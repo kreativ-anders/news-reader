@@ -24,3 +24,20 @@ const FF_ALLOW_PRIVATE_HOSTS = false;
 // Optional path to a CA bundle (e.g. cacert.pem from https://curl.se/docs/caextract.html).
 // Empty = use the OS certificate store on Windows / PHP defaults elsewhere.
 const FF_CA_BUNDLE = '';
+
+// ------------------------------------------------------------------ Flint sync (/api/sync)
+// Optional, account-free state store for the Flint reader (see README → "Flint sync").
+const FF_SYNC_ENABLED          = true;
+const FF_SYNC_DB               = __DIR__ . '/../var/sync/flint.sqlite';
+const FF_SYNC_MAX_BATCH        = 1000;       // records per request
+const FF_SYNC_MAX_BODY_BYTES   = 1_000_000;  // keep <= nginx client_max_body_size
+const FF_SYNC_MAX_RECORD_BYTES = 16_384;     // JSON size of one record's data
+const FF_SYNC_MAX_CLOCK_SKEW   = 300_000;    // ms: client timestamps are clamped to server time + 5 min
+
+// Who may sync (REMOTE_ADDR). Default: loopback + private networks only ("own network").
+// Use [] to allow every client (then protect the endpoint otherwise, e.g. VPN / reverse proxy).
+const FF_SYNC_ALLOWED_NETS = [
+    '127.0.0.0/8', '::1/128',
+    '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16',
+    'fc00::/7', 'fe80::/10',
+];

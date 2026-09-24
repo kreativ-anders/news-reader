@@ -4,6 +4,8 @@
  *
  * Resolves any website / feed URL into normalized JSON entries.
  * Results are cached per source URL for 24 h (shared across all clients).
+ *
+ * /api/sync is routed to src/sync.php (Flint client state, see README).
  */
 declare(strict_types=1);
 
@@ -12,6 +14,15 @@ require __DIR__ . '/../src/http.php';
 require __DIR__ . '/../src/parsers.php';
 require __DIR__ . '/../src/cache.php';
 require __DIR__ . '/../src/resolver.php';
+
+// Flint sync store: /api/sync (same front controller, separate handler)
+$ffPath = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+if (preg_match('#/api/sync/?$#', $ffPath)) {
+    require __DIR__ . '/../src/sync.php';
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
+    ff_sync_handle();
+}
 
 set_time_limit(90);
 ini_set('display_errors', '0'); // warnings must never corrupt the JSON output

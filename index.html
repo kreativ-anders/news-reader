@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Feedforge – Turn Any Website into a Feed, Self-Hosted</title>
-  <meta name="description" content="Feedforge turns any website or feed URL into clean, normalized entries: direct RSS/Atom, feed discovery, guessed feed paths, HTML extraction or sitemap. Self-hosted, plain PHP, no database.">
+  <meta name="description" content="Feedforge turns any website or feed URL into clean, normalized entries: direct RSS/Atom, feed discovery, guessed feed paths, HTML extraction or sitemap. With Flint, a local-first reader that syncs in your own network. Self-hosted, plain PHP, MIT-licensed.">
   <link rel="canonical" href="https://kreativ-anders.github.io/feedforge/">
   <meta name="robots" content="index, follow">
   <meta name="author" content="kreativ-anders">
@@ -41,7 +41,8 @@
         "@type": "SoftwareApplication",
         "name": "Feedforge",
         "description": "Centralized RSS feed extractor for local RSS handling. Turns any website or feed URL into normalized JSON via direct feeds, discovery, guessed feed paths, HTML extraction or sitemaps.",
-        "featureList": ["Direct RSS 2.0, RSS 1.0 (RDF) and Atom parsing", "Feed discovery via <link rel=alternate>", "Probing of common feed paths", "HTML extraction via JSON-LD, article elements and links", "Sitemap fallback", "Normalized JSON with stable IDs", "Self-hosted, plain PHP, no database"],
+        "featureList": ["Direct RSS 2.0, RSS 1.0 (RDF) and Atom parsing", "Feed discovery via <link rel=alternate>", "Probing of common feed paths", "HTML extraction via JSON-LD, article elements and links", "Sitemap fallback", "Normalized JSON with stable IDs", "Flint: local-first reader PWA with read now, later and not-interested triage", "Account-free sync between devices, limited to the local network by default", "OPML import and export", "Self-hosted, plain PHP, no database server required"],
+        "license": "https://opensource.org/licenses/MIT",
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "Windows, macOS, Linux",
         "url": "https://kreativ-anders.github.io/feedforge/",
@@ -61,11 +62,17 @@
           { "@type": "Question", "name": "Which formats are supported?",
             "acceptedAnswer": { "@type": "Answer", "text": "RSS 2.0, RSS 1.0 (RDF) and Atom feeds, HTML pages and XML sitemaps. The output is always the same JSON shape." } },
           { "@type": "Question", "name": "How do I host Feedforge myself?",
-            "acceptedAnswer": { "@type": "Answer", "text": "You need PHP 8.1+ with dom, libxml and mbstring (curl recommended) and a web server. Clone the repository, make var/cache writable for PHP and use the included nginx config. No database, no build step." } },
+            "acceptedAnswer": { "@type": "Answer", "text": "You need PHP 8.1+ with dom, libxml and mbstring (curl recommended, pdo_sqlite for Flint sync) and a web server with HTTPS. Clone the repository, make var/ writable for PHP and use the included nginx config. No database server, no build step." } },
+          { "@type": "Question", "name": "What is Flint?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Flint is the reader that ships with Feedforge – an installable web app for phone and desktop. Every new entry lands in the inbox and gets one decision: read now, later or not interested. Read entries move to done." } },
           { "@type": "Question", "name": "Where does my reading state live?",
-            "acceptedAnswer": { "@type": "Answer", "text": "In your client. The Feedforge server is stateless and only caches per source URL; read and saved states never touch the server." } },
+            "acceptedAnswer": { "@type": "Answer", "text": "On your devices. Flint keeps feeds and states locally and works offline. Feedforge itself only caches per source URL. If you turn on sync, Flint stores item states and your feed list in an account-free vault on your own Feedforge server, reachable from your local network only by default." } },
+          { "@type": "Question", "name": "How does Flint sync without an account?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The first device creates a random vault key. Other devices join by scanning a QR code or opening the pairing link. The server stores only the key's hash and the latest state per entry – the most recent change wins. Offline changes are queued and sent when the device is back in your network." } },
+          { "@type": "Question", "name": "Can I move from Feedly?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Export your subscriptions from Feedly as OPML and import the file in Flint under Feeds. Flint exports OPML as well, so you can leave any time." } },
           { "@type": "Question", "name": "Where can I get Feedforge?",
-            "acceptedAnswer": { "@type": "Answer", "text": "The source code is available on GitHub at github.com/kreativ-anders/feedforge." } }
+            "acceptedAnswer": { "@type": "Answer", "text": "The source code is available on GitHub at github.com/kreativ-anders/feedforge under the MIT license." } }
         ]
       }
     ]
@@ -117,7 +124,7 @@
     .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--ember-ink);margin-bottom:20px}
     .eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 12px var(--ember)}
     h1{font-size:clamp(2.4rem,5.5vw,4rem);line-height:1.05;letter-spacing:-.035em;font-weight:800}
-    h1 .hot{background:linear-gradient(120deg,var(--hot-a),var(--hot-b));-webkit-background-clip:text;background-clip:text;color:transparent}
+    h1 .hot,.h1 .hot{background:linear-gradient(120deg,var(--hot-a),var(--hot-b));-webkit-background-clip:text;background-clip:text;color:transparent}
     .lead{font-size:1.2rem;color:var(--muted);margin:24px 0 36px;max-width:34em}
     .cta{display:flex;flex-wrap:wrap;gap:12px}
     .forge{width:100%;height:auto}
@@ -235,6 +242,33 @@
     footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
     footer a{text-decoration:none}footer a:hover{color:var(--ember-ink)}
 
+    /* hero switch: Feedforge (server) ⇄ Flint (client) – same place, cross-fading */
+    .modes{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:4px;margin-bottom:28px;border-radius:999px;background:color-mix(in srgb,var(--card) 85%,transparent);border:1px solid var(--line)}
+    .modes button{all:unset;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 16px;border-radius:999px;font-weight:700;font-size:.95rem;cursor:pointer;color:var(--muted);transition:color .35s}
+    .modes button:hover{color:var(--fg)}
+    .modes button[aria-selected="true"]{color:#1a0d00}
+    .modes button:focus-visible{outline:2px solid var(--ember-ink);outline-offset:2px}
+    .modes svg,.modes img{width:20px;height:20px;border-radius:6px;flex:none}
+    .modes small{font:600 .66rem var(--mono);text-transform:uppercase;letter-spacing:.1em;opacity:.75}
+    .modes .thumb{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:999px;overflow:hidden;background:linear-gradient(135deg,var(--ember),var(--ember2));box-shadow:0 6px 24px var(--glow);transition:transform .55s cubic-bezier(.65,0,.25,1)}
+    .modes .thumb i{position:absolute;left:14px;right:14px;bottom:3px;height:2px;border-radius:2px;background:rgba(26,13,0,.35);transform-origin:left;transform:scaleX(0)}
+    .modes.run .thumb i{animation:mbar var(--mdur,7s) linear forwards}
+    @keyframes mbar{to{transform:scaleX(1)}}
+    [data-mode="client"] .modes .thumb{transform:translateX(100%)}
+    html:not(.js-on) .modes{display:none}
+    .stack{display:grid}
+    .stack > *{grid-area:1/1;transition:opacity .6s ease,transform .6s cubic-bezier(.65,0,.25,1),filter .6s ease}
+    [data-mode="server"] .is-client,[data-mode="client"] .is-server{opacity:0;pointer-events:none;filter:blur(6px)}
+    [data-mode="server"] .hc.is-client,[data-mode="client"] .hc.is-server{transform:translateY(10px)}
+    [data-mode="server"] .visual .is-client{transform:scale(.92) translateX(24px)}
+    [data-mode="client"] .visual .is-server{transform:scale(.92) translateX(-24px)}
+    .hc .h1{font-size:clamp(2.4rem,5.5vw,4rem);line-height:1.05;letter-spacing:-.035em;font-weight:800;margin:0}
+    .flintviz .dst rect{fill:var(--card);stroke:var(--c);stroke-opacity:.7;stroke-width:1.5}
+    .flintviz .dst .lbl{fill:var(--fg)}
+    .flintviz .flash{transform-box:fill-box;transform-origin:center;animation:flash 2.4s ease-in-out infinite}
+    @keyframes flash{0%,100%{opacity:.25;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}
+    .flint-cta{margin-top:32px}
+
     :focus-visible{outline:2px solid var(--ember-ink);outline-offset:3px;border-radius:6px}
     @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.forge animateMotion{display:none}}
   </style>
@@ -250,6 +284,7 @@
       </a>
       <ul>
         <li><a href="#variants">Variants</a></li>
+        <li><a href="#flint">Flint</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#self-host">Self-host</a></li>
         <li><a href="#faq">FAQ</a></li>
@@ -260,8 +295,15 @@
 
   <main id="main">
     <section class="hero" aria-labelledby="hero-title">
-      <div class="wrap hero-grid">
-        <div>
+      <div class="wrap hero-grid" data-mode="server">
+        <div class="hero-copy">
+          <div class="modes" role="tablist" aria-label="Feedforge server or Flint client">
+            <span class="thumb" aria-hidden="true"><i></i></span>
+            <button type="button" role="tab" id="m-server" data-mode="server" aria-selected="true" aria-controls="hc-server"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#FFA500"/><circle cx="10" cy="22" r="2.6" fill="#1a0d00"/><path d="M8 14a10 10 0 0 1 10 10M8 8a16 16 0 0 1 16 16" stroke="#1a0d00" stroke-width="3" fill="none" stroke-linecap="round"/></svg>Feedforge <small>server</small></button>
+            <button type="button" role="tab" id="m-client" data-mode="client" aria-selected="false" aria-controls="hc-client" tabindex="-1"><img src="app/icons/flint.svg" alt="" width="20" height="20">Flint <small>client</small></button>
+          </div>
+          <div class="stack">
+            <div class="hc is-server" id="hc-server" role="tabpanel" aria-labelledby="m-server">
           <p class="eyebrow">Any URL. One feed.</p>
           <h1 id="hero-title">Forge every feed <span class="hot">into one.</span></h1>
           <p class="lead">Feedforge is a centralized RSS feed extractor for local RSS handling. Throw any URL at it – a native feed, a blog, a news page without RSS – and get clean, normalized entries back from your own server. No cloud, no tracking, no noise.</p>
@@ -272,9 +314,21 @@
             </a>
             <a class="btn btn-ghost" href="#variants">See the five variants</a>
           </div>
+            </div>
+            <div class="hc is-client" id="hc-client" role="tabpanel" aria-labelledby="m-client" inert>
+              <p class="eyebrow">Any entry. One decision.</p>
+              <h2 class="h1">Read what matters. <span class="hot">Skip the rest.</span></h2>
+              <p class="lead">Flint is the reader for your forge – on your phone and in your desktop browser. Every new entry gets one decision: read now, later or not interested. Your devices stay in sync inside your own network, without an account.</p>
+              <div class="cta">
+                <a class="btn btn-primary" href="app/">Open Flint</a>
+                <a class="btn btn-ghost" href="#flint">How Flint works</a>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <svg class="forge" viewBox="0 0 520 400" role="img" aria-labelledby="forge-t">
+        <div class="stack visual">
+        <svg class="forge is-server" viewBox="0 0 520 400" role="img" aria-labelledby="forge-t">
           <title id="forge-t">A native feed, a discovered feed, a sitemap and a plain HTML page flow into Feedforge and come out as one clean local feed</title>
           <defs>
             <radialGradient id="coreGrad"><stop offset="0" stop-color="#FFE4B0"/><stop offset=".45" stop-color="#FFC04B"/><stop offset="1" stop-color="#FFA500"/></radialGradient>
@@ -304,6 +358,31 @@
           <circle class="spark" r="4"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#p4"/></animateMotion></circle>
           <circle class="spark" r="4"><animateMotion dur="2.5s" repeatCount="indefinite"><mpath href="#p5"/></animateMotion></circle>
         </svg>
+          <svg class="forge flintviz is-client" viewBox="0 0 520 400" role="img" aria-labelledby="flint-t">
+            <title id="flint-t">Entries from Feedforge reach Flint, where each one becomes read now (then done), later or not interested</title>
+            <defs>
+              <radialGradient id="flintCore" cx=".4" cy=".35"><stop offset="0" stop-color="#2a221b"/><stop offset="1" stop-color="#120f0c"/></radialGradient>
+            </defs>
+            <path id="fi" class="path" d="M120 200 L168 200"/>
+            <path id="f1" class="path" d="M252 200 C310 200 310 80 370 80"/>
+            <path id="f2" class="path" d="M252 200 L370 200"/>
+            <path id="f3" class="path" d="M252 200 C310 200 310 320 370 320"/>
+            <rect class="src" x="10" y="180" width="110" height="40" rx="10"/><text class="lbl" x="24" y="205">feedforge</text>
+            <g class="dst" style="--c:var(--v-direct)"><rect x="370" y="60" width="140" height="40" rx="10"/><text class="lbl" x="382" y="85">read now → done</text></g>
+            <g class="dst" style="--c:var(--v-discovered)"><rect x="370" y="180" width="140" height="40" rx="10"/><text class="lbl" x="382" y="205">later</text></g>
+            <g class="dst" style="--c:var(--v-sitemap)"><rect x="370" y="300" width="140" height="40" rx="10"/><text class="lbl" x="382" y="325">not interested</text></g>
+            <circle cx="210" cy="200" r="66" fill="#FFA500" opacity=".28" filter="url(#blur)"/>
+            <circle cx="210" cy="200" r="42" fill="url(#flintCore)" stroke="#FFA500" stroke-opacity=".45" stroke-width="1.5"/>
+            <g transform="translate(208 202) scale(1.25) translate(-29 -36)">
+              <path d="M20 26 36 20 31 34Z" fill="#FFD27A"/><path d="M36 20 47 31 40 49 31 34Z" fill="#FFA500"/><path d="M11 44 20 26 31 34 22 53Z" fill="#E08A00"/><path d="M22 53 31 34 40 49Z" fill="#A85F00"/>
+            </g>
+            <path class="flash" d="M238 160 239.6 165.4 245 167 239.6 168.6 238 174 236.4 168.6 231 167 236.4 165.4Z" fill="#FFF1D6"/>
+            <circle class="spark" r="4"><animateMotion dur="1.2s" repeatCount="indefinite"><mpath href="#fi"/></animateMotion></circle>
+            <circle class="spark" r="4"><animateMotion dur="2.4s" begin="0s" repeatCount="indefinite"><mpath href="#f1"/></animateMotion></circle>
+            <circle class="spark" r="4"><animateMotion dur="2.4s" begin="-.8s" repeatCount="indefinite"><mpath href="#f2"/></animateMotion></circle>
+            <circle class="spark" r="4"><animateMotion dur="2.4s" begin="-1.6s" repeatCount="indefinite"><mpath href="#f3"/></animateMotion></circle>
+          </svg>
+        </div>
       </div>
     </section>
 
@@ -459,12 +538,12 @@
           <article class="card">
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
             <h3>Stateless &amp; private</h3>
-            <p>No account, no analytics. The server only caches sources – read and saved state stays in your client.</p>
+            <p>No account, no analytics. The server only caches sources – your reading state lives on your devices.</p>
           </article>
           <article class="card">
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
-            <h3>Plain PHP, no database</h3>
-            <p>A handful of PHP files and a file cache. No framework, no build step, no background workers.</p>
+            <h3>Plain PHP, no database server</h3>
+            <p>A handful of PHP files and a file cache. No framework, no build step, no background workers – optional sync uses PHP's built-in SQLite.</p>
           </article>
         </div>
       </div>
@@ -479,8 +558,51 @@
         <ol class="steps">
           <li><h3>Send any URL</h3><p>A feed, a blog, a news page – call <code>/api/?url=…</code> with whatever you follow. It does not have to be an RSS link.</p></li>
           <li><h3>Feedforge picks the variant</h3><p>Direct, discovered, guessed, HTML or sitemap – the most precise strategy wins, the result is cached per source.</p></li>
-          <li><h3>Use clean JSON</h3><p>Normalized entries with stable IDs, newest first – ready for your own reader on phone or desktop.</p></li>
+          <li><h3>Use clean JSON</h3><p>Normalized entries with stable IDs, newest first – read them in Flint or build your own reader on top.</p></li>
         </ol>
+      </div>
+    </section>
+
+    <section id="flint" class="flint" aria-labelledby="flint-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="eyebrow">Meet Flint</p>
+          <h2 id="flint-title">Flint strikes the spark. Feedforge keeps the fire.</h2>
+          <p>Flint is the reader that ships with Feedforge: an installable web app for your phone and your desktop browser. No endless timeline – every entry gets one decision, and your inbox stays calm.</p>
+        </div>
+        <div class="features flint-features" id="flint-sync">
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg></div>
+            <h3>Sync without an account</h3>
+            <p>Create a vault on one device, scan its QR code with the other – done. No e-mail, no password. The server stores the key's hash and the latest state per entry, nothing else.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
+            <h3>Only in your network</h3>
+            <p>Sync answers to your local network by default. Away from home, Flint keeps working and queues every change – it catches up the moment you are back.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l22 22M16.7 11.1A10.9 10.9 0 0 1 19 12.6M5 12.6a10.9 10.9 0 0 1 5.2-2.5M10.7 5.1A16 16 0 0 1 22.6 9M1.4 9a15.9 15.9 0 0 1 4.3-2.8M8.5 16.1a5 5 0 0 1 7 0M12 20h.01"/></svg></div>
+            <h3>Local-first &amp; offline</h3>
+            <p>Feeds, states and entries live in your browser. The app starts instantly from cache, works on the train and never waits for a server to show your list.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div>
+            <h3>Phone and desktop</h3>
+            <p>Install Flint from the browser like an app. Swipe to triage on the phone, use <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> on the desktop, and share any page to Flint to follow it.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></div>
+            <h3>Leave Feedly behind</h3>
+            <p>Import your OPML export and every source is resolved by Feedforge – including sites that never had a feed. Export works just as easily.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M4.9 4.9l14.2 14.2"/></svg></div>
+            <h3>Private and light</h3>
+            <p>No tracking, no third-party requests, no framework. A few kilobytes of plain JavaScript and one shared 24-hour cache per source keep it fast for you and polite to every site.</p>
+          </article>
+        </div>
+        <div class="cta flint-cta"><a class="btn btn-primary" href="app/">Open Flint</a><a class="btn btn-ghost" href="#faq">Sync FAQ</a></div>
       </div>
     </section>
 
@@ -489,7 +611,7 @@
         <div class="sec-head">
           <p class="eyebrow">Self-host</p>
           <h2 id="host-title">Your server. Your feeds. Five minutes.</h2>
-          <p>Feedforge is a handful of PHP files – no database, no build step, no container required. If your server runs PHP, it runs Feedforge.</p>
+          <p>Feedforge is a handful of PHP files – no database server, no build step, no container required. If your server runs PHP, it runs Feedforge and Flint. MIT-licensed.</p>
         </div>
         <div class="host-grid">
           <div>
@@ -497,7 +619,8 @@
             <ul class="checks">
               <li><strong>PHP 8.1+</strong> with <code>dom</code>, <code>libxml</code>, <code>mbstring</code> – <code>curl</code> recommended</li>
               <li><strong>A web server</strong> – an nginx config is included, any server that routes <code>/api/</code> to PHP works</li>
-              <li><strong>A writable cache</strong> – <code>var/cache/</code> must be writable by PHP</li>
+              <li><strong>A writable <code>var/</code></strong> – feed cache and sync vault, blocked from the web by the included config</li>
+              <li><strong>Optional: <code>pdo_sqlite</code></strong> – for Flint sync; answers to your local network only by default</li>
             </ul>
           </div>
           <div class="terminal" role="figure" aria-label="Installing Feedforge">
@@ -505,8 +628,11 @@
 <pre><code><span class="c"># get the code</span>
 <span class="p">$ </span>git clone https://github.com/kreativ-anders/feedforge.git
 
-<span class="c"># let PHP write the cache</span>
-<span class="p">$ </span>sudo chown -R www-data: feedforge/var/cache</code></pre>
+<span class="c"># let PHP write cache + sync vault</span>
+<span class="p">$ </span>sudo chown -R www-data: feedforge/var
+
+<span class="c"># then open the reader in your browser</span>
+<span class="c"># https://feeds.example.com/app/</span></code></pre>
           </div>
         </div>
       </div>
@@ -519,9 +645,12 @@
         <details><summary>What if a website has no RSS feed?</summary><p>Feedforge does not need one. It probes common feed paths, extracts entries from the HTML (JSON-LD, article elements or links below the requested path) and finally falls back to the site's sitemap.</p></details>
         <details><summary>In which order are the variants tried?</summary><p>From most to least precise: direct (the URL is a feed), discovered (declared in the HTML), guessed (common feed paths), HTML extraction and sitemap. The field <code>source.strategy</code> in the response tells you which one was used.</p></details>
         <details><summary>Which formats are supported?</summary><p>RSS 2.0, RSS 1.0 (RDF) and Atom feeds, HTML pages and XML sitemaps. The output is always the same JSON shape.</p></details>
-        <details><summary>How do I host Feedforge myself?</summary><p>You need PHP 8.1+ with dom, libxml and mbstring (curl recommended) and a web server. Clone the repository, make var/cache writable for PHP and use the included nginx config. No database, no build step.</p></details>
-        <details><summary>Where does my reading state live?</summary><p>In your client. The Feedforge server is stateless and only caches per source URL; read and saved states never touch the server.</p></details>
-        <details><summary>Where can I get Feedforge?</summary><p>The source code is available on <a href="https://github.com/kreativ-anders/feedforge" rel="noopener">GitHub</a>.</p></details>
+        <details><summary>How do I host Feedforge myself?</summary><p>You need PHP 8.1+ with dom, libxml and mbstring (curl recommended, <code>pdo_sqlite</code> for Flint sync) and a web server with HTTPS. Clone the repository, make <code>var/</code> writable for PHP and use the included nginx config. No database server, no build step.</p></details>
+        <details><summary>What is Flint?</summary><p>Flint is the reader that ships with Feedforge – an installable web app for phone and desktop. Every new entry lands in the inbox and gets one decision: read now, later or not interested. Read entries move to done.</p></details>
+        <details><summary>Where does my reading state live?</summary><p>On your devices. Flint keeps feeds and states locally and works offline. Feedforge itself only caches per source URL. If you turn on sync, Flint stores item states and your feed list in an account-free vault on your own Feedforge server – reachable from your local network only by default.</p></details>
+        <details><summary>How does Flint sync without an account?</summary><p>The first device creates a random vault key. Other devices join by scanning a QR code or opening the pairing link. The server stores only the key's hash and the latest state per entry – the most recent change wins. Offline changes are queued and sent as soon as the device is back in your network.</p></details>
+        <details><summary>Can I move from Feedly?</summary><p>Yes. Export your subscriptions from Feedly as OPML and import the file in Flint under <em>Feeds</em>. Flint exports OPML as well, so you can leave any time.</p></details>
+        <details><summary>Where can I get Feedforge?</summary><p>The source code is available on <a href="https://github.com/kreativ-anders/feedforge" rel="noopener">GitHub</a> under the MIT license.</p></details>
       </div>
     </section>
 
@@ -530,7 +659,7 @@
         <div class="card">
           <h2 id="final-title">Light the forge.</h2>
           <p>Clone it, point your web server at it and take back control of what you read.</p>
-          <div class="cta"><a class="btn btn-primary" href="https://github.com/kreativ-anders/feedforge" rel="noopener">Get Feedforge on GitHub</a><a class="btn btn-ghost" href="#self-host">Self-host guide</a></div>
+          <div class="cta"><a class="btn btn-primary" href="https://github.com/kreativ-anders/feedforge" rel="noopener">Get Feedforge on GitHub</a><a class="btn btn-ghost" href="app/">Open Flint</a><a class="btn btn-ghost" href="#self-host">Self-host guide</a></div>
         </div>
       </div>
     </section>
@@ -538,7 +667,7 @@
 
   <footer>
     <div class="wrap">
-      <span>© <span id="y">2026</span> Feedforge · a project by <a href="https://kreativ-anders.de" rel="noopener">kreativ-anders</a></span>
+      <span>© <span id="y">2026</span> Feedforge &amp; Flint · a project by <a href="https://kreativ-anders.de" rel="noopener">kreativ-anders</a> · MIT license</span>
       <a href="https://github.com/kreativ-anders/feedforge" rel="noopener">Source on GitHub</a>
     </div>
   </footer>
@@ -579,6 +708,45 @@
     if('IntersectionObserver' in window){
       var started=false;new IntersectionObserver(function(es){if(es[0].isIntersecting&&!started){started=true;show(0);}},{threshold:.35}).observe(sec);
     } else show(0);
+  })();
+  </script>
+  <script>
+  /* hero switch: Feedforge (server) ⇄ Flint (client) */
+  (function(){
+    document.documentElement.classList.add('js-on');
+    var grid=document.querySelector('.hero-grid'), box=grid&&grid.querySelector('.modes');
+    if(!box) return;
+    var tabs=[].slice.call(box.querySelectorAll('[role="tab"]'));
+    var panels=[].slice.call(grid.querySelectorAll('.hc'));
+    var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var auto=!reduce, paused=false, visible=true, timer=null, DUR=7000;
+    box.style.setProperty('--mdur',DUR+'ms');
+    function set(mode,focus){
+      grid.dataset.mode=mode;
+      tabs.forEach(function(t){var on=t.dataset.mode===mode;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;if(on&&focus)t.focus();});
+      panels.forEach(function(p){p.inert=!p.classList.contains('is-'+mode);});
+      schedule();
+    }
+    function schedule(){
+      clearTimeout(timer);box.classList.remove('run');
+      if(!auto||paused||!visible) return;
+      void box.offsetWidth;box.classList.add('run');
+      timer=setTimeout(function(){set(grid.dataset.mode==='server'?'client':'server');},DUR);
+    }
+    tabs.forEach(function(t,k){
+      t.addEventListener('click',function(){auto=false;set(t.dataset.mode);});
+      t.addEventListener('keydown',function(e){
+        if(['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0) return;
+        e.preventDefault();auto=false;
+        var n=e.key==='Home'?0:e.key==='End'?tabs.length-1:(k+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+        set(tabs[n].dataset.mode,true);
+      });
+    });
+    var hero=grid.parentNode;
+    ['mouseenter','focusin'].forEach(function(ev){hero.addEventListener(ev,function(){paused=true;schedule();});});
+    ['mouseleave','focusout'].forEach(function(ev){hero.addEventListener(ev,function(e){if(e.relatedTarget&&hero.contains(e.relatedTarget))return;paused=false;schedule();});});
+    if('IntersectionObserver' in window) new IntersectionObserver(function(es){visible=es[0].isIntersecting;schedule();},{threshold:.3}).observe(hero);
+    set('server');
   })();
   </script>
   <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
