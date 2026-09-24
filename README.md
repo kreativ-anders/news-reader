@@ -58,7 +58,7 @@ A per-URL `flock` ensures only one request refreshes a source at a time; concurr
 
 - Requires PHP 8.1+ with `dom`, `libxml`, `mbstring`. `curl` is recommended; without it the PHP stream wrapper is used (needs `openssl` for HTTPS and `allow_url_fopen = On`).
 - HTTPS on Windows: the OS certificate store is used automatically (PHP 8.2+). Alternatively set `FF_CA_BUNDLE` in `src/config.php` or `curl.cainfo` in php.ini to a `cacert.pem`.
-- Paste `wharf-nginx.conf` into the project's nginx config in Wharf. It blocks `/src`, `/var`, dotfiles, `*.conf`, `*.md`.
+- Wharf: paste `wharf.conf.example` into the project's nginx config. Plain nginx: `nginx.conf.example`. Both block `/src`, `/var`, dotfiles and config/doc files.
 - `var/cache/` must be writable by PHP.
 
 ## Security

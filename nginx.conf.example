@@ -1,20 +1,13 @@
-# Feedforge – classic nginx server config (no templating)
-# Landing page (static) at /, API (PHP front controller) at /api/
-#
-# Adjust before use:
-#   server_name   feedforge.example.com
-#   root          /var/www/feedforge
-#   PHP-FPM       unix:/run/php/php8.3-fpm.sock
-#   certificates  /etc/letsencrypt/live/feedforge.example.com/
-# Install: /etc/nginx/sites-available/feedforge.conf -> symlink to sites-enabled, then `nginx -t && systemctl reload nginx`
+# Feedforge – plain nginx (production)
+# Adjust: server_name, root, PHP-FPM socket, certificate paths
 
-# --- HTTP -> HTTPS
+# HTTP -> HTTPS
 server {
   listen 80;
   listen [::]:80;
   server_name feedforge.example.com;
 
-  # ACME challenge (certbot --webroot)
+  # certbot --webroot
   location ^~ /.well-known/acme-challenge/ {
     root /var/www/feedforge;
     try_files $uri =404;
@@ -22,11 +15,11 @@ server {
   location / { return 301 https://$host$request_uri; }
 }
 
-# --- HTTPS
+# HTTPS
 server {
   listen 443 ssl;
   listen [::]:443 ssl;
-  http2 on;                       # nginx >= 1.25.1; older: "listen 443 ssl http2;"
+  http2 on;
   server_name feedforge.example.com;
 
   root /var/www/feedforge;
@@ -46,33 +39,33 @@ server {
   client_max_body_size 1m;
   server_tokens off;
 
-  # --- security headers (server level; no add_header in locations below, so they are inherited)
+  # security headers (inherited: no add_header in locations)
   add_header Strict-Transport-Security "max-age=31536000" always;
   add_header X-Content-Type-Options "nosniff" always;
   add_header X-Frame-Options "DENY" always;
   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-  # --- compression for text assets (text/html is always included)
+  # compression
   gzip on;
   gzip_vary on;
   gzip_min_length 512;
   gzip_types text/css text/plain application/javascript application/json
              application/xml image/svg+xml application/manifest+json;
 
-  # --- never expose internals
+  # never expose internals
   location ^~ /.well-known/ { try_files $uri =404; }
-  location ~ ^/(src|var|vendor|tests)(/|$)             { return 404; }
-  location ~ /\.                                              { return 404; }
+  location ~ ^/(src|var|vendor|tests)(/|$) { return 404; }
+  location ~ /\. { return 404; }
   location ~ \.(conf|md|lock|example|dist|ini|env|log|sql|sqlite)$ { return 404; }
-  location ~ ^/(composer|package)\.json$                      { return 404; }
+  location ~ ^/(composer|package)\.json$ { return 404; }
 
-  # --- API: everything under /api/ goes through the front controller
+  # API via front controller
   location = /api { return 301 /api/$is_args$args; }
   location /api/ {
     try_files $uri /api/index.php$is_args$args;
   }
 
-  # only the front controller is executed; any other .php is 404
+  # execute only the front controller
   location = /api/index.php {
     try_files $uri =404;
     fastcgi_pass unix:/run/php/php8.3-fpm.sock;
@@ -83,7 +76,7 @@ server {
   }
   location ~ \.php$ { return 404; }
 
-  # --- landing page: static assets with long cache, HTML always revalidated
+  # landing page: long cache for assets, HTML revalidated
   location ~* \.(png|jpe?g|webp|avif|gif|ico|svg|woff2?)$ {
     expires 30d;
     access_log off;
