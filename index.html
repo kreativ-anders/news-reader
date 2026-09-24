@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feedforge – Turn Any Website into a Feed, Self-Hosted</title>
+  <meta name="description" content="Feedforge turns any website or feed URL into clean, normalized entries: direct RSS/Atom, feed discovery, guessed feed paths, HTML extraction or sitemap. Self-hosted, plain PHP, no database.">
+  <link rel="canonical" href="https://kreativ-anders.github.io/feedforge/">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="kreativ-anders">
+  <meta name="theme-color" content="#0f0d0b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
+  <meta name="color-scheme" content="dark light">
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Feedforge">
+  <meta property="og:title" content="Feedforge – Forge every feed into one">
+  <meta property="og:description" content="Any URL in, one clean feed out – direct, discovered, guessed, HTML or sitemap. Self-hosted, plain PHP.">
+  <meta property="og:url" content="https://kreativ-anders.github.io/feedforge/">
+  <meta property="og:image" content="https://kreativ-anders.github.io/feedforge/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Feedforge – many feeds merged into one">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Feedforge – Forge every feed into one">
+  <meta name="twitter:description" content="Any URL in, one clean feed out – direct, discovered, guessed, HTML or sitemap. Self-hosted.">
+  <meta name="twitter:image" content="https://kreativ-anders.github.io/feedforge/og-image.png">
+
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Feedforge",
+        "description": "Centralized RSS feed extractor for local RSS handling. Turns any website or feed URL into normalized JSON via direct feeds, discovery, guessed feed paths, HTML extraction or sitemaps.",
+        "featureList": ["Direct RSS 2.0, RSS 1.0 (RDF) and Atom parsing", "Feed discovery via <link rel=alternate>", "Probing of common feed paths", "HTML extraction via JSON-LD, article elements and links", "Sitemap fallback", "Normalized JSON with stable IDs", "Self-hosted, plain PHP, no database"],
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Windows, macOS, Linux",
+        "url": "https://kreativ-anders.github.io/feedforge/",
+        "codeRepository": "https://github.com/kreativ-anders/feedforge",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "author": { "@type": "Organization", "name": "kreativ-anders", "url": "https://kreativ-anders.de" }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "What is Feedforge?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Feedforge is a self-hosted, centralized feed extractor. It turns any website or feed URL into normalized JSON entries with stable IDs – whether the site offers RSS/Atom or not." } },
+          { "@type": "Question", "name": "What if a website has no RSS feed?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Feedforge does not need one. It probes common feed paths, extracts entries from the HTML (JSON-LD, article elements or links below the requested path) and finally falls back to the site's sitemap." } },
+          { "@type": "Question", "name": "In which order are the variants tried?",
+            "acceptedAnswer": { "@type": "Answer", "text": "From most to least precise: direct (the URL is a feed), discovered (declared in the HTML), guessed (common feed paths), HTML extraction and sitemap. The field source.strategy in the response tells you which one was used." } },
+          { "@type": "Question", "name": "Which formats are supported?",
+            "acceptedAnswer": { "@type": "Answer", "text": "RSS 2.0, RSS 1.0 (RDF) and Atom feeds, HTML pages and XML sitemaps. The output is always the same JSON shape." } },
+          { "@type": "Question", "name": "How do I host Feedforge myself?",
+            "acceptedAnswer": { "@type": "Answer", "text": "You need PHP 8.1+ with dom, libxml and mbstring (curl recommended) and a web server. Clone the repository, make var/cache writable for PHP and use the included nginx config. No database, no build step." } },
+          { "@type": "Question", "name": "Where does my reading state live?",
+            "acceptedAnswer": { "@type": "Answer", "text": "In your client. The Feedforge server is stateless and only caches per source URL; read and saved states never touch the server." } },
+          { "@type": "Question", "name": "Where can I get Feedforge?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The source code is available on GitHub at github.com/kreativ-anders/feedforge." } }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root{
+      --bg:#0f0d0b; --bg2:#17130f; --card:#1c1713; --line:#2e2620;
+      --fg:#f3ece4; --muted:#a8998a; --ember:#ff7a1a; --ember2:#ffb347; --glow:rgba(255,122,26,.35);
+      --radius:16px; --max:1120px;
+      --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#faf7f2; --bg2:#f2ece3; --card:#fff; --line:#e6ddd1; --fg:#1d1813; --muted:#6b5f53; --ember:#e25d00; --ember2:#f08c1a; --glow:rgba(226,93,0,.18); }
+    }
+    *{box-sizing:border-box;margin:0}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--font);background:var(--bg);color:var(--fg);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{color:inherit}
+    img,svg{display:block;max-width:100%}
+    .wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+    .skip{position:absolute;left:-999px}.skip:focus{left:16px;top:16px;background:var(--ember);color:#000;padding:8px 12px;border-radius:8px;z-index:9}
+
+    /* header */
+    header{position:sticky;top:0;z-index:5;backdrop-filter:blur(12px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:1px solid var(--line)}
+    .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;text-decoration:none;letter-spacing:-.01em}
+    .brand svg{width:28px;height:28px}
+    .nav ul{display:flex;gap:28px;list-style:none;padding:0;align-items:center}
+    .nav a{text-decoration:none;color:var(--muted);font-size:.95rem;transition:color .2s}
+    .nav a:hover{color:var(--fg)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-weight:600;text-decoration:none;transition:transform .15s,box-shadow .2s,background .2s;border:1px solid transparent}
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:linear-gradient(135deg,var(--ember),var(--ember2));color:#1a0d00;box-shadow:0 8px 30px var(--glow)}
+    .btn-primary:hover{box-shadow:0 10px 40px var(--glow)}
+    .btn-ghost{border-color:var(--line);color:var(--fg)}
+    .btn-ghost:hover{border-color:var(--ember)}
+    .nav .btn{padding:8px 16px;color:var(--fg)}
+    @media (max-width:720px){.nav ul li:not(:last-child){display:none}}
+
+    /* hero */
+    .hero{position:relative;overflow:hidden;padding:96px 0 72px}
+    .hero::before{content:"";position:absolute;inset:auto -20% -40% -20%;height:80%;background:radial-gradient(ellipse at center,var(--glow),transparent 65%);pointer-events:none}
+    .hero-grid{position:relative;display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--ember);margin-bottom:20px}
+    .eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 12px var(--ember)}
+    h1{font-size:clamp(2.4rem,5.5vw,4rem);line-height:1.05;letter-spacing:-.035em;font-weight:800}
+    h1 .hot{background:linear-gradient(120deg,var(--ember),var(--ember2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lead{font-size:1.2rem;color:var(--muted);margin:24px 0 36px;max-width:34em}
+    .cta{display:flex;flex-wrap:wrap;gap:12px}
+    .forge{width:100%;height:auto}
+    .forge .src{fill:var(--card);stroke:var(--line)}
+    .forge .lbl{fill:var(--muted);font:600 13px var(--mono)}
+    .forge .path{fill:none;stroke:var(--line);stroke-width:2}
+    .forge .spark{fill:var(--ember2);filter:drop-shadow(0 0 4px var(--ember))}
+    .forge .core{fill:url(#coreGrad)}
+    .forge .out{fill:none;stroke:var(--ember2);stroke-width:4;stroke-linecap:round}
+    @media (max-width:880px){.hero-grid{grid-template-columns:1fr}.hero{padding:64px 0 48px}}
+
+    /* variants (USP) */
+    :root{--v-direct:#ff7a1a;--v-discovered:#ffb347;--v-guessed:#ffd166;--v-html:#ff5a5f;--v-sitemap:#f59ac0}
+    @media (prefers-color-scheme: light){:root{--v-direct:#e25d00;--v-discovered:#d98200;--v-guessed:#b98900;--v-html:#d93a3f;--v-sitemap:#c2477d}}
+    .variants{position:relative}
+    .sec-head .eyebrow{color:var(--ember);font-size:.8rem;margin-bottom:14px}
+    .variants-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:40px;align-items:start}
+    .vtabs{list-style:none;padding:0}
+    .vtab button{all:unset;box-sizing:border-box;position:relative;overflow:hidden;display:grid;grid-template-columns:48px 1fr;gap:16px;width:100%;padding:18px;border-radius:14px;cursor:pointer;border:1px solid transparent;transition:background .25s,border-color .25s,box-shadow .25s}
+    .vtab button:hover{background:color-mix(in srgb,var(--card) 60%,transparent)}
+    .vtab button[aria-selected="true"]{background:var(--card);border-color:color-mix(in srgb,var(--v) 55%,var(--line));box-shadow:0 12px 40px color-mix(in srgb,var(--v) 18%,transparent)}
+    .vtab button:focus-visible{outline:2px solid var(--v)}
+    .vnum{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:var(--v);border:1px solid var(--line);background:color-mix(in srgb,var(--v) 10%,transparent);transition:all .25s}
+    .vnum svg{width:22px;height:22px}
+    [aria-selected="true"] .vnum{background:var(--v);color:#1a0d00;border-color:transparent;box-shadow:0 0 24px color-mix(in srgb,var(--v) 55%,transparent)}
+    .vname{display:block;font-weight:700;font-size:1.08rem}
+    .vname small{font:600 .75rem var(--mono);color:var(--v);margin-left:6px;letter-spacing:.02em}
+    .vdesc{display:block;color:var(--muted);font-size:.94rem;margin-top:2px}
+    .vbar{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--v)}
+    .vtab .run .vbar{animation:vbar var(--vdur,5.5s) linear forwards}
+    @keyframes vbar{to{width:100%}}
+    .vfall{font:12px var(--mono);color:var(--muted);opacity:.7;padding:4px 0 4px 41px;position:relative}
+    .vfall::before{content:"";position:absolute;left:41px;top:-6px;bottom:-6px;border-left:1px dashed var(--line);transform:translateX(-10px)}
+    .vconsole{position:sticky;top:96px;background:#0a0908;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+    .vhead{display:flex;align-items:center;gap:6px;padding:12px 16px;border-bottom:1px solid #221c17;font:12px var(--mono);color:#7d6f62}
+    .vhead i{width:11px;height:11px;border-radius:50%;background:#3a302a}
+    .vhead span{margin-left:auto}
+    .vpanel{padding:24px 24px 8px;min-height:340px;font:14px/1.7 var(--mono);color:#e9dfd4}
+    .vin{word-break:break-all}
+    .vk{color:#7d6f62;margin-right:4px}
+    .vurl{color:#fff}
+    .caret{display:inline-block;width:8px;height:1.1em;vertical-align:-3px;background:var(--v);margin-left:2px;animation:blink 1s steps(1) infinite}
+    @keyframes blink{50%{opacity:0}}
+    .vstat{margin:14px 0 12px;color:#bcae9f;font-family:var(--font);font-size:.95rem}
+    .pill{display:inline-block;font:700 .75rem var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:3px 10px;border-radius:999px;background:var(--v);color:#1a0d00;margin-right:8px;box-shadow:0 0 18px color-mix(in srgb,var(--v) 50%,transparent)}
+    .vjson{font:inherit;overflow-x:auto;padding:0}
+    .jc{color:#7d6f62;font-style:italic}.jk{color:#c9b8a6}.js{color:#9fd49f}.jn{color:#ffb347}.jv{color:var(--v);font-weight:700}
+    .js-on .vpanel .vstat,.js-on .vpanel .vjson{opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+    .js-on .vpanel.done .vstat{opacity:1;transform:none}
+    .js-on .vpanel.done .vjson{opacity:1;transform:none;transition-delay:.12s}
+    .vtrack{display:flex;gap:6px;padding:14px 24px 20px;border-top:1px solid #221c17}
+    .vtrack span{flex:1;text-align:center;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:#6b5f53;padding:6px 0;border-radius:8px;border:1px solid #221c17;transition:all .25s}
+    .vtrack span.on{color:#1a0d00;background:var(--v);border-color:transparent}
+    .vtrack span.tried{color:#8a7b6d;text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--v) 60%,transparent)}
+    @media (max-width:880px){.variants-grid{grid-template-columns:1fr;gap:24px}.vconsole{position:relative;top:0;order:-1}.vpanel{min-height:250px}}
+    @media (max-width:480px){.vpanel{padding:20px 16px 8px;font-size:13px}.vtrack{padding:12px 16px 16px}.vtrack span{font-size:9.5px}}
+
+    code{font-family:var(--mono);font-size:.9em;padding:.1em .35em;border-radius:5px;background:color-mix(in srgb,var(--ember) 10%,transparent)}
+    pre code{padding:0;background:none;font-size:inherit;border-radius:0}
+    .terminal .bar{align-items:center}.terminal .bar span{margin-left:auto;font:12px var(--mono);color:#7d6f62}
+    .host-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:40px;align-items:start}
+    .host-grid .terminal{margin-top:0;max-width:none}
+    .host-h{font-size:.8rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 14px}
+    .checks{list-style:none;padding:0;margin-bottom:32px;display:grid;gap:12px}
+    .checks li{position:relative;padding:14px 16px 14px 48px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+    .checks li::before{content:"";position:absolute;left:16px;top:17px;width:18px;height:18px;border-radius:50%;background:var(--ember) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a0d00' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/12px no-repeat}
+    .notes{list-style:none;padding:0;display:grid;gap:14px;color:var(--muted);font-size:.95rem}
+    .notes span{display:block;color:var(--fg);font-weight:600;font-size:.92rem;margin-bottom:2px}
+    @media (max-width:880px){.host-grid{grid-template-columns:1fr}}
+
+    /* sections */
+    section{padding:88px 0}
+    .sec-head{max-width:640px;margin-bottom:48px}
+    h2{font-size:clamp(1.8rem,3.5vw,2.6rem);letter-spacing:-.025em;line-height:1.15;margin-bottom:14px}
+    .sec-head p{color:var(--muted);font-size:1.08rem}
+    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px;transition:border-color .2s,transform .2s}
+    .card:hover{border-color:color-mix(in srgb,var(--ember) 50%,var(--line));transform:translateY(-3px)}
+    .icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--ember) 14%,transparent);color:var(--ember);margin-bottom:18px}
+    .icon svg{width:22px;height:22px}
+    h3{font-size:1.12rem;margin-bottom:8px;letter-spacing:-.01em}
+    .card p{color:var(--muted);font-size:.97rem}
+    @media (max-width:880px){.features{grid-template-columns:1fr 1fr}}
+    @media (max-width:560px){.features{grid-template-columns:1fr}}
+
+    .alt{background:var(--bg2);border-block:1px solid var(--line)}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;counter-reset:s;list-style:none;padding:0}
+    .steps li{position:relative;padding-top:56px}
+    .steps li::before{counter-increment:s;content:"0" counter(s);position:absolute;top:0;left:0;font:800 2.2rem var(--font);color:transparent;-webkit-text-stroke:1.5px var(--ember);letter-spacing:-.03em}
+    .steps p{color:var(--muted)}
+    @media (max-width:760px){.steps{grid-template-columns:1fr}}
+
+    .terminal{margin-top:56px;background:#0a0908;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;max-width:720px}
+    .terminal .bar{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid #221c17}
+    .terminal .bar i{width:11px;height:11px;border-radius:50%;background:#3a302a}
+    .terminal pre{padding:20px;overflow-x:auto;font:14px/1.7 var(--mono);color:#e9dfd4}
+    .terminal .p{color:#ff9a4a;user-select:none}
+    .terminal .c{color:#7d6f62}
+
+    .faq{max-width:780px}
+    details{border-bottom:1px solid var(--line);padding:20px 0}
+    summary{cursor:pointer;font-weight:600;font-size:1.08rem;list-style:none;display:flex;justify-content:space-between;gap:16px}
+    summary::-webkit-details-marker{display:none}
+    summary::after{content:"+";color:var(--ember);font-size:1.4rem;line-height:1;transition:transform .2s}
+    details[open] summary::after{transform:rotate(45deg)}
+    details p{color:var(--muted);margin-top:10px}
+
+    .final{text-align:center}
+    .final .card{padding:64px 24px;background:radial-gradient(ellipse at top,var(--glow),transparent 70%),var(--card)}
+    .final p{max-width:520px;margin:0 auto 32px;color:var(--muted)}
+    .final .cta{justify-content:center}
+
+    footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:.9rem}
+    footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    footer a{text-decoration:none}footer a:hover{color:var(--ember)}
+
+    :focus-visible{outline:2px solid var(--ember);outline-offset:3px;border-radius:6px}
+    @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.forge animateMotion{display:none}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header>
+    <nav class="wrap nav" aria-label="Main">
+      <a class="brand" href="./" aria-label="Feedforge home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ffb347"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#lg)"/><circle cx="10" cy="22" r="2.6" fill="#1a0d00"/><path d="M8 14a10 10 0 0 1 10 10M8 8a16 16 0 0 1 16 16" stroke="#1a0d00" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+        Feedforge
+      </a>
+      <ul>
+        <li><a href="#variants">Variants</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#self-host">Self-host</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a class="btn btn-ghost" href="https://github.com/kreativ-anders/feedforge" rel="noopener">GitHub</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">Any URL. One feed.</p>
+          <h1 id="hero-title">Forge every feed <span class="hot">into one.</span></h1>
+          <p class="lead">Feedforge is a centralized RSS feed extractor for local RSS handling. Throw any URL at it – a native feed, a blog, a news page without RSS – and get clean, normalized entries back from your own server. No cloud, no tracking, no noise.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="https://github.com/kreativ-anders/feedforge" rel="noopener">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+              View on GitHub
+            </a>
+            <a class="btn btn-ghost" href="#variants">See the five variants</a>
+          </div>
+        </div>
+
+        <svg class="forge" viewBox="0 0 520 400" role="img" aria-labelledby="forge-t">
+          <title id="forge-t">A native feed, a discovered feed, a sitemap and a plain HTML page flow into Feedforge and come out as one clean local feed</title>
+          <defs>
+            <radialGradient id="coreGrad"><stop offset="0" stop-color="#ffe0b0"/><stop offset=".45" stop-color="#ffb347"/><stop offset="1" stop-color="#ff7a1a"/></radialGradient>
+            <linearGradient id="outGrad" x1="0" x2="1"><stop offset="0" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
+            <filter id="blur" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="18"/></filter>
+          </defs>
+          <path id="p1" class="path" d="M120 50 C220 50 220 200 300 200"/>
+          <path id="p2" class="path" d="M120 125 C210 125 220 200 300 200"/>
+          <path id="p3" class="path" d="M120 200 L300 200"/>
+          <path id="p4" class="path" d="M120 275 C210 275 220 200 300 200"/>
+          <path id="p5" class="path" d="M120 350 C220 350 220 200 300 200"/>
+          <g>
+            <rect class="src" x="10" y="30" width="110" height="40" rx="10"/><text class="lbl" x="28" y="55">feed.xml</text>
+            <rect class="src" x="10" y="105" width="110" height="40" rx="10"/><text class="lbl" x="28" y="130">&lt;link rel&gt;</text>
+            <rect class="src" x="10" y="180" width="110" height="40" rx="10"/><text class="lbl" x="28" y="205">/feed ?</text>
+            <rect class="src" x="10" y="255" width="110" height="40" rx="10"/><text class="lbl" x="28" y="280">page.html</text>
+            <rect class="src" x="10" y="330" width="110" height="40" rx="10"/><text class="lbl" x="28" y="355">sitemap.xml</text>
+          </g>
+          <circle cx="330" cy="200" r="70" fill="#ff7a1a" opacity=".45" filter="url(#blur)"/>
+          <circle class="core" cx="330" cy="200" r="42"/>
+          <path d="M316 214a2.5 2.5 0 1 1 0 .1M314 198a18 18 0 0 1 18 18M314 186a30 30 0 0 1 30 30" stroke="#3a1a00" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path class="out" d="M372 200 L498 200"/>
+          <path d="M490 190 L505 200 L490 210" fill="none" stroke="#ffb347" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle class="spark" r="4"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#p1"/></animateMotion></circle>
+          <circle class="spark" r="4"><animateMotion dur="2.1s" repeatCount="indefinite"><mpath href="#p2"/></animateMotion></circle>
+          <circle class="spark" r="4"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#p3"/></animateMotion></circle>
+          <circle class="spark" r="4"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#p4"/></animateMotion></circle>
+          <circle class="spark" r="4"><animateMotion dur="2.5s" repeatCount="indefinite"><mpath href="#p5"/></animateMotion></circle>
+        </svg>
+      </div>
+    </section>
+
+    <section id="variants" class="variants" aria-labelledby="variants-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="eyebrow">The Feedforge difference</p>
+          <h2 id="variants-title">Five ways to forge a feed</h2>
+          <p>Most readers give up when a site has no RSS link. Feedforge doesn't. It tries the most precise variant first, falls back step by step until it finds your entries – and tells you exactly how in <code>source.strategy</code>.</p>
+        </div>
+        <div class="variants-grid">
+          <ol class="vtabs" role="tablist" aria-label="Resolution variants" aria-orientation="vertical">
+            <li class="vtab" style="--v:var(--v-direct)">
+              <button role="tab" id="vt-direct" aria-controls="vp-direct" aria-selected="true" tabindex="0">
+                <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></span>
+                <span class="vtxt"><span class="vname">Direct <small>RSS · RDF · Atom</small></span><span class="vdesc">The URL already is a feed. Parsed as-is – the fastest and most precise path.</span></span>
+                <span class="vbar" aria-hidden="true"></span>
+              </button>
+            </li>
+            <li class="vfall" aria-hidden="true">nothing? fall back ↓</li>
+            <li class="vtab" style="--v:var(--v-discovered)">
+              <button role="tab" id="vt-discovered" aria-controls="vp-discovered" aria-selected="false" tabindex="-1">
+                <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+                <span class="vtxt"><span class="vname">Discovered <small>&lt;link rel&gt;</small></span><span class="vdesc">The page declares its feed – via &lt;link rel="alternate"&gt; or a visible …/rss.xml link. Feedforge follows it.</span></span>
+                <span class="vbar" aria-hidden="true"></span>
+              </button>
+            </li>
+            <li class="vfall" aria-hidden="true">nothing? fall back ↓</li>
+            <li class="vtab" style="--v:var(--v-guessed)">
+              <button role="tab" id="vt-guessed" aria-controls="vp-guessed" aria-selected="false" tabindex="-1">
+                <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".6"/><circle cx="12" cy="12" r="9"/></svg></span>
+                <span class="vtxt"><span class="vname">Guessed <small>common paths</small></span><span class="vdesc">Nothing declared? Feedforge probes the usual suspects: /feed, /rss.xml, /feed.xml, /atom.xml, /index.xml …</span></span>
+                <span class="vbar" aria-hidden="true"></span>
+              </button>
+            </li>
+            <li class="vfall" aria-hidden="true">nothing? fall back ↓</li>
+            <li class="vtab" style="--v:var(--v-html)">
+              <button role="tab" id="vt-html" aria-controls="vp-html" aria-selected="false" tabindex="-1">
+                <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6M14 4l-4 16"/></svg></span>
+                <span class="vtxt"><span class="vname">HTML <small>JSON-LD · article · links</small></span><span class="vdesc">No feed at all. Entries are extracted from JSON-LD, &lt;article&gt; elements or links below the requested path.</span></span>
+                <span class="vbar" aria-hidden="true"></span>
+              </button>
+            </li>
+            <li class="vfall" aria-hidden="true">nothing? fall back ↓</li>
+            <li class="vtab" style="--v:var(--v-sitemap)">
+              <button role="tab" id="vt-sitemap" aria-controls="vp-sitemap" aria-selected="false" tabindex="-1">
+                <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v8M6.5 12h11v4"/></svg></span>
+                <span class="vtxt"><span class="vname">Sitemap <small>robots.txt → sitemap.xml</small></span><span class="vdesc">The last resort: the sitemap, found via robots.txt, filtered to the requested path.</span></span>
+                <span class="vbar" aria-hidden="true"></span>
+              </button>
+            </li>
+          </ol>
+          <div class="vconsole">
+            <div class="vhead" aria-hidden="true"><i></i><i></i><i></i><span>feedforge · response</span></div>
+          <div class="vpanel" role="tabpanel" id="vp-direct" aria-labelledby="vt-direct" style="--v:var(--v-direct)">
+            <p class="vin"><span class="vk">GET</span> /api/?url=<span class="vurl" data-url="https://example.com/feed.xml">https://example.com/feed.xml</span><span class="caret" aria-hidden="true"></span></p>
+            <p class="vstat"><span class="pill">direct</span> URL is a native feed</p>
+<pre class="vjson"><code>{
+  <span class="jk">"source"</span>: {
+    <span class="jk">"strategy"</span>: <span class="jv">"direct"</span>,
+    <span class="jk">"type"</span>: <span class="js">"rss"</span>,
+    <span class="jk">"feedUrl"</span>: <span class="js">"https://example.com/feed.xml"</span>
+  },
+  <span class="jk">"entries"</span>: [ <span class="jc">… 30 normalized entries</span> ],
+  <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">30</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
+}</code></pre>
+          </div>
+          <div class="vpanel" role="tabpanel" id="vp-discovered" aria-labelledby="vt-discovered" style="--v:var(--v-discovered)" hidden>
+            <p class="vin"><span class="vk">GET</span> /api/?url=<span class="vurl" data-url="https://example.com/blog">https://example.com/blog</span><span class="caret" aria-hidden="true"></span></p>
+            <p class="vstat"><span class="pill">discovered</span> Feed declared in the HTML</p>
+<pre class="vjson"><code>{
+  <span class="jk">"source"</span>: {
+    <span class="jk">"strategy"</span>: <span class="jv">"discovered"</span>,
+    <span class="jk">"type"</span>: <span class="js">"atom"</span>,
+    <span class="jk">"feedUrl"</span>: <span class="js">"https://example.com/blog/atom.xml"</span>
+  },
+  <span class="jk">"entries"</span>: [ <span class="jc">… 24 normalized entries</span> ],
+  <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">24</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
+}</code></pre>
+          </div>
+          <div class="vpanel" role="tabpanel" id="vp-guessed" aria-labelledby="vt-guessed" style="--v:var(--v-guessed)" hidden>
+            <p class="vin"><span class="vk">GET</span> /api/?url=<span class="vurl" data-url="https://example.com/news">https://example.com/news</span><span class="caret" aria-hidden="true"></span></p>
+            <p class="vstat"><span class="pill">guessed</span> Feed found at a common path</p>
+<pre class="vjson"><code>{
+  <span class="jk">"source"</span>: {
+    <span class="jk">"strategy"</span>: <span class="jv">"guessed"</span>,
+    <span class="jk">"type"</span>: <span class="js">"rss"</span>,
+    <span class="jk">"feedUrl"</span>: <span class="js">"https://example.com/news/feed"</span>
+  },
+  <span class="jk">"entries"</span>: [ <span class="jc">… 20 normalized entries</span> ],
+  <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">20</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
+}</code></pre>
+          </div>
+          <div class="vpanel" role="tabpanel" id="vp-html" aria-labelledby="vt-html" style="--v:var(--v-html)" hidden>
+            <p class="vin"><span class="vk">GET</span> /api/?url=<span class="vurl" data-url="https://example.com/press">https://example.com/press</span><span class="caret" aria-hidden="true"></span></p>
+            <p class="vstat"><span class="pill">html-article</span> Entries extracted from the page</p>
+<pre class="vjson"><code>{
+  <span class="jk">"source"</span>: {
+    <span class="jk">"strategy"</span>: <span class="jv">"html-article"</span>,
+    <span class="jk">"type"</span>: <span class="js">"html"</span>,
+    <span class="jk">"feedUrl"</span>: <span class="jn">null</span>
+  },
+  <span class="jk">"entries"</span>: [ <span class="jc">… 12 normalized entries</span> ],
+  <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">12</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
+}</code></pre>
+          </div>
+          <div class="vpanel" role="tabpanel" id="vp-sitemap" aria-labelledby="vt-sitemap" style="--v:var(--v-sitemap)" hidden>
+            <p class="vin"><span class="vk">GET</span> /api/?url=<span class="vurl" data-url="https://example.com/insights">https://example.com/insights</span><span class="caret" aria-hidden="true"></span></p>
+            <p class="vstat"><span class="pill">sitemap</span> Entries built from the sitemap</p>
+<pre class="vjson"><code>{
+  <span class="jk">"source"</span>: {
+    <span class="jk">"strategy"</span>: <span class="jv">"sitemap"</span>,
+    <span class="jk">"type"</span>: <span class="js">"sitemap"</span>,
+    <span class="jk">"feedUrl"</span>: <span class="jn">null</span>
+  },
+  <span class="jk">"entries"</span>: [ <span class="jc">… 50 normalized entries</span> ],
+  <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">50</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
+}</code></pre>
+          </div>
+            <div class="vtrack" aria-hidden="true"><span style="--v:var(--v-direct)">direct</span><span style="--v:var(--v-discovered)">discovered</span><span style="--v:var(--v-guessed)">guessed</span><span style="--v:var(--v-html)">html</span><span style="--v:var(--v-sitemap)">sitemap</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" aria-labelledby="features-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 id="features-title">One place for every feed</h2>
+          <p>Stop juggling tabs, apps and newsletters. Feedforge turns scattered sources into one tidy, predictable stream you control.</p>
+        </div>
+        <div class="features">
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></div>
+            <h3>Feed or no feed</h3>
+            <p>Native, discovered or guessed feeds, HTML pages or sitemaps – Feedforge always finds a way to your entries.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+            <h3>One clean JSON shape</h3>
+            <p>Every source becomes the same normalized entries with stable SHA-256 IDs – build any reader on top.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+            <h3>Cached &amp; resilient</h3>
+            <p>Shared per-URL cache, stale copies when a source is down and lock-protected refreshes – polite to every site.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg></div>
+            <h3>Safe by default</h3>
+            <p>Only http/https, every redirect re-validated, private IPs blocked, hard size and time limits, no external XML entities.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
+            <h3>Stateless &amp; private</h3>
+            <p>No account, no analytics. The server only caches sources – read and saved state stays in your client.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+            <h3>Plain PHP, no database</h3>
+            <p>A handful of PHP files and a file cache. No framework, no build step, no background workers.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="alt" aria-labelledby="how-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 id="how-title">How it works</h2>
+          <p>Three steps from feed chaos to a calm reading flow.</p>
+        </div>
+        <ol class="steps">
+          <li><h3>Send any URL</h3><p>A feed, a blog, a news page – call <code>/api/?url=…</code> with whatever you follow. It does not have to be an RSS link.</p></li>
+          <li><h3>Feedforge picks the variant</h3><p>Direct, discovered, guessed, HTML or sitemap – the most precise strategy wins, the result is cached per source.</p></li>
+          <li><h3>Use clean JSON</h3><p>Normalized entries with stable IDs, newest first – ready for your own reader on phone or desktop.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="self-host" aria-labelledby="host-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <p class="eyebrow">Self-host</p>
+          <h2 id="host-title">Your server. Your feeds. Five minutes.</h2>
+          <p>Feedforge is a handful of PHP files – no database, no build step, no container required. If your server runs PHP, it runs Feedforge.</p>
+        </div>
+        <div class="host-grid">
+          <div>
+            <h3 class="host-h">What you need</h3>
+            <ul class="checks">
+              <li><strong>PHP 8.1+</strong> with <code>dom</code>, <code>libxml</code>, <code>mbstring</code> – <code>curl</code> recommended</li>
+              <li><strong>A web server</strong> – nginx configs are included, any server that routes <code>/api/</code> to PHP works</li>
+              <li><strong>A writable cache</strong> – <code>var/cache/</code> must be writable by PHP</li>
+            </ul>
+            <h3 class="host-h">Good to know</h3>
+            <ul class="notes">
+              <li><span>Configs</span><code>nginx.conf.example</code> for a classic server with HTTPS, <code>wharf.conf.example</code> as template. Both expose only the landing page and <code>/api/</code> – <code>src/</code>, <code>var/</code> and dotfiles stay blocked.</li>
+              <li><span>Tuning</span>Cache lifetimes live in <code>src/config.php</code>: 24 h cache, 7 d stale fallback, 15 min minimum for <code>refresh=1</code>.</li>
+              <li><span>Home network only</span>Add <code>allow 192.168.0.0/16; deny all;</code> to the server block and Feedforge answers inside your LAN only.</li>
+              <li><span>Windows</span>PHP 8.2+ uses the system certificate store for HTTPS automatically.</li>
+            </ul>
+          </div>
+          <div class="terminal" role="figure" aria-label="Self-hosting Feedforge with nginx">
+            <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>nginx · Debian/Ubuntu</span></div>
+<pre><code><span class="c"># 1 · get the code</span>
+<span class="p">$ </span>git clone https://github.com/kreativ-anders/feedforge.git \
+    /var/www/feedforge
+
+<span class="c"># 2 · let PHP write the cache</span>
+<span class="p">$ </span>sudo chown -R www-data: /var/www/feedforge/var/cache
+
+<span class="c"># 3 · enable the site (edit server_name, certs, PHP socket)</span>
+<span class="p">$ </span>sudo cp /var/www/feedforge/nginx.conf.example \
+    /etc/nginx/sites-available/feedforge.conf
+<span class="p">$ </span>sudo ln -s /etc/nginx/sites-available/feedforge.conf \
+    /etc/nginx/sites-enabled/
+<span class="p">$ </span>sudo nginx -t &amp;&amp; sudo systemctl reload nginx
+
+<span class="c"># 4 · forge your first feed</span>
+<span class="p">$ </span>curl "https://feedforge.example.com/api/?url=example.com"</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" aria-labelledby="faq-title">
+      <div class="wrap faq">
+        <div class="sec-head"><h2 id="faq-title">Frequently asked questions</h2></div>
+        <details open><summary>What is Feedforge?</summary><p>Feedforge is a self-hosted, centralized feed extractor. It turns any website or feed URL into normalized JSON entries with stable IDs – whether the site offers RSS/Atom or not.</p></details>
+        <details><summary>What if a website has no RSS feed?</summary><p>Feedforge does not need one. It probes common feed paths, extracts entries from the HTML (JSON-LD, article elements or links below the requested path) and finally falls back to the site's sitemap.</p></details>
+        <details><summary>In which order are the variants tried?</summary><p>From most to least precise: direct (the URL is a feed), discovered (declared in the HTML), guessed (common feed paths), HTML extraction and sitemap. The field <code>source.strategy</code> in the response tells you which one was used.</p></details>
+        <details><summary>Which formats are supported?</summary><p>RSS 2.0, RSS 1.0 (RDF) and Atom feeds, HTML pages and XML sitemaps. The output is always the same JSON shape.</p></details>
+        <details><summary>How do I host Feedforge myself?</summary><p>You need PHP 8.1+ with dom, libxml and mbstring (curl recommended) and a web server. Clone the repository, make var/cache writable for PHP and use the included nginx config. No database, no build step.</p></details>
+        <details><summary>Where does my reading state live?</summary><p>In your client. The Feedforge server is stateless and only caches per source URL; read and saved states never touch the server.</p></details>
+        <details><summary>Where can I get Feedforge?</summary><p>The source code is available on <a href="https://github.com/kreativ-anders/feedforge" rel="noopener">GitHub</a>.</p></details>
+      </div>
+    </section>
+
+    <section class="final" aria-labelledby="final-title">
+      <div class="wrap">
+        <div class="card">
+          <h2 id="final-title">Light the forge.</h2>
+          <p>Clone it, point your web server at it and take back control of what you read.</p>
+          <div class="cta"><a class="btn btn-primary" href="https://github.com/kreativ-anders/feedforge" rel="noopener">Get Feedforge on GitHub</a><a class="btn btn-ghost" href="#self-host">Self-host guide</a></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>© <span id="y">2026</span> Feedforge · a project by <a href="https://kreativ-anders.de" rel="noopener">kreativ-anders</a></span>
+      <a href="https://github.com/kreativ-anders/feedforge" rel="noopener">Source on GitHub</a>
+    </div>
+  </footer>
+  <script>
+  (function(){
+    document.documentElement.classList.add('js-on');
+    var tabs=[].slice.call(document.querySelectorAll('.vtab [role="tab"]'));
+    if(!tabs.length) return;
+    var panels=tabs.map(function(t){return document.getElementById(t.getAttribute('aria-controls'))});
+    var track=[].slice.call(document.querySelectorAll('.vtrack span'));
+    var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var auto=!reduce, paused=false, cur=0, timer=null, DUR=5500;
+    function show(n,focus){
+      cur=n;
+      tabs.forEach(function(t,k){var on=k===n;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;t.classList.remove('run');panels[k].hidden=!on;});
+      track.forEach(function(s,k){s.className=k===n?'on':(k<n?'tried':'');});
+      if(focus) tabs[n].focus();
+      var p=panels[n],u=p.querySelector('.vurl'),full=u.getAttribute('data-url');
+      clearInterval(p._t);
+      if(reduce){u.textContent=full;p.classList.add('done');}
+      else{p.classList.remove('done');u.textContent='';var c=0;p._t=setInterval(function(){u.textContent=full.slice(0,++c);if(c>=full.length){clearInterval(p._t);setTimeout(function(){p.classList.add('done')},180);}},26);}
+      if(auto&&!paused){void tabs[n].offsetWidth;tabs[n].classList.add('run');}
+      schedule();
+    }
+    function schedule(){clearTimeout(timer);if(auto&&!paused)timer=setTimeout(function(){show((cur+1)%tabs.length)},DUR);}
+    tabs.forEach(function(t,k){
+      t.addEventListener('click',function(){auto=false;show(k);});
+      t.addEventListener('keydown',function(e){
+        var m={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];
+        if(m){e.preventDefault();auto=false;show((k+m+tabs.length)%tabs.length,true);}
+        else if(e.key==='Home'){e.preventDefault();auto=false;show(0,true);}
+        else if(e.key==='End'){e.preventDefault();auto=false;show(tabs.length-1,true);}
+      });
+    });
+    var sec=document.getElementById('variants');
+    ['mouseenter','focusin'].forEach(function(ev){sec.addEventListener(ev,function(){paused=true;clearTimeout(timer);tabs[cur].classList.remove('run');});});
+    ['mouseleave','focusout'].forEach(function(ev){sec.addEventListener(ev,function(e){if(e.relatedTarget&&sec.contains(e.relatedTarget))return;paused=false;if(auto){tabs[cur].classList.add('run');schedule();}});});
+    if('IntersectionObserver' in window){
+      var started=false;new IntersectionObserver(function(es){if(es[0].isIntersecting&&!started){started=true;show(0);}},{threshold:.35}).observe(sec);
+    } else show(0);
+  })();
+  </script>
+  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+</body>
+</html>
