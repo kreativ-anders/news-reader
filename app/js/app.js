@@ -1,23 +1,29 @@
-// Flint – a calm, local-first reader for Feedforge.
+// News – a calm, local-first feed reader (News Reader project).
 //
 // Item flow:   new ──► reading ("read now") ──► done
 //               │  └─► later ──► reading ──► done
 //               └────► dismissed ("not interested")
 //
 // Feeds and item states are records {kind, id, data, updatedAt} in IndexedDB,
-// synced last-write-wins via Feedforge /api/sync. Entries themselves are never
-// synced – every device fetches them from Feedforge.
+// synced end-to-end encrypted via <server>/api/sync (last write wins). Entries
+// themselves are never synced – every device fetches them from the Collector.
+//
+// UI strings: app/i18n/<lang>.json (English is the fallback per key), see js/i18n.js.
 
 import * as db from './db.js';
-import { Sync, serverBase, defaultServer, isValidKey } from './sync.js';
+import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable } from './sync.js';
+import { DB_NAME } from './db.js';
 import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml } from './feeds.js';
+import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.4.0';
 
 const PAGE = 150;
-const AUTO_REFRESH_MS = 30 * 60 * 1000;   // refetch feeds when older than 30 min (Feedforge caches 24 h)
+const AUTO_REFRESH_MS = 30 * 60 * 1000;   // refetch feeds when older than 30 min (the Collector caches 24 h)
 const INITIAL_WINDOW_MS = 14 * 864e5;      // a new subscription shows entries of the last 14 days
 const KEEP_UNSEEN_MS = 30 * 864e5;         // unseen entries that left the feed are kept 30 days
+const SWIPE_DEFAULT = { right: 'later', left: 'dismissed' };
+const SWIPE_CHOICES = ['later', 'dismissed', 'done', 'reading', 'none'];
 
 const S = {
   view: 'inbox',
@@ -31,12 +37,16 @@ const S = {
   kb: -1,
   lastRefresh: 0,
   share: '',          // URL received via share sheet / bookmarklet, prefilled in "Follow"
+  swipe: { ...SWIPE_DEFAULT }, // per device (IndexedDB kv), not synced
 };
 
+let t = (k) => k;     // replaced by loadI18n() at boot
 const sync = new Sync();
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const viewEl = $('#view');
+
+applyTheme();
 
 // ------------------------------------------------------------ helpers
 
@@ -54,23 +64,23 @@ const ICON = {
 };
 
 function strategyVar(strategy) {
-  if (!strategy) return 'var(--ember)';
+  if (!strategy) return 'var(--brand)';
   const k = strategy.startsWith('html') ? 'html' : strategy;
-  return ['direct', 'discovered', 'guessed', 'html', 'sitemap'].includes(k) ? `var(--v-${k})` : 'var(--ember)';
+  return ['direct', 'discovered', 'guessed', 'html', 'sitemap'].includes(k) ? `var(--v-${k})` : 'var(--brand)';
 }
 
-const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'short' });
+let rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'short' });
 function ago(ts) {
   if (!ts) return '';
   const s = (ts - Date.now()) / 1000;
   const a = Math.abs(s);
-  if (a < 60) return 'just now';
+  if (a < 60) return t('time.just_now');
   if (a < 3600) return rtf.format(Math.round(s / 60), 'minute');
   if (a < 86400) return rtf.format(Math.round(s / 3600), 'hour');
   if (a < 7 * 86400) return rtf.format(Math.round(s / 86400), 'day');
-  return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: a > 300 * 86400 ? 'numeric' : undefined });
+  return new Date(ts).toLocaleDateString(t.lang, { day: 'numeric', month: 'short', year: a > 300 * 86400 ? 'numeric' : undefined });
 }
-const clock = (ts) => new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+const clock = (ts) => new Date(ts).toLocaleTimeString(t.lang, { hour: '2-digit', minute: '2-digit' });
 
 const entryTime = (e) => Date.parse(e.publishedAt || '') || e.firstSeen || 0;
 const liveFeeds = () => [...S.feeds.values()].filter((f) => !f.data.d).sort((a, b) => (a.data.title || a.data.url).localeCompare(b.data.title || b.data.url));
@@ -89,6 +99,7 @@ async function loadAll() {
   for (const e of await db.getAll('entries')) S.entries.set(e.id, e);
   S.lastRefresh = await db.kvGet('lastRefresh', 0);
   Object.entries(await db.kvGet('fetchState', {})).forEach(([k, v]) => S.fetch.set(k, v));
+  S.swipe = { ...SWIPE_DEFAULT, ...(await db.kvGet('swipe', {})) };
 }
 
 /** Local write → memory, IndexedDB + outbox, then sync. */
@@ -103,15 +114,13 @@ function itemRecord(id, s) {
   const prev = S.items.get(id)?.data || {};
   const data = { s };
   // snapshot so "Later" & "Done" stay complete after the entry left the feed
-  const t = e?.title ?? prev.t, u = e?.url ?? prev.u, f = e?.feedId ?? prev.f, p = e?.publishedAt ?? prev.p;
-  if (t) data.t = t;
+  const title = e?.title ?? prev.t, u = e?.url ?? prev.u, f = e?.feedId ?? prev.f, p = e?.publishedAt ?? prev.p;
+  if (title) data.t = title;
   if (u) data.u = u;
   if (f) data.f = f;
   if (p) data.p = p;
   return { kind: 'item', id, data, updatedAt: Date.now() };
 }
-
-const LABEL = { reading: 'Moved to Read now', later: 'Saved for later', done: 'Marked as done', dismissed: 'Not interested', new: 'Back in inbox' };
 
 async function setState(ids, s, { toast = true, animate = true } = {}) {
   ids = [].concat(ids);
@@ -120,7 +129,8 @@ async function setState(ids, s, { toast = true, animate = true } = {}) {
   await commit(ids.map((id) => itemRecord(id, s)));
   render();
   if (toast) {
-    showToast(ids.length > 1 ? `${ids.length} × ${LABEL[s].toLowerCase()}` : LABEL[s], async () => {
+    const what = t(`toast.${s}`);
+    showToast(ids.length > 1 ? t('toast.many', { n: ids.length, what }) : what, async () => {
       const now = Date.now();
       await commit(ids.map((id, i) => {
         const prev = before[i];
@@ -143,10 +153,12 @@ function openUrl(url) {
   if (url) window.open(url, '_blank', 'noopener');
 }
 
+const urlOf = (id) => S.entries.get(id)?.url || S.items.get(id)?.data?.u;
+
 // ------------------------------------------------------------ feeds
 
 async function refreshFeed(feed, force = false) {
-  const res = await fetchFeed(feed.data.url, { refresh: force });
+  const res = await fetchFeed(feed.data.url, { refresh: force, t });
   const now = Date.now();
   const existing = await db.entriesForFeed(feed.id);
   const known = new Map(existing.map((e) => [e.id, e]));
@@ -190,15 +202,15 @@ async function refreshAll(force = false) {
   $('#refreshBtn').removeAttribute('aria-busy');
   render();
   if (failed === feeds.length && results[0]?.error?.code === 'UNREACHABLE') showToast(results[0].error.message);
-  else if (failed) showToast(`${failed} feed${failed > 1 ? 's' : ''} could not be refreshed`, () => go('feeds'), 'Details');
+  else if (failed) showToast(t('toast.refresh_failed', { n: failed }), () => go('feeds'), t('toast.details'));
 }
 
 async function addFeed(input, { quiet = false, title = '' } = {}) {
   const url = normalizeUrl(input);
-  if (!url) throw new Error('Please enter a valid http(s) URL.');
+  if (!url) throw new Error(t('err.invalid_url'));
   const id = feedId(url);
-  if (S.feeds.get(id) && !S.feeds.get(id).data.d) throw new Error('You already follow this feed.');
-  const res = await fetchFeed(url);
+  if (S.feeds.get(id) && !S.feeds.get(id).data.d) throw new Error(t('err.already_following'));
+  const res = await fetchFeed(url, { t });
   const now = Date.now();
   const rec = {
     kind: 'feed', id, updatedAt: now,
@@ -242,7 +254,7 @@ function itemsIn(s) {
       return {
         id: r.id,
         url: e?.url || r.data.u,
-        title: e?.title || r.data.t || r.data.u || '(untitled)',
+        title: e?.title || r.data.t || r.data.u || t('untitled'),
         summary: e?.summary || '',
         feedId: e?.feedId || r.data.f,
         time: e ? entryTime(e) : Date.parse(r.data.p || '') || 0,
@@ -257,23 +269,29 @@ function counts() {
   return c;
 }
 
+// [target state, label key, icon, css class, keyboard key]
 const ACTIONS = {
-  inbox: [['reading', 'Read now', ICON.now, 'main', 'o'], ['later', 'Later', ICON.later, '', 'l'], ['dismissed', 'Not interested', ICON.x, 'x', 'x']],
-  reading: [['done', 'Done', ICON.done, 'main', 'd'], ['later', 'Later', ICON.later, '', 'l'], ['dismissed', 'Drop', ICON.x, 'x', 'x']],
-  later: [['reading', 'Read now', ICON.now, 'main', 'o'], ['done', 'Done', ICON.done, '', 'd'], ['dismissed', 'Remove', ICON.x, 'x', 'x']],
-  done: [['reading', 'Read again', ICON.back, '', 'o'], ['later', 'Later', ICON.later, '', 'l']],
+  inbox: [['reading', 'act.reading', ICON.now, 'main', 'o'], ['later', 'act.later', ICON.later, '', 'l'], ['dismissed', 'act.dismissed', ICON.x, 'x', 'x']],
+  reading: [['done', 'act.done', ICON.done, 'main', 'd'], ['later', 'act.later', ICON.later, '', 'l'], ['dismissed', 'act.drop', ICON.x, 'x', 'x']],
+  later: [['reading', 'act.reading', ICON.now, 'main', 'o'], ['done', 'act.done', ICON.done, '', 'd'], ['dismissed', 'act.remove', ICON.x, 'x', 'x']],
+  done: [['reading', 'act.again', ICON.back, '', 'o'], ['later', 'act.later', ICON.later, '', 'l']],
 };
-const SWIPE = { inbox: ['later', 'dismissed'], reading: ['later', 'done'], later: ['reading', 'dismissed'], done: ['later', null] };
-const SWIPE_LABEL = { later: 'Later', dismissed: 'Not interested', done: 'Done', reading: 'Read now' };
+
+/** Configured swipe actions, limited to what the current view offers: [right, left]. */
+function swipeFor(view) {
+  const allowed = (ACTIONS[view] || []).map(([s]) => s);
+  const ok = (s) => (s && s !== 'none' && allowed.includes(s) ? s : null);
+  return [ok(S.swipe.right), ok(S.swipe.left)];
+}
 
 function card(it, view) {
   const feed = S.feeds.get(it.feedId);
   const strat = S.fetch.get(it.feedId)?.strategy;
-  const [right, left] = SWIPE[view];
+  const [right, left] = swipeFor(view);
   const when = view === 'inbox' ? it.time : it.changed;
   const acts = ACTIONS[view].map(([s, label, icon, cls, key]) =>
-    `<button type="button" class="act ${cls}" data-act="${s}">${icon}<span>${label}</span><kbd>${key}</kbd></button>`).join('');
-  return `<li class="card" data-id="${esc(it.id)}" tabindex="-1"${right ? ` data-right="${SWIPE_LABEL[right]} →"` : ''}${left ? ` data-left="← ${SWIPE_LABEL[left]}"` : ''}>
+    `<button type="button" class="act ${cls}" data-act="${s}">${icon}<span>${t(label)}</span><kbd>${key}</kbd></button>`).join('');
+  return `<li class="card" data-id="${esc(it.id)}" tabindex="-1"${right ? ` data-right="${esc(t('act.' + right))} →" data-right-act="${right}"` : ''}${left ? ` data-left="← ${esc(t('act.' + left))}" data-left-act="${left}"` : ''}>
     <div class="meta"><span class="src" style="--v:${strategyVar(strat)}">${esc(feed ? feedTitle(it.feedId) : host(it.url))}</span>${when ? `<span aria-hidden="true">·</span><time datetime="${new Date(when).toISOString()}">${ago(when)}</time>` : ''}</div>
     <h3><a href="${esc(it.url || '#')}" target="_blank" rel="noopener" data-open>${esc(it.title)}</a></h3>
     ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
@@ -290,7 +308,7 @@ function render() {
     if (b.dataset.view === S.view) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
-  document.title = c.inbox ? `(${c.inbox}) Flint` : 'Flint – Feed Reader';
+  document.title = c.inbox ? `(${c.inbox}) News` : 'News';
   if (navigator.setAppBadge) navigator.setAppBadge(c.inbox).catch(() => {});
 
   const views = { inbox: renderInbox, reading: renderItems, later: renderItems, done: renderItems, feeds: renderFeeds, settings: renderSettings };
@@ -303,34 +321,30 @@ function render() {
 function renderInbox() {
   const feeds = liveFeeds();
   if (!feeds.length) {
-    viewEl.innerHTML = `<div class="vh"><div><h1>Inbox</h1></div></div>
-      <div class="empty"><strong>Light the first spark.</strong>Follow any website – with or without RSS – and Feedforge turns it into entries.<br>
-      <button class="btn btn-primary" data-view="feeds" type="button">Add your first feed</button></div>`;
+    viewEl.innerHTML = `<div class="vh"><div><h1>${t('inbox.title')}</h1></div></div>
+      <div class="empty"><strong>${t('inbox.empty_title')}</strong>${t('inbox.empty_text')}<br>
+      <button class="btn btn-primary" data-view="feeds" type="button">${t('inbox.add_first')}</button></div>`;
     return;
   }
   const all = inboxEntries();
   const list = all.slice(0, S.shown);
   const opts = feeds.map((f) => `<option value="${esc(f.id)}"${S.filter === f.id ? ' selected' : ''}>${esc(f.data.title || f.data.url)}</option>`).join('');
   viewEl.innerHTML = `<div class="vh">
-      <div><h1>Inbox</h1><p>${all.length ? `${all.length} new – decide: read now, later or not interested.` : 'Nothing new.'}</p></div>
+      <div><h1>${t('inbox.title')}</h1><p>${all.length ? t('inbox.count', { n: all.length }) : t('inbox.nothing_new')}</p></div>
       <div class="tools">
-        <select id="filter" aria-label="Filter by feed"><option value="">All feeds</option>${opts}</select>
-        ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="Mark all shown entries as not interested">Clear ${list.length < all.length ? 'shown' : 'all'}</button>` : ''}
+        <select id="filter" aria-label="${esc(t('inbox.filter'))}"><option value="">${t('inbox.all_feeds')}</option>${opts}</select>
+        ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>` : ''}
       </div></div>
-    ${list.length ? `<ol class="list">${list.map((e) => card({ ...e, time: entryTime(e) }, 'inbox')).join('')}</ol>` : `<div class="empty"><strong>Inbox zero.</strong>${S.lastRefresh ? `Last checked ${ago(S.lastRefresh)}.` : ''}<br><button class="btn btn-ghost" type="button" data-refresh>Check for new entries</button></div>`}
-    ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>Show more (${all.length - list.length})</button></div>` : ''}`;
+    ${list.length ? `<ol class="list">${list.map((e) => card({ ...e, time: entryTime(e) }, 'inbox')).join('')}</ol>` : `<div class="empty"><strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${t('inbox.check')}</button></div>`}
+    ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button></div>` : ''}`;
 }
 
 function renderItems() {
-  const meta = {
-    reading: ['Read now', 'What you are reading right now. Mark it done when you are through.', 'Nothing in progress.', 'Pick something from your inbox or your later list.'],
-    later: ['Later', 'Your reading list – synced across your devices.', 'Your reading list is empty.', 'Save entries from the inbox with “Later”.'],
-    done: ['Done', 'Finished reading. The most recent 300 are shown.', 'Nothing finished yet.', ''],
-  }[S.view];
+  const v = `views.${S.view}`;
   let list = itemsIn(S.view);
   if (S.view === 'done') list = list.slice(0, 300);
-  viewEl.innerHTML = `<div class="vh"><div><h1>${meta[0]}</h1><p>${meta[1]}</p></div></div>
-    ${list.length ? `<ol class="list">${list.map((it) => card(it, S.view)).join('')}</ol>` : `<div class="empty"><strong>${meta[2]}</strong>${meta[3]}</div>`}`;
+  viewEl.innerHTML = `<div class="vh"><div><h1>${t(v + '.title')}</h1><p>${t(v + '.text')}</p></div></div>
+    ${list.length ? `<ol class="list">${list.map((it) => card(it, S.view)).join('')}</ol>` : `<div class="empty"><strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}`;
 }
 
 function renderFeeds() {
@@ -340,37 +354,38 @@ function renderFeeds() {
   const rows = feeds.map((f) => {
     const st = S.fetch.get(f.id) || {};
     const unread = [...S.entries.values()].filter((e) => e.feedId === f.id && stateOf(e.id) === 'new' && entryTime(e) >= (f.data.since || 0)).length;
+    const name = esc(f.data.title);
     return `<div class="feedrow" data-feed="${esc(f.id)}">
       <div class="t">${esc(f.data.title || f.data.url)}</div>
       <div class="u">${esc(f.data.url)}</div>
       <div class="st">${st.strategy ? `<span class="pill" style="--v:${strategyVar(st.strategy)}">${esc(st.strategy)}</span>` : ''}
-        <span>${unread} new</span>${st.at ? `<span>· checked ${ago(st.at)}</span>` : ''}${st.ok === false ? `<span class="err">· ${esc(st.error)}</span>` : ''}${st.stale ? '<span>· source down, cached copy</span>' : ''}</div>
+        <span>${t('feeds.new', { n: unread })}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err">· ${esc(st.error)}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
       <div class="ops">
-        <button class="icon-btn" type="button" data-feed-act="refresh" title="Refresh" aria-label="Refresh ${esc(f.data.title)}">${ICON.refresh}</button>
-        <button class="icon-btn" type="button" data-feed-act="rename" title="Rename" aria-label="Rename ${esc(f.data.title)}">${ICON.edit}</button>
-        <button class="icon-btn" type="button" data-feed-act="remove" title="Unfollow" aria-label="Unfollow ${esc(f.data.title)}">${ICON.trash}</button>
+        <button class="icon-btn" type="button" data-feed-act="refresh" title="${esc(t('feeds.refresh'))}" aria-label="${esc(t('feeds.refresh'))}: ${name}">${ICON.refresh}</button>
+        <button class="icon-btn" type="button" data-feed-act="rename" title="${esc(t('feeds.rename'))}" aria-label="${esc(t('feeds.rename'))}: ${name}">${ICON.edit}</button>
+        <button class="icon-btn" type="button" data-feed-act="remove" title="${esc(t('feeds.unfollow'))}" aria-label="${esc(t('feeds.unfollow'))}: ${name}">${ICON.trash}</button>
       </div></div>`;
   }).join('');
-  viewEl.innerHTML = `<div class="vh"><div><h1>Feeds</h1><p>${feeds.length} followed · resolved by Feedforge</p></div></div>
+  viewEl.innerHTML = `<div class="vh"><div><h1>${t('feeds.title')}</h1><p>${t('feeds.count', { n: feeds.length })}</p></div></div>
     <section class="panel">
-      <h2>Follow a website</h2>
-      <p>A feed URL or any page – Feedforge finds the entries (direct, discovered, guessed, HTML or sitemap).</p>
-      <form class="row" id="addForm"><input type="url" id="addUrl" inputmode="url" autocomplete="url" placeholder="https://example.com/blog" required aria-label="Website or feed URL"><button class="btn btn-primary" type="submit">Follow</button></form>
+      <h2>${t('feeds.follow_title')}</h2>
+      <p>${t('feeds.follow_text')}</p>
+      <form class="row" id="addForm"><input type="url" id="addUrl" inputmode="url" autocomplete="url" placeholder="https://example.com/blog" required aria-label="${esc(t('feeds.url_label'))}"><button class="btn btn-primary" type="submit">${t('feeds.follow')}</button></form>
       <div class="result" id="addResult" aria-live="polite"></div>
     </section>
     <section class="panel">
-      <h2>Your feeds</h2>
-      ${rows || '<p class="hint">No feeds yet.</p>'}
+      <h2>${t('feeds.yours')}</h2>
+      ${rows || `<p class="hint">${t('feeds.none')}</p>`}
     </section>
     <section class="panel">
-      <h2>Import &amp; export</h2>
-      <p>Coming from Feedly or another reader? Import its OPML export. Adding via the share sheet works once Flint is installed; on desktop drag this bookmarklet to your bookmarks bar: <a class="btn btn-ghost" href="${esc(bookmarklet)}" onclick="return false">+ Flint</a></p>
-      <div class="row"><label class="btn btn-ghost">Import OPML<input type="file" id="opmlIn" accept=".opml,.xml,text/xml,application/xml" hidden></label><button class="btn btn-ghost" type="button" id="opmlOut"${feeds.length ? '' : ' disabled'}>Export OPML</button></div>
+      <h2>${t('feeds.io_title')}</h2>
+      <p>${t('feeds.io_text')} <a class="btn btn-ghost" href="${esc(bookmarklet)}" onclick="return false">+ News</a></p>
+      <div class="row"><label class="btn btn-ghost">${t('feeds.import')}<input type="file" id="opmlIn" accept=".opml,.xml,text/xml,application/xml" hidden></label><button class="btn btn-ghost" type="button" id="opmlOut"${feeds.length ? '' : ' disabled'}>${t('feeds.export')}</button></div>
       <div class="result" id="opmlResult" aria-live="polite"></div>
     </section>`;
   if (S.share) {
     $('#addUrl').value = S.share;
-    $('#addResult').textContent = 'Shared link received – press Follow to subscribe.';
+    $('#addResult').textContent = t('feeds.shared');
     $('#addUrl').focus();
   }
 }
@@ -380,50 +395,67 @@ async function renderSettings() {
   const server = await serverBase();
   const custom = await db.kvGet('server');
   const pairLink = key ? pairingLink(key, custom) : '';
-  viewEl.innerHTML = `<div class="vh"><div><h1>Settings</h1><p>Flint ${VERSION} · everything stays on your devices and your Feedforge server.</p></div></div>
+  const opt = (value, label, cur) => `<option value="${value}"${value === cur ? ' selected' : ''}>${label}</option>`;
+  const swipeOpts = (cur) => SWIPE_CHOICES.map((s) => opt(s, t(s === 'none' ? 'act.none' : 'act.' + s), cur)).join('');
+  viewEl.innerHTML = `<div class="vh"><div><h1>${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p></div></div>
     <section class="panel">
-      <h2>Feedforge server</h2>
-      <p>Flint fetches all feeds through this server. Default: the server Flint is served from.</p>
-      <form class="row" id="serverForm"><input type="url" id="serverUrl" value="${esc(custom || '')}" placeholder="${esc(defaultServer())}" aria-label="Feedforge server URL"><button class="btn btn-ghost" type="submit">Save</button><button class="btn btn-ghost" type="button" id="serverTest">Test</button></form>
+      <h2>${t('settings.look_title')}</h2>
+      <div class="grid2">
+        <label class="field"><span>${t('settings.language')}</span><select id="langSel">${Object.entries(LANGS).map(([k, v]) => opt(k, v, t.lang)).join('')}</select></label>
+        <label class="field"><span>${t('settings.theme')}</span><select id="themeSel">${['auto', 'light', 'dark'].map((m) => opt(m, t('settings.theme_' + m), getTheme())).join('')}</select></label>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>${t('settings.swipe_title')}</h2>
+      <p>${t('settings.swipe_text')}</p>
+      <div class="grid2">
+        <label class="field"><span>${t('settings.swipe_right')}</span><select id="swipeRight">${swipeOpts(S.swipe.right)}</select></label>
+        <label class="field"><span>${t('settings.swipe_left')}</span><select id="swipeLeft">${swipeOpts(S.swipe.left)}</select></label>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>${t('settings.server_title')}</h2>
+      <p>${t('settings.server_text')}</p>
+      <form class="row" id="serverForm"><input type="url" id="serverUrl" value="${esc(custom || '')}" placeholder="${esc(defaultServer())}" aria-label="${esc(t('settings.server_label'))}"><button class="btn btn-ghost" type="submit">${t('settings.save')}</button><button class="btn btn-ghost" type="button" id="serverTest">${t('settings.test')}</button></form>
       <div class="result" id="serverResult" aria-live="polite"></div>
     </section>
     <section class="panel" id="syncPanel">
-      <h2>Sync between devices</h2>
+      <h2>${t('settings.sync_title')}</h2>
       ${key ? `
-        <p>This device is paired. Scan the code with your phone (or open the link on another device) to share feeds, reading list and states. No account – whoever has the link has access, so keep it private.</p>
-        <div class="qr" id="qr" aria-label="Pairing QR code"></div>
+        <p>${t('settings.sync_paired')}</p>
+        <div class="qr" id="qr" aria-label="${esc(t('settings.qr_label'))}"></div>
         <div class="row">
-          <button class="btn btn-primary" type="button" id="syncNow">Sync now</button>
-          <button class="btn btn-ghost" type="button" id="copyLink">Copy pairing link</button>
-          <button class="btn btn-ghost" type="button" id="leaveVault">Unpair this device</button>
-          <button class="btn btn-danger" type="button" id="wipeVault">Delete server copy</button>
+          <button class="btn btn-primary" type="button" id="syncNow">${t('settings.sync_now')}</button>
+          <button class="btn btn-ghost" type="button" id="copyLink">${t('settings.copy_link')}</button>
+          <button class="btn btn-ghost" type="button" id="leaveVault">${t('settings.unpair')}</button>
+          <button class="btn btn-danger" type="button" id="wipeVault">${t('settings.wipe')}</button>
         </div>
-        <dl class="kv" style="margin-top:14px"><dt>Server</dt><dd>${esc(new URL('api/sync', server).href)}</dd><dt>Status</dt><dd id="syncDetail">${esc(statusText(sync.status, true))}</dd></dl>`
+        <dl class="kv" style="margin-top:14px"><dt>${t('settings.server')}</dt><dd>${esc(new URL('api/sync', server).href)}</dd><dt>${t('settings.status')}</dt><dd id="syncDetail">${esc(statusText(sync.status, true))}</dd></dl>`
       : `
-        <p>Flint works fully offline on this device. To sync with your phone or another browser, create a sync vault on your Feedforge server (it stores only item states and your feed list – no account, no e-mail). Sync is limited to your own network by default.</p>
-        <div class="row"><button class="btn btn-primary" type="button" id="createVault">Create sync vault</button></div>
-        <h2 style="margin-top:20px">Already set up on another device?</h2>
-        <p>Scan its QR code, or paste its pairing link or key here.</p>
-        <form class="row" id="joinForm"><input type="text" id="joinKey" placeholder="Pairing link or key" autocomplete="off" aria-label="Pairing link or key"><button class="btn btn-ghost" type="submit">Join</button></form>`}
+        <p>${t('settings.sync_intro')}</p>${cryptoAvailable() ? '' : `<p class="err">${t('settings.sync_https')}</p>`}
+        <div class="row"><button class="btn btn-primary" type="button" id="createVault">${t('settings.create_vault')}</button></div>
+        <h2 style="margin-top:20px">${t('settings.join_title')}</h2>
+        <p>${t('settings.join_text')}</p>
+        <form class="row" id="joinForm"><input type="text" id="joinKey" placeholder="${esc(t('settings.join_placeholder'))}" autocomplete="off" aria-label="${esc(t('settings.join_placeholder'))}"><button class="btn btn-ghost" type="submit">${t('settings.join')}</button></form>`}
       <div class="result" id="syncResult" aria-live="polite"></div>
     </section>
     <section class="panel">
-      <h2>Keyboard</h2>
+      <h2>${t('settings.keyboard')}</h2>
       <ul class="keys">
-        <li><kbd>j</kbd><kbd>k</kbd>next / previous entry</li>
-        <li><kbd>o</kbd>read now (opens the article)</li>
-        <li><kbd>l</kbd>later</li>
-        <li><kbd>x</kbd>not interested</li>
-        <li><kbd>d</kbd>done</li>
-        <li><kbd>u</kbd>undo</li>
-        <li><kbd>r</kbd>refresh feeds</li>
-        <li><kbd>1</kbd>–<kbd>5</kbd>switch view</li>
+        <li><kbd>j</kbd><kbd>k</kbd>${t('settings.key_jk')}</li>
+        <li><kbd>o</kbd>${t('settings.key_o')}</li>
+        <li><kbd>l</kbd>${t('settings.key_l')}</li>
+        <li><kbd>x</kbd>${t('settings.key_x')}</li>
+        <li><kbd>d</kbd>${t('settings.key_d')}</li>
+        <li><kbd>u</kbd>${t('settings.key_u')}</li>
+        <li><kbd>r</kbd>${t('settings.key_r')}</li>
+        <li><kbd>1</kbd>–<kbd>5</kbd>${t('settings.key_num')}</li>
       </ul>
     </section>
     <section class="panel">
-      <h2>Local data</h2>
-      <p>${S.feeds.size} feed records, ${S.items.size} item states, ${S.entries.size} cached entries on this device.</p>
-      <div class="row"><button class="btn btn-danger" type="button" id="resetLocal">Reset this device</button></div>
+      <h2>${t('settings.local_title')}</h2>
+      <p>${t('settings.local_text', { feeds: S.feeds.size, items: S.items.size, entries: S.entries.size })}</p>
+      <div class="row"><button class="btn btn-danger" type="button" id="resetLocal">${t('settings.reset')}</button></div>
     </section>`;
   if (key) drawQr(pairLink);
 }
@@ -456,19 +488,31 @@ async function drawQr(text) {
   }
 }
 
+// ------------------------------------------------------------ language & theme
+
+async function useLanguage(lang) {
+  t = await loadI18n('i18n/', lang);
+  rtf = new Intl.RelativeTimeFormat(t.lang, { numeric: 'auto', style: 'short' });
+  applyI18n(t);
+  paintStatus(sync.status);
+}
+
 // ------------------------------------------------------------ sync status
 
 function statusText(st, long = false) {
-  const p = st.pending ? `${st.pending} pending` : '';
+  const p = st.pending ? t('sync.pending', { n: st.pending }) : '';
   const join = (...a) => a.filter(Boolean).join(' · ');
   switch (st.state) {
-    case 'local': return long ? 'Not paired – data stays on this device' : 'Local only';
-    case 'syncing': return 'Syncing…';
-    case 'ok': return p || `Synced ${clock(st.lastSync)}`;
-    case 'idle': return join('Not synced yet', p);
-    case 'offline': return join('Offline', p);
-    case 'unreachable': return join(long ? 'Server not reachable (not at home?)' : 'Not reachable', p);
-    case 'error': return join(long ? `Error: ${st.message}` : 'Sync error', p);
+    case 'local': return t(long ? 'sync.local_long' : 'sync.local');
+    case 'syncing': return t('sync.syncing');
+    case 'ok': return p || t('sync.synced', { time: clock(st.lastSync) });
+    case 'idle': return join(t('sync.idle'), p);
+    case 'offline': return join(t('sync.offline'), p);
+    case 'unreachable': return join(t(long ? 'sync.unreachable_long' : 'sync.unreachable'), p);
+    case 'error': {
+      const msg = st.code && t('sync.' + st.code) !== 'sync.' + st.code ? t('sync.' + st.code) : st.message;
+      return join(long ? t('sync.error_long', { msg }) : t('sync.error'), p);
+    }
     default: return st.state;
   }
 }
@@ -478,8 +522,8 @@ function paintStatus(st) {
   pill.dataset.state = st.state === 'ok' && st.pending ? 'pending' : st.state;
   $('.txt', pill).textContent = statusText(st);
   const detail = [statusText(st, true)];
-  if (st.lastSync) detail.push(`Last sync ${new Date(st.lastSync).toLocaleString()}`);
-  pill.title = detail.join('\n') + (st.state === 'local' ? '\nClick to set up sync' : '\nClick to sync now');
+  if (st.lastSync) detail.push(t('sync.last', { when: new Date(st.lastSync).toLocaleString(t.lang) }));
+  pill.title = detail.join('\n') + '\n' + t(st.state === 'local' ? 'sync.click_setup' : 'sync.click_sync');
   const d = $('#syncDetail');
   if (d) d.textContent = statusText(st, true);
 }
@@ -488,17 +532,19 @@ function paintStatus(st) {
 
 let toastTimer = null;
 let lastUndo = null;
-function showToast(msg, action, actionLabel = 'Undo') {
-  const t = $('#toast');
-  t.innerHTML = `<span>${esc(msg)}</span>${action ? `<button type="button">${esc(actionLabel)}</button>` : ''}`;
-  t.hidden = false;
-  lastUndo = actionLabel === 'Undo' ? action : null;
-  if (action) $('button', t).onclick = () => { t.hidden = true; lastUndo = null; action(); };
+function showToast(msg, action, actionLabel) {
+  const el = $('#toast');
+  const isUndo = action && !actionLabel;
+  actionLabel = actionLabel || t('toast.undo');
+  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button type="button">${esc(actionLabel)}</button>` : ''}`;
+  el.hidden = false;
+  lastUndo = isUndo ? action : null;
+  if (action) $('button', el).onclick = () => { el.hidden = true; lastUndo = null; action(); };
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; lastUndo = null; }, action ? 6000 : 3500);
+  toastTimer = setTimeout(() => { el.hidden = true; lastUndo = null; }, action ? 6000 : 3500);
 }
 
-function dialog({ title, body, ok = 'OK', cancel = 'Cancel', danger = false }) {
+function dialog({ title, body, ok = t('dlg.ok'), cancel = t('dlg.cancel'), danger = false }) {
   const dlg = $('#dlg');
   $('#dlgTitle').textContent = title;
   $('#dlgBody').innerHTML = body;
@@ -525,32 +571,32 @@ function go(view) {
 // ------------------------------------------------------------ events
 
 document.addEventListener('click', async (ev) => {
-  const t = ev.target;
-  const viewBtn = t.closest('[data-view]');
+  const el = ev.target;
+  const viewBtn = el.closest('[data-view]');
   if (viewBtn) return go(viewBtn.dataset.view);
 
-  const cardEl = t.closest('.card');
+  const cardEl = el.closest('.card');
   if (cardEl) {
     const id = cardEl.dataset.id;
-    const act = t.closest('[data-act]');
+    const act = el.closest('[data-act]');
     if (act) {
       const s = act.dataset.act;
-      if (s === 'reading') openUrl(S.entries.get(id)?.url || S.items.get(id)?.data?.u);
+      if (s === 'reading') openUrl(urlOf(id));
       return setState(id, s);
     }
-    if (t.closest('[data-open]')) {
+    if (el.closest('[data-open]')) {
       // opening the article = reading it (the link opens in a new tab by itself)
       if (S.view === 'inbox' || S.view === 'later') setState(id, 'reading', { toast: false, animate: false });
       return;
     }
   }
-  if (t.closest('[data-more]')) { S.shown += PAGE; return render(); }
-  if (t.closest('[data-refresh]')) return refreshAll(true);
+  if (el.closest('[data-more]')) { S.shown += PAGE; return render(); }
+  if (el.closest('[data-refresh]')) return refreshAll(true);
 
-  const feedBtn = t.closest('[data-feed-act]');
+  const feedBtn = el.closest('[data-feed-act]');
   if (feedBtn) return feedAction(feedBtn.dataset.feedAct, feedBtn.closest('[data-feed]').dataset.feed);
 
-  switch (t.closest('button')?.id) {
+  switch (el.closest('button')?.id) {
     case 'clearInbox': {
       const ids = inboxEntries().slice(0, S.shown).map((e) => e.id);
       return setState(ids, 'dismissed', { animate: false });
@@ -564,38 +610,46 @@ document.addEventListener('click', async (ev) => {
     case 'syncNow': return sync.run();
     case 'copyLink': {
       const link = pairingLink(await db.kvGet('vaultKey'), await db.kvGet('server'));
-      try { await navigator.clipboard.writeText(link); showToast('Pairing link copied'); }
-      catch { await dialog({ title: 'Pairing link', body: `<textarea rows="4" readonly>${esc(link)}</textarea>`, cancel: '' }); }
+      try { await navigator.clipboard.writeText(link); showToast(t('toast.link_copied')); }
+      catch { await dialog({ title: t('dlg.link_title'), body: `<textarea rows="4" readonly>${esc(link)}</textarea>`, cancel: '' }); }
       return;
     }
     case 'leaveVault':
-      if (await dialog({ title: 'Unpair this device?', body: '<p>This device stops syncing. Your local data stays here, and other devices keep the vault.</p>', ok: 'Unpair' })) {
+      if (await dialog({ title: t('dlg.unpair_title'), body: t('dlg.unpair_body'), ok: t('dlg.unpair_ok') })) {
         await sync.leaveVault(); render();
       }
       return;
     case 'wipeVault':
-      if (await dialog({ title: 'Delete the server copy?', body: '<p>All synced states of this vault are removed from the server. Devices keep their local data; the next sync of any paired device uploads it again.</p><p>Use “Unpair” on every device first if you want the vault gone for good.</p>', ok: 'Delete', danger: true })) {
-        try { await sync.wipeServer(); showToast('Server copy deleted'); } catch (e) { showToast(e.message); }
+      if (await dialog({ title: t('dlg.wipe_title'), body: t('dlg.wipe_body'), ok: t('dlg.wipe_ok'), danger: true })) {
+        try { await sync.wipeServer(); showToast(t('toast.server_deleted')); } catch (e) { showToast(e.message); }
       }
       return;
     case 'resetLocal':
-      if (await dialog({ title: 'Reset this device?', body: '<p>Deletes all feeds, states and cached entries from this browser. Synced data on the server is not touched – pair again to restore it.</p>', ok: 'Reset', danger: true })) {
-        indexedDB.deleteDatabase('flint');
+      if (await dialog({ title: t('dlg.reset_title'), body: t('dlg.reset_body'), ok: t('dlg.reset_ok'), danger: true })) {
+        indexedDB.deleteDatabase(DB_NAME);
         location.replace(location.pathname);
       }
       return;
   }
 
-  if (t.closest('#syncPill')) {
+  if (el.closest('#syncPill')) {
     if (sync.status.state === 'local') return go('settings');
     return sync.run();
   }
-  if (t.closest('#refreshBtn')) return refreshAll(true);
+  if (el.closest('#refreshBtn')) return refreshAll(true);
 });
 
 document.addEventListener('change', async (ev) => {
-  if (ev.target.id === 'filter') { S.filter = ev.target.value; S.shown = PAGE; render(); }
-  if (ev.target.id === 'opmlIn' && ev.target.files[0]) importOpml(ev.target.files[0]);
+  const id = ev.target.id;
+  if (id === 'filter') { S.filter = ev.target.value; S.shown = PAGE; render(); }
+  if (id === 'opmlIn' && ev.target.files[0]) importOpml(ev.target.files[0]);
+  if (id === 'langSel') { setLang(ev.target.value); await useLanguage(ev.target.value); render(); }
+  if (id === 'themeSel') setTheme(ev.target.value);
+  if (id === 'swipeRight' || id === 'swipeLeft') {
+    S.swipe = { right: $('#swipeRight').value, left: $('#swipeLeft').value };
+    await db.kvSet('swipe', S.swipe);
+    showToast(t('toast.saved'));
+  }
 });
 
 document.addEventListener('submit', async (ev) => {
@@ -606,12 +660,12 @@ document.addEventListener('submit', async (ev) => {
     const out = $('#addResult');
     const btn = $('button[type="submit"]', ev.target);
     btn.disabled = true;
-    out.innerHTML = 'Asking Feedforge…';
+    out.innerHTML = t('feeds.asking');
     try {
       const { rec, res } = await addFeed($('#addUrl').value, { quiet: true });
       S.share = '';
       render(); // re-renders the feeds view → write the result into the fresh DOM
-      $('#addResult').innerHTML = `<span class="pill" style="--v:${strategyVar(res.source?.strategy)}">${esc(res.source?.strategy)}</span> Following <strong>${esc(rec.data.title)}</strong> – ${res.entries.length} entries found.`;
+      $('#addResult').innerHTML = `<span class="pill" style="--v:${strategyVar(res.source?.strategy)}">${esc(res.source?.strategy)}</span> ${t('feeds.following', { title: esc(rec.data.title), n: res.entries.length })}`;
     } catch (e) {
       out.innerHTML = `<span class="err">${esc(e.message)}</span>`;
     } finally {
@@ -622,18 +676,18 @@ document.addEventListener('submit', async (ev) => {
     const v = $('#serverUrl').value.trim();
     if (v) {
       const u = normalizeUrl(v);
-      if (!u) { $('#serverResult').innerHTML = '<span class="err">Invalid URL.</span>'; return; }
+      if (!u) { $('#serverResult').innerHTML = `<span class="err">${t('settings.invalid_url')}</span>`; return; }
       await db.kvSet('server', u.endsWith('/') ? u : u + '/');
     } else {
       await db.kvDel('server');
     }
-    showToast('Server saved');
+    showToast(t('toast.server_saved'));
     render();
   }
   if (id === 'joinForm') {
     const raw = $('#joinKey').value.trim();
     const parsed = parsePairing(raw);
-    if (!parsed) { $('#syncResult').innerHTML = '<span class="err">That is neither a pairing link nor a vault key.</span>'; return; }
+    if (!parsed) { $('#syncResult').innerHTML = `<span class="err">${t('settings.join_invalid')}</span>`; return; }
     await joinVault(parsed);
   }
 });
@@ -647,55 +701,55 @@ async function feedAction(act, id) {
     return render();
   }
   if (act === 'rename') {
-    const name = prompt('Name for this feed', f.data.title || '');
+    const name = prompt(t('feeds.rename_prompt'), f.data.title || '');
     if (name === null) return;
     await commit([{ ...f, data: { ...f.data, title: name.trim() || f.data.title }, updatedAt: Date.now() }]);
     return render();
   }
-  if (act === 'remove' && await dialog({ title: 'Unfollow feed?', body: `<p><strong>${esc(f.data.title)}</strong> disappears from all your devices. Entries you saved for later stay in your list.</p>`, ok: 'Unfollow', danger: true })) {
+  if (act === 'remove' && await dialog({ title: t('feeds.unfollow_title'), body: `<p>${t('feeds.unfollow_body', { title: esc(f.data.title) })}</p>`, ok: t('feeds.unfollow'), danger: true })) {
     await removeFeed(id);
-    showToast('Feed removed');
+    showToast(t('toast.feed_removed'));
   }
 }
 
 async function testServer() {
   const out = $('#serverResult');
-  out.textContent = 'Testing…';
+  out.textContent = t('settings.testing');
   try {
-    const res = await fetch(new URL('api/', await serverBase()), { cache: 'no-store' });
+    const res = await fetch(new URL('api/collect', await serverBase()), { cache: 'no-store' });
     const body = await res.json();
-    out.innerHTML = body?.name?.toLowerCase() === 'feedforge'
-      ? `Feedforge ${esc(body.version)} reachable.`
-      : '<span class="err">Server answered, but this is not Feedforge.</span>';
+    out.innerHTML = body?.service === 'collector'
+      ? esc(t('settings.test_ok', { version: body.version }) + t(body.sync ? 'settings.test_sync_on' : 'settings.test_sync_off'))
+      : `<span class="err">${t('settings.test_wrong')}</span>`;
   } catch {
-    out.innerHTML = '<span class="err">Not reachable. Check the address, HTTPS certificate and that you are in your network.</span>';
+    out.innerHTML = `<span class="err">${t('settings.test_fail')}</span>`;
   }
 }
 
 async function importOpml(file) {
   const out = $('#opmlResult');
   let list;
-  try { list = parseOpml(await file.text()); } catch (e) { out.innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
+  try { list = parseOpml(await file.text()); } catch { out.innerHTML = `<span class="err">${t('feeds.import_invalid')}</span>`; return; }
   const todo = list.filter((f) => { const u = normalizeUrl(f.url); return u && !(S.feeds.get(feedId(u)) && !S.feeds.get(feedId(u)).data.d); });
-  if (!todo.length) { out.textContent = `Nothing new in ${list.length} feeds.`; return; }
+  if (!todo.length) { out.textContent = t('feeds.import_nothing', { n: list.length }); return; }
   let done = 0;
-  out.textContent = `Importing ${todo.length} feeds…`;
+  out.textContent = t('feeds.importing', { n: todo.length });
   const results = await pool(todo, 3, async (f) => {
     const r = await addFeed(f.url, { quiet: true, title: f.title });
-    out.textContent = `Importing… ${++done}/${todo.length}`;
+    out.textContent = t('feeds.importing_progress', { done: ++done, n: todo.length });
     return r;
   });
   const failed = results.map((r, i) => (r.ok ? null : `${todo[i].url}: ${r.error.message}`)).filter(Boolean);
   render();
   const o = $('#opmlResult');
-  if (o) o.innerHTML = `${todo.length - failed.length} of ${todo.length} feeds imported.${failed.length ? `<br><span class="err">${failed.map(esc).join('<br>')}</span>` : ''}`;
+  if (o) o.innerHTML = `${t('feeds.imported', { ok: todo.length - failed.length, n: todo.length })}${failed.length ? `<br><span class="err">${failed.map(esc).join('<br>')}</span>` : ''}`;
 }
 
 function exportOpml() {
   const blob = new Blob([buildOpml(liveFeeds().map((f) => f.data))], { type: 'text/x-opml' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `flint-${new Date().toISOString().slice(0, 10)}.opml`;
+  a.download = `news-${new Date().toISOString().slice(0, 10)}.opml`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -715,14 +769,11 @@ function parsePairing(raw) {
 
 async function joinVault({ key, server }) {
   const current = await db.kvGet('vaultKey');
-  if (current === key) { showToast('Already paired with this vault'); return; }
+  if (current === key) { showToast(t('toast.already_paired')); return; }
   const ok = await dialog({
-    title: 'Pair this device?',
-    body: `<p>This device will share feeds, reading list and states with every device that uses this vault.</p>
-      ${server ? `<p>Feedforge server: <code>${esc(server)}</code></p>` : ''}
-      ${current ? '<p>It leaves its current vault.</p>' : ''}
-      <p>Existing data on this device is merged – nothing is lost.</p>`,
-    ok: 'Pair',
+    title: t('dlg.pair_title'),
+    body: t('dlg.pair_body') + (server ? t('dlg.pair_server', { server: esc(server) }) : '') + (current ? t('dlg.pair_leave') : '') + t('dlg.pair_merge'),
+    ok: t('dlg.pair_ok'),
   });
   if (!ok) return;
   if (server) {
@@ -732,7 +783,7 @@ async function joinVault({ key, server }) {
   await sync.joinVault(key);
   await loadAll();
   go('inbox');
-  showToast(sync.status.state === 'ok' ? 'Paired and synced' : 'Paired – will sync when the server is reachable');
+  showToast(t(sync.status.state === 'ok' ? 'toast.paired_synced' : 'toast.paired_later'));
   refreshAll();
 }
 
@@ -776,7 +827,7 @@ document.addEventListener('keydown', (ev) => {
   cards[S.kb]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 });
 
-// ------------------------------------------------------------ swipe (touch)
+// ------------------------------------------------------------ swipe (touch) – actions configurable in Settings
 
 let sw = null;
 viewEl.addEventListener('pointerdown', (ev) => {
@@ -792,9 +843,9 @@ viewEl.addEventListener('pointermove', (ev) => {
     if (Math.abs(dy) > 12) { sw = null; return; }
     if (Math.abs(dx) < 12) return;
     sw.active = true;
-    sw.c.setPointerCapture(ev.pointerId);
+    try { sw.c.setPointerCapture(ev.pointerId); } catch { /* pointer already gone */ }
   }
-  const [right, left] = SWIPE[S.view] || [];
+  const [right, left] = swipeFor(S.view);
   if ((dx > 0 && !right) || (dx < 0 && !left)) return;
   sw.dx = dx;
   sw.c.style.transition = 'none';
@@ -810,9 +861,11 @@ const endSwipe = () => {
   c.style.transition = '';
   c.style.transform = '';
   delete c.dataset.swipe;
-  const [right, left] = SWIPE[S.view] || [];
+  const [right, left] = swipeFor(S.view);
   const s = dx > 90 ? right : dx < -90 ? left : null;
-  if (s) setState(c.dataset.id, s, { animate: false });
+  if (!s) return;
+  if (s === 'reading') openUrl(urlOf(c.dataset.id));
+  setState(c.dataset.id, s, { animate: false });
 };
 viewEl.addEventListener('pointerup', endSwipe);
 viewEl.addEventListener('pointercancel', endSwipe);
@@ -872,10 +925,11 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
 }
 
 (async function boot() {
+  await useLanguage(getLang());
   try {
     await loadAll();
   } catch (e) {
-    viewEl.innerHTML = `<div class="empty"><strong>Storage not available.</strong>${esc(e.message)}<br>Private windows may block IndexedDB.</div>`;
+    viewEl.innerHTML = `<div class="empty"><strong>${t('err.storage_title')}</strong>${esc(e.message)}<br>${t('err.storage_hint')}</div>`;
     return;
   }
   await sync.init();

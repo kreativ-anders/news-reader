@@ -1,4 +1,4 @@
-# Feedforge – Wharf template ({{…}} filled in by Wharf)
+# News Reader – Wharf template ({{…}} filled in by Wharf)
 
 server {
   {{listen}}
@@ -30,7 +30,7 @@ server {
   location ^~ /.well-known/ { try_files $uri =404; }
   location ~ ^/(src|var|vendor|tests)(/|$) { return 404; }
   location ~ /\. { return 404; }
-  location ~ \.(conf|md|lock|example|dist|ini|env|log|sql|sqlite)$ { return 404; }
+  location ~ \.(conf|md|lock|example|dist|ini|env|log|sql|sqlite|vault|tmp)$ { return 404; }
   location ~ ^/(composer|package)\.json$ { return 404; }
 
   # API via front controller

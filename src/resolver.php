@@ -13,86 +13,86 @@ declare(strict_types=1);
  *
  * @return array{ok:true,payload:array}|array{ok:false,code:string,message:string}
  */
-function ff_resolve(string $url): array
+function nr_resolve(string $url): array
 {
-    $page = ff_fetch($url);
+    $page = nr_fetch($url);
     if (!$page['ok']) return $page;
 
     $finalUrl = $page['finalUrl'];
     $tried = [];
 
     // 1. Direct feed
-    $feed = ff_parse_feed($page['body'], $finalUrl);
+    $feed = nr_parse_feed($page['body'], $finalUrl);
     if ($feed !== null) {
-        return ff_success($url, $finalUrl, $feed['type'], 'direct', $feed['title'], $finalUrl, $feed['entries']);
+        return nr_success($url, $finalUrl, $feed['type'], 'direct', $feed['title'], $finalUrl, $feed['entries']);
     }
 
-    if (!ff_is_html($page['contentType'], $page['body'])) {
-        return ff_err('NO_FEED_DETECTED', 'The URL returned neither a feed nor an HTML page.');
+    if (!nr_is_html($page['contentType'], $page['body'])) {
+        return nr_err('NO_FEED_DETECTED', 'The URL returned neither a feed nor an HTML page.');
     }
 
-    $dom = ff_load_html($page['body']);
-    $pageTitle = ff_page_title($dom);
+    $dom = nr_load_html($page['body']);
+    $pageTitle = nr_page_title($dom);
 
     // 2. Declared feeds  3. Guessed feed paths
-    $declared = ff_discover_feed_links($dom, $finalUrl);
-    $candidates = array_values(array_unique(array_merge($declared, ff_guess_feed_urls($finalUrl))));
+    $declared = nr_discover_feed_links($dom, $finalUrl);
+    $candidates = array_values(array_unique(array_merge($declared, nr_guess_feed_urls($finalUrl))));
 
     foreach ($candidates as $i => $feedUrl) {
         if ($i >= 12) break; // hard cap on probes
         $tried[] = $feedUrl;
-        $res = ff_fetch($feedUrl);
+        $res = nr_fetch($feedUrl);
         if (!$res['ok']) continue;
-        $feed = ff_parse_feed($res['body'], $res['finalUrl']);
+        $feed = nr_parse_feed($res['body'], $res['finalUrl']);
         if ($feed !== null && count($feed['entries']) > 0) {
             $strategy = in_array($feedUrl, $declared, true) ? 'discovered' : 'guessed';
-            return ff_success($url, $finalUrl, $feed['type'], $strategy, $feed['title'] ?? $pageTitle, $res['finalUrl'], $feed['entries']);
+            return nr_success($url, $finalUrl, $feed['type'], $strategy, $feed['title'] ?? $pageTitle, $res['finalUrl'], $feed['entries']);
         }
     }
 
     // 4. HTML listing
-    $listing = ff_parse_html_listing($dom, $finalUrl);
+    $listing = nr_parse_html_listing($dom, $finalUrl);
     if ($listing !== null) {
         $entries = $listing['entries'];
 
         // Enrich with sitemap dates if the page shows hardly any dates
         $dated = count(array_filter($entries, fn($e) => $e['publishedAt'] !== null));
         if ($dated < count($entries) / 2) {
-            $entries = ff_enrich_with_sitemap($entries, $finalUrl);
+            $entries = nr_enrich_with_sitemap($entries, $finalUrl);
         }
 
-        return ff_success($url, $finalUrl, 'html', $listing['strategy'], $pageTitle, null, $entries);
+        return nr_success($url, $finalUrl, 'html', $listing['strategy'], $pageTitle, null, $entries);
     }
 
     // 5. Sitemap
-    foreach (ff_sitemap_candidates($finalUrl) as $sitemapUrl) {
+    foreach (nr_sitemap_candidates($finalUrl) as $sitemapUrl) {
         $tried[] = $sitemapUrl;
-        $res = ff_fetch($sitemapUrl);
+        $res = nr_fetch($sitemapUrl);
         if (!$res['ok']) continue;
-        $entries = ff_parse_sitemap($res['body'], $res['finalUrl'], $finalUrl);
+        $entries = nr_parse_sitemap($res['body'], $res['finalUrl'], $finalUrl);
         if (count($entries) >= 3) {
-            return ff_success($url, $finalUrl, 'sitemap', 'sitemap', $pageTitle, $res['finalUrl'], $entries);
+            return nr_success($url, $finalUrl, 'sitemap', 'sitemap', $pageTitle, $res['finalUrl'], $entries);
         }
     }
 
-    return ff_err('NO_FEED_DETECTED', 'No RSS/Atom feed, article listing or matching sitemap entries were found.', ['tried' => $tried]);
+    return nr_err('NO_FEED_DETECTED', 'No RSS/Atom feed, article listing or matching sitemap entries were found.', ['tried' => $tried]);
 }
 
-function ff_enrich_with_sitemap(array $entries, string $pageUrl): array
+function nr_enrich_with_sitemap(array $entries, string $pageUrl): array
 {
     $dates = [];
-    foreach (ff_sitemap_candidates($pageUrl) as $sitemapUrl) {
-        $res = ff_fetch($sitemapUrl);
+    foreach (nr_sitemap_candidates($pageUrl) as $sitemapUrl) {
+        $res = nr_fetch($sitemapUrl);
         if (!$res['ok']) continue;
-        foreach (ff_parse_sitemap($res['body'], $res['finalUrl'], $pageUrl) as $e) {
-            $dates[ff_normalize_url($e['url'])] = $e['publishedAt'] ?? $e['updatedAt'];
+        foreach (nr_parse_sitemap($res['body'], $res['finalUrl'], $pageUrl) as $e) {
+            $dates[nr_normalize_url($e['url'])] = $e['publishedAt'] ?? $e['updatedAt'];
         }
         if ($dates) break;
     }
     if (!$dates) return $entries;
 
     foreach ($entries as &$e) {
-        $key = ff_normalize_url($e['url']);
+        $key = nr_normalize_url($e['url']);
         if ($e['updatedAt'] === null && isset($dates[$key])) {
             $e['updatedAt'] = $dates[$key];
         }
@@ -100,9 +100,9 @@ function ff_enrich_with_sitemap(array $entries, string $pageUrl): array
     return $entries;
 }
 
-function ff_success(string $inputUrl, string $finalUrl, string $type, string $strategy, ?string $title, ?string $feedUrl, array $entries): array
+function nr_success(string $inputUrl, string $finalUrl, string $type, string $strategy, ?string $title, ?string $feedUrl, array $entries): array
 {
-    $entries = array_slice($entries, 0, FF_MAX_ENTRIES);
+    $entries = array_slice($entries, 0, NR_MAX_ENTRIES);
     return [
         'ok' => true,
         'payload' => [

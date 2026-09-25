@@ -1,8 +1,8 @@
-// Flint – Feedforge client, feed ids and OPML.
+// News – Collector client, feed ids and OPML.
 
 import { serverBase } from './sync.js';
 
-/** Normalise user input the same way Feedforge does (scheme optional). */
+/** Normalise user input the same way the Collector does (scheme optional). */
 export function normalizeUrl(input) {
   let url = String(input || '').trim();
   if (!url) return '';
@@ -39,11 +39,11 @@ export function feedId(url) {
 }
 
 /**
- * Resolve a URL through Feedforge.
+ * Resolve a URL through the Collector (GET <server>/api/collect?url=…).
  * @returns {Promise<{source:object, entries:object[], meta:object}>}
  */
-export async function fetchFeed(url, { refresh = false, timeout = 60000 } = {}) {
-  const api = new URL('api/', await serverBase());
+export async function fetchFeed(url, { refresh = false, timeout = 60000, t = (k) => k } = {}) {
+  const api = new URL('api/collect', await serverBase());
   api.searchParams.set('url', url);
   if (refresh) api.searchParams.set('refresh', '1');
   const ctrl = new AbortController();
@@ -54,12 +54,12 @@ export async function fetchFeed(url, { refresh = false, timeout = 60000 } = {}) 
     try { body = await res.json(); } catch { /* ignore */ }
     if (!res.ok || !body || body.error) {
       const e = body?.error;
-      throw Object.assign(new Error(e?.message || `Feedforge answered HTTP ${res.status}`), { code: e?.code || 'HTTP_' + res.status });
+      throw Object.assign(new Error(e?.message || t('err.http', { status: res.status })), { code: e?.code || 'HTTP_' + res.status });
     }
     return body;
   } catch (err) {
-    if (err.name === 'AbortError') throw Object.assign(new Error('Feedforge did not answer in time.'), { code: 'TIMEOUT' });
-    if (err instanceof TypeError) throw Object.assign(new Error('Feedforge server not reachable – check the server address in Settings.'), { code: 'UNREACHABLE' });
+    if (err.name === 'AbortError') throw Object.assign(new Error(t('err.timeout')), { code: 'TIMEOUT' });
+    if (err instanceof TypeError) throw Object.assign(new Error(t('err.unreachable')), { code: 'UNREACHABLE' });
     throw err;
   } finally {
     clearTimeout(timer);
@@ -101,7 +101,7 @@ export function buildOpml(feeds) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <opml version="2.0">
   <head>
-    <title>Flint subscriptions</title>
+    <title>News subscriptions</title>
     <dateCreated>${new Date().toUTCString()}</dateCreated>
   </head>
   <body>

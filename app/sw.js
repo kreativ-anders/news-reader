@@ -1,9 +1,11 @@
-// Flint service worker – offline app shell. Feeds (/api/) and sync always go to the network.
-const VERSION = 'flint-0.1.0';
+// News service worker – offline app shell. Collector (/api/collect) and sync always go to the network.
+const VERSION = 'news-0.4.0';
 const SHELL = [
-  './', 'index.html', 'app.css', 'manifest.webmanifest',
-  'js/app.js', 'js/db.js', 'js/sync.js', 'js/feeds.js', 'vendor/qrcode.js',
-  'icons/flint.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
+  './', 'index.html', 'app.css', 'theme.css', 'manifest.webmanifest',
+  'fonts/newsreader.woff2', 'fonts/source-sans-3.woff2',
+  'js/app.js', 'js/db.js', 'js/sync.js', 'js/feeds.js', 'js/i18n.js', 'vendor/qrcode.js',
+  'i18n/en.json', 'i18n/de.json', 'i18n/fr.json', 'i18n/it.json', 'i18n/es.json',
+  'icons/news.svg', 'icons/favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
 ];
 
 self.addEventListener('install', (e) => {
@@ -13,7 +15,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('flint-') && k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => (k.startsWith('flint-') || k.startsWith('news-')) && k !== VERSION).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -22,7 +24,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
   const scope = new URL(self.registration.scope);
-  // only GETs of our own app files; never the Feedforge API or sync
+  // only GETs of our own app files; never the API (Collector, sync)
   if (req.method !== 'GET' || url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
 
   // navigations (incl. share target ?url=… and pairing #pair=…) → the app shell

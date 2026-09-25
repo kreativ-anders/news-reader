@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /api/
 
-Sitemap: https://kreativ-anders.github.io/feedforge/sitemap.xml
+Sitemap: https://newsreader.app/sitemap.xml

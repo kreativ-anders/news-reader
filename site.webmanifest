@@ -1,10 +1,10 @@
 {
-  "name": "Feedforge",
-  "short_name": "Feedforge",
-  "description": "Centralized RSS feed extractor for local RSS handling.",
+  "name": "News Reader",
+  "short_name": "News Reader",
+  "description": "News – a calm, local-first feed reader with end-to-end encrypted sync. Self-host your own, white-label.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0f0d0b",
+  "background_color": "#292929",
   "theme_color": "#FFA500",
   "icons": [
     { "src": "favicon.svg", "type": "image/svg+xml", "sizes": "any" },

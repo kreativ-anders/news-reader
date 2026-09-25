@@ -1,12 +1,12 @@
-// Flint – tiny IndexedDB layer.
+// News – tiny IndexedDB layer.
 //
 // Stores
 //   records  [kind, id] → { kind, id, data, updatedAt }   synced state (feeds, items)
 //   outbox   [kind, id] → { kind, id, updatedAt }         local changes not yet pushed
 //   entries  id         → { id, feedId, url, title, summary, publishedAt, firstSeen }
-//   kv       k          → { k, v }                         local settings (server, vault key, cursor …)
+//   kv       k          → { k, v }                         local settings (server, vault key, etag …)
 
-const DB_NAME = 'flint';
+export const DB_NAME = 'news';
 const DB_VERSION = 1;
 
 let dbPromise = null;
@@ -27,7 +27,7 @@ function open() {
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error('Database blocked – close other Flint tabs.'));
+    req.onblocked = () => reject(new Error('Database blocked – close other News tabs.'));
   });
   return dbPromise;
 }
@@ -114,7 +114,33 @@ export async function outboxAck(markers) {
   return txDone(tx);
 }
 
-/** Queue every local record for upload (after joining a vault or a server reset). */
+/** Forget all pending markers (after leaving a vault). */
+export async function outboxClear() {
+  return write(['outbox'], (tx) => tx.objectStore('outbox').clear());
+}
+
+/**
+ * Delete records matching `drop` (and their outbox markers) in one transaction.
+ * Returns the remaining records – the snapshot that goes into the sync vault.
+ */
+export async function prune(drop) {
+  const db = await open();
+  const tx = db.transaction(['records', 'outbox'], 'readwrite');
+  const all = await done(tx.objectStore('records').getAll());
+  const keep = [];
+  for (const r of all) {
+    if (drop(r)) {
+      tx.objectStore('records').delete([r.kind, r.id]);
+      tx.objectStore('outbox').delete([r.kind, r.id]);
+    } else {
+      keep.push(r);
+    }
+  }
+  await txDone(tx);
+  return keep;
+}
+
+/** Queue every local record for upload (after joining a vault). */
 export async function outboxAll() {
   const all = await getAll('records');
   return write(['outbox'], (tx) => {

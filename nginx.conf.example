@@ -1,15 +1,15 @@
-# Feedforge – plain nginx (production)
+# News Reader – plain nginx (production)
 # Adjust: server_name, root, PHP-FPM socket, certificate paths
 
 # HTTP -> HTTPS
 server {
   listen 80;
   listen [::]:80;
-  server_name feedforge.example.com;
+  server_name newsreader.example.com;
 
   # certbot --webroot
   location ^~ /.well-known/acme-challenge/ {
-    root /var/www/feedforge;
+    root /var/www/news-reader;
     try_files $uri =404;
   }
   location / { return 301 https://$host$request_uri; }
@@ -20,16 +20,16 @@ server {
   listen 443 ssl;
   listen [::]:443 ssl;
   http2 on;
-  server_name feedforge.example.com;
+  server_name newsreader.example.com;
 
-  root /var/www/feedforge;
+  root /var/www/news-reader;
   index index.html index.php;
 
-  access_log /var/log/nginx/feedforge.access.log;
-  error_log  /var/log/nginx/feedforge.error.log;
+  access_log /var/log/nginx/news-reader.access.log;
+  error_log  /var/log/nginx/news-reader.error.log;
 
-  ssl_certificate     /etc/letsencrypt/live/feedforge.example.com/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/feedforge.example.com/privkey.pem;
+  ssl_certificate     /etc/letsencrypt/live/newsreader.example.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/newsreader.example.com/privkey.pem;
   ssl_protocols TLSv1.2 TLSv1.3;
   ssl_prefer_server_ciphers off;
   ssl_session_cache shared:SSL:10m;
@@ -56,7 +56,7 @@ server {
   location ^~ /.well-known/ { try_files $uri =404; }
   location ~ ^/(src|var|vendor|tests)(/|$) { return 404; }
   location ~ /\. { return 404; }
-  location ~ \.(conf|md|lock|example|dist|ini|env|log|sql|sqlite)$ { return 404; }
+  location ~ \.(conf|md|lock|example|dist|ini|env|log|sql|sqlite|vault|tmp)$ { return 404; }
   location ~ ^/(composer|package)\.json$ { return 404; }
 
   # API via front controller

@@ -1,17 +1,17 @@
 {
-  "name": "Flint – Feed Reader",
-  "short_name": "Flint",
-  "description": "A calm, local-first feed reader for Feedforge: read now, later or not interested – synced in your own network.",
+  "name": "News",
+  "short_name": "News",
+  "description": "A calm, local-first feed reader: read now, later or not interested – end-to-end encrypted sync between your devices, no account.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0f0d0b",
-  "theme_color": "#0f0d0b",
+  "background_color": "#292929",
+  "theme_color": "#292929",
   "categories": ["news", "productivity"],
   "icons": [
-    { "src": "icons/flint.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "icons/news.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "icons/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
     { "src": "icons/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
     { "src": "icons/maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }

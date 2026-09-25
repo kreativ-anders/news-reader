@@ -1,49 +1,52 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <script>try{var t=localStorage.getItem("nr.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Flint – Feed Reader</title>
-  <meta name="description" content="Flint is a calm, local-first feed reader for Feedforge: triage every entry into read now, later or not interested – synced between your devices without an account.">
+  <title>News</title>
+  <meta name="description" content="News is a calm, local-first feed reader: every entry gets one decision – read now, later or not interested. End-to-end encrypted sync between your devices, no account.">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#0f0d0b" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#292929" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
   <meta name="color-scheme" content="dark light">
-  <link rel="icon" href="icons/flint.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preload" href="fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="app.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <a class="skip" href="#view">Skip to content</a>
+  <a class="skip" href="#view" data-i18n="app.skip">Skip to content</a>
 
   <header class="top">
-    <a class="brand" href="./" aria-label="Flint – Inbox">
-      <img src="icons/flint.svg" alt="" width="30" height="30">
-      <span>Flint <small>a Feedforge reader</small></span>
+    <a class="brand" href="./" aria-label="News – Inbox">
+      <svg class="nr-mark" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="i" x="8" y="8" width="48" height="48" rx="6" stroke-width="4"/><rect class="f" x="16" y="16" width="32" height="7" rx="1.5"/><path class="i" d="M40.5 30.5H46.5M40.5 38.5H46.5M40.5 46.5H43.5" stroke-width="3"/><path class="r" d="M19 37.5A7.5 7.5 0 0 1 26.5 45M19 31A14 14 0 0 1 33 45" stroke-width="4"/><circle class="d" cx="19" cy="45" r="3"/></svg>
+      <span>News <small data-i18n="app.tagline">News Reader</small></span>
     </a>
     <div class="top-actions">
       <button id="syncPill" class="sync" type="button" data-state="local" title="Sync status – click to sync now">
         <span class="dot" aria-hidden="true"></span><span class="txt">Local only</span>
       </button>
-      <button id="refreshBtn" class="icon-btn" type="button" title="Refresh feeds (r)" aria-label="Refresh feeds">
+      <button id="refreshBtn" class="icon-btn" type="button" title="Refresh feeds (r)" aria-label="Refresh feeds" data-i18n-attr="title:app.refresh;aria-label:app.refresh">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
       </button>
-      <button class="icon-btn" type="button" data-view="settings" title="Settings" aria-label="Settings">
+      <button class="icon-btn" type="button" data-view="settings" title="Settings" aria-label="Settings" data-i18n-attr="title:app.settings;aria-label:app.settings">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </div>
   </header>
 
   <div class="shell">
-    <nav class="nav" aria-label="Views">
-      <button type="button" data-view="inbox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><span>Inbox</span><b class="badge" data-count="inbox"></b></button>
-      <button type="button" data-view="reading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Read now</span><b class="badge" data-count="reading"></b></button>
-      <button type="button" data-view="later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Later</span><b class="badge" data-count="later"></b></button>
-      <button type="button" data-view="done"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Done</span></button>
-      <button type="button" data-view="feeds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg><span>Feeds</span></button>
+    <nav class="nav" aria-label="Views" data-i18n-attr="aria-label:app.views">
+      <button type="button" data-view="inbox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><span data-i18n="nav.inbox">Inbox</span><b class="badge" data-count="inbox"></b></button>
+      <button type="button" data-view="reading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span data-i18n="nav.reading">Read now</span><b class="badge" data-count="reading"></b></button>
+      <button type="button" data-view="later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span data-i18n="nav.later">Later</span><b class="badge" data-count="later"></b></button>
+      <button type="button" data-view="done"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="nav.done">Done</span></button>
+      <button type="button" data-view="feeds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg><span data-i18n="nav.feeds">Feeds</span></button>
     </nav>
     <main id="view" tabindex="-1" aria-live="polite"></main>
   </div>
@@ -61,6 +64,6 @@
     </form>
   </dialog>
 
-  <noscript><p class="empty">Flint needs JavaScript.</p></noscript>
+  <noscript><p class="empty">News needs JavaScript.</p></noscript>
 </body>
 </html>

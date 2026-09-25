@@ -5,24 +5,24 @@ declare(strict_types=1);
 //  Entry model
 // =====================================================================
 
-function ff_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = ''): array
+function nr_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = ''): array
 {
     return [
-        'id'          => hash('sha256', $guid !== '' ? $guid : ff_normalize_url($url)),
+        'id'          => hash('sha256', $guid !== '' ? $guid : nr_normalize_url($url)),
         'url'         => $url,
-        'title'       => ff_clean_text($title),
+        'title'       => nr_clean_text($title),
         'publishedAt' => $publishedAt,
         'updatedAt'   => $updatedAt,
-        'summary'     => $summary !== null && $summary !== '' ? ff_summary($summary) : null,
+        'summary'     => $summary !== null && $summary !== '' ? nr_summary($summary) : null,
     ];
 }
 
 /** Deduplicate by URL (first wins). Optionally sort newest first. */
-function ff_finalize_entries(array $entries, bool $sortByDate): array
+function nr_finalize_entries(array $entries, bool $sortByDate): array
 {
     $unique = [];
     foreach ($entries as $e) {
-        $key = ff_normalize_url($e['url']);
+        $key = nr_normalize_url($e['url']);
         if (!isset($unique[$key])) $unique[$key] = $e;
     }
     $entries = array_values($unique);
@@ -39,25 +39,25 @@ function ff_finalize_entries(array $entries, bool $sortByDate): array
         $entries = array_column($indexed, 1);
     }
 
-    return array_slice($entries, 0, FF_MAX_ENTRIES);
+    return array_slice($entries, 0, NR_MAX_ENTRIES);
 }
 
-function ff_clean_text(string $s): string
+function nr_clean_text(string $s): string
 {
     $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     return trim(preg_replace('/\s+/u', ' ', $s) ?? '');
 }
 
-function ff_summary(string $html): string
+function nr_summary(string $html): string
 {
-    $text = ff_clean_text(strip_tags(preg_replace('/<(script|style)\b.*?<\/\1>/is', '', $html) ?? ''));
-    if (mb_strlen($text) > FF_SUMMARY_LENGTH) {
-        $text = rtrim(mb_substr($text, 0, FF_SUMMARY_LENGTH - 1)) . '…';
+    $text = nr_clean_text(strip_tags(preg_replace('/<(script|style)\b.*?<\/\1>/is', '', $html) ?? ''));
+    if (mb_strlen($text) > NR_SUMMARY_LENGTH) {
+        $text = rtrim(mb_substr($text, 0, NR_SUMMARY_LENGTH - 1)) . '…';
     }
     return $text;
 }
 
-function ff_parse_date(?string $value): ?string
+function nr_parse_date(?string $value): ?string
 {
     $value = trim((string)$value);
     if ($value === '') return null;
@@ -72,7 +72,7 @@ function ff_parse_date(?string $value): ?string
 }
 
 /** Finds a human-readable date inside arbitrary text. */
-function ff_find_date_in_text(string $text): ?string
+function nr_find_date_in_text(string $text): ?string
 {
     $months = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
     $patterns = [
@@ -83,14 +83,14 @@ function ff_find_date_in_text(string $text): ?string
     ];
     foreach ($patterns as $p) {
         if (preg_match($p, $text, $m)) {
-            $d = ff_parse_date(ff_normalize_date_token($m[0]));
+            $d = nr_parse_date(nr_normalize_date_token($m[0]));
             if ($d !== null) return $d;
         }
     }
     return null;
 }
 
-function ff_normalize_date_token(string $s): string
+function nr_normalize_date_token(string $s): string
 {
     if (preg_match('/^\d{1,2}\.\d{1,2}\.\d{4}$/', $s) || preg_match('/^\d{4}-/', $s)) return $s;
     return trim(preg_replace('/\s+/', ' ', str_replace(['Sept', '.'], ['Sep', ' '], $s)) ?? $s);
@@ -100,7 +100,7 @@ function ff_normalize_date_token(string $s): string
 //  XML helpers
 // =====================================================================
 
-function ff_load_xml(string $body): ?DOMDocument
+function nr_load_xml(string $body): ?DOMDocument
 {
     if (str_starts_with($body, "\x1f\x8b")) {
         $decoded = @gzdecode($body);
@@ -120,7 +120,7 @@ function ff_load_xml(string $body): ?DOMDocument
 }
 
 /** First direct child element (any namespace) whose local name is in $names; returns its text. */
-function ff_child_text(DOMElement $el, array $names): string
+function nr_child_text(DOMElement $el, array $names): string
 {
     foreach ($names as $name) {
         foreach ($el->childNodes as $c) {
@@ -133,7 +133,7 @@ function ff_child_text(DOMElement $el, array $names): string
     return '';
 }
 
-function ff_child_elements(DOMElement $el, string $name): array
+function nr_child_elements(DOMElement $el, string $name): array
 {
     $out = [];
     foreach ($el->childNodes as $c) {
@@ -147,9 +147,9 @@ function ff_child_elements(DOMElement $el, string $name): array
 // =====================================================================
 
 /** @return array{type:string,title:?string,siteUrl:?string,entries:array}|null */
-function ff_parse_feed(string $body, string $baseUrl): ?array
+function nr_parse_feed(string $body, string $baseUrl): ?array
 {
-    $dom = ff_load_xml($body);
+    $dom = nr_load_xml($body);
     if ($dom === null) return null;
 
     $root = $dom->documentElement;
@@ -159,73 +159,73 @@ function ff_parse_feed(string $body, string $baseUrl): ?array
 
     if ($rootName === 'rss' || $rootName === 'rdf') {
         $channel = $xp->query('//*[local-name()="channel"]')->item(0);
-        $title = $channel instanceof DOMElement ? ff_child_text($channel, ['title']) : '';
-        $site  = $channel instanceof DOMElement ? ff_child_text($channel, ['link']) : '';
+        $title = $channel instanceof DOMElement ? nr_child_text($channel, ['title']) : '';
+        $site  = $channel instanceof DOMElement ? nr_child_text($channel, ['link']) : '';
 
         foreach ($xp->query('//*[local-name()="item"]') as $item) {
             /** @var DOMElement $item */
-            $guid = ff_child_text($item, ['guid']);
-            $link = ff_child_text($item, ['link']);
+            $guid = nr_child_text($item, ['guid']);
+            $link = nr_child_text($item, ['link']);
             if ($link === '' && preg_match('#^https?://#i', $guid)) $link = $guid;
             if ($link === '') continue;
 
-            $entries[] = ff_entry(
-                ff_absolute_url($link, $baseUrl),
-                ff_child_text($item, ['title']),
-                ff_parse_date(ff_child_text($item, ['pubdate', 'date', 'published'])),
-                ff_parse_date(ff_child_text($item, ['updated', 'modified'])),
-                ff_child_text($item, ['description', 'encoded', 'summary']),
+            $entries[] = nr_entry(
+                nr_absolute_url($link, $baseUrl),
+                nr_child_text($item, ['title']),
+                nr_parse_date(nr_child_text($item, ['pubdate', 'date', 'published'])),
+                nr_parse_date(nr_child_text($item, ['updated', 'modified'])),
+                nr_child_text($item, ['description', 'encoded', 'summary']),
                 $guid
             );
         }
 
         return [
             'type'    => $rootName === 'rss' ? 'rss' : 'rdf',
-            'title'   => $title !== '' ? ff_clean_text($title) : null,
+            'title'   => $title !== '' ? nr_clean_text($title) : null,
             'siteUrl' => $site !== '' ? $site : null,
-            'entries' => ff_finalize_entries($entries, true),
+            'entries' => nr_finalize_entries($entries, true),
         ];
     }
 
     if ($rootName === 'feed') {
-        $title = ff_child_text($root, ['title']);
+        $title = nr_child_text($root, ['title']);
         $site = null;
-        foreach (ff_child_elements($root, 'link') as $l) {
+        foreach (nr_child_elements($root, 'link') as $l) {
             $rel = $l->getAttribute('rel') ?: 'alternate';
             if ($rel === 'alternate') { $site = $l->getAttribute('href'); break; }
         }
 
-        foreach (ff_child_elements($root, 'entry') as $item) {
+        foreach (nr_child_elements($root, 'entry') as $item) {
             $link = '';
-            foreach (ff_child_elements($item, 'link') as $l) {
+            foreach (nr_child_elements($item, 'link') as $l) {
                 $rel = $l->getAttribute('rel') ?: 'alternate';
                 if ($rel === 'alternate' && $l->getAttribute('href') !== '') {
                     $link = $l->getAttribute('href');
                     break;
                 }
             }
-            $id = ff_child_text($item, ['id']);
+            $id = nr_child_text($item, ['id']);
             if ($link === '' && preg_match('#^https?://#i', $id)) $link = $id;
             if ($link === '') continue;
 
-            $published = ff_parse_date(ff_child_text($item, ['published', 'issued', 'created']));
-            $updated   = ff_parse_date(ff_child_text($item, ['updated', 'modified']));
+            $published = nr_parse_date(nr_child_text($item, ['published', 'issued', 'created']));
+            $updated   = nr_parse_date(nr_child_text($item, ['updated', 'modified']));
 
-            $entries[] = ff_entry(
-                ff_absolute_url($link, $baseUrl),
-                ff_child_text($item, ['title']),
+            $entries[] = nr_entry(
+                nr_absolute_url($link, $baseUrl),
+                nr_child_text($item, ['title']),
                 $published ?? $updated,
                 $updated,
-                ff_child_text($item, ['summary', 'content']),
+                nr_child_text($item, ['summary', 'content']),
                 $id
             );
         }
 
         return [
             'type'    => 'atom',
-            'title'   => $title !== '' ? ff_clean_text($title) : null,
-            'siteUrl' => $site ? ff_absolute_url($site, $baseUrl) : null,
-            'entries' => ff_finalize_entries($entries, true),
+            'title'   => $title !== '' ? nr_clean_text($title) : null,
+            'siteUrl' => $site ? nr_absolute_url($site, $baseUrl) : null,
+            'entries' => nr_finalize_entries($entries, true),
         ];
     }
 
@@ -236,7 +236,7 @@ function ff_parse_feed(string $body, string $baseUrl): ?array
 //  HTML helpers
 // =====================================================================
 
-function ff_load_html(string $html): DOMDocument
+function nr_load_html(string $html): DOMDocument
 {
     $prev = libxml_use_internal_errors(true);
     $dom = new DOMDocument();
@@ -247,24 +247,24 @@ function ff_load_html(string $html): DOMDocument
     return $dom;
 }
 
-function ff_is_html(string $contentType, string $body): bool
+function nr_is_html(string $contentType, string $body): bool
 {
     return str_contains($contentType, 'html')
         || preg_match('/<html\b|<!doctype\s+html/i', substr($body, 0, 4096)) === 1;
 }
 
-function ff_page_title(DOMDocument $dom): ?string
+function nr_page_title(DOMDocument $dom): ?string
 {
     $xp = new DOMXPath($dom);
     $og = $xp->query('//meta[@property="og:site_name"]/@content')->item(0);
     $t = $dom->getElementsByTagName('title')->item(0);
-    $title = $t ? ff_clean_text($t->textContent) : '';
-    if ($title === '' && $og) $title = ff_clean_text($og->nodeValue ?? '');
+    $title = $t ? nr_clean_text($t->textContent) : '';
+    if ($title === '' && $og) $title = nr_clean_text($og->nodeValue ?? '');
     return $title !== '' ? $title : null;
 }
 
 /** Explicit <link rel="alternate" type="application/rss+xml"> plus visible feed links. */
-function ff_discover_feed_links(DOMDocument $dom, string $baseUrl): array
+function nr_discover_feed_links(DOMDocument $dom, string $baseUrl): array
 {
     $xp = new DOMXPath($dom);
     $found = [];
@@ -275,7 +275,7 @@ function ff_discover_feed_links(DOMDocument $dom, string $baseUrl): array
         $type = strtolower(trim($link->getAttribute('type')));
         if (str_contains($rel, ' alternate ') && in_array($type, ['application/rss+xml', 'application/atom+xml', 'application/rdf+xml', 'application/feed+json', 'application/xml', 'text/xml'], true)) {
             if ($type === 'application/feed+json') continue; // JSON Feed not supported yet
-            $found[] = ff_absolute_url($link->getAttribute('href'), $baseUrl);
+            $found[] = nr_absolute_url($link->getAttribute('href'), $baseUrl);
         }
     }
 
@@ -283,7 +283,7 @@ function ff_discover_feed_links(DOMDocument $dom, string $baseUrl): array
     $host = parse_url($baseUrl, PHP_URL_HOST);
     foreach ($xp->query('//a[@href]') as $a) {
         /** @var DOMElement $a */
-        $href = ff_absolute_url($a->getAttribute('href'), $baseUrl);
+        $href = nr_absolute_url($a->getAttribute('href'), $baseUrl);
         $path = strtolower((string)parse_url($href, PHP_URL_PATH));
         if (parse_url($href, PHP_URL_HOST) !== $host) continue;
         if (preg_match('#(/(rss|atom|feed)(/)?|\.(rss|atom)|/(rss|atom|feed|index)\.xml)$#', $path)) {
@@ -295,9 +295,9 @@ function ff_discover_feed_links(DOMDocument $dom, string $baseUrl): array
 }
 
 /** Common feed locations to probe when nothing is declared. Path-specific first. */
-function ff_guess_feed_urls(string $url): array
+function nr_guess_feed_urls(string $url): array
 {
-    $origin = ff_origin($url);
+    $origin = nr_origin($url);
     $path = rtrim((string)parse_url($url, PHP_URL_PATH), '/');
     $guesses = [];
 
@@ -324,21 +324,21 @@ function ff_guess_feed_urls(string $url): array
  *
  * @return array{strategy:string, entries:array}|null
  */
-function ff_parse_html_listing(DOMDocument $dom, string $baseUrl): ?array
+function nr_parse_html_listing(DOMDocument $dom, string $baseUrl): ?array
 {
-    $entries = ff_listing_jsonld($dom, $baseUrl);
+    $entries = nr_listing_jsonld($dom, $baseUrl);
     if (count($entries) >= 3) return ['strategy' => 'html-jsonld', 'entries' => $entries];
 
-    $entries = ff_listing_articles($dom, $baseUrl);
+    $entries = nr_listing_articles($dom, $baseUrl);
     if (count($entries) >= 3) return ['strategy' => 'html-article', 'entries' => $entries];
 
-    $entries = ff_listing_path_links($dom, $baseUrl);
+    $entries = nr_listing_path_links($dom, $baseUrl);
     if (count($entries) >= 3) return ['strategy' => 'html-links', 'entries' => $entries];
 
     return null;
 }
 
-function ff_listing_jsonld(DOMDocument $dom, string $baseUrl): array
+function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
 {
     $xp = new DOMXPath($dom);
     $entries = [];
@@ -359,13 +359,13 @@ function ff_listing_jsonld(DOMDocument $dom, string $baseUrl): array
                 $url = $node['url'] ?? ($node['mainEntityOfPage']['@id'] ?? $node['mainEntityOfPage'] ?? null);
                 $title = $node['headline'] ?? $node['name'] ?? '';
                 if (is_string($url) && $url !== '' && is_string($title) && $title !== '') {
-                    $absolute = ff_absolute_url($url, $baseUrl);
-                    if (ff_normalize_url($absolute) !== ff_normalize_url($baseUrl)) {
-                        $entries[] = ff_entry(
+                    $absolute = nr_absolute_url($url, $baseUrl);
+                    if (nr_normalize_url($absolute) !== nr_normalize_url($baseUrl)) {
+                        $entries[] = nr_entry(
                             $absolute,
                             $title,
-                            ff_parse_date(is_string($node['datePublished'] ?? null) ? $node['datePublished'] : null),
-                            ff_parse_date(is_string($node['dateModified'] ?? null) ? $node['dateModified'] : null),
+                            nr_parse_date(is_string($node['datePublished'] ?? null) ? $node['datePublished'] : null),
+                            nr_parse_date(is_string($node['dateModified'] ?? null) ? $node['dateModified'] : null),
                             is_string($node['description'] ?? null) ? $node['description'] : null
                         );
                     }
@@ -374,7 +374,7 @@ function ff_listing_jsonld(DOMDocument $dom, string $baseUrl): array
                 $url = is_string($node['url'] ?? null) ? $node['url'] : (is_string($node['item'] ?? null) ? $node['item'] : ($node['item']['@id'] ?? null));
                 $title = $node['name'] ?? ($node['item']['name'] ?? '');
                 if (is_string($url) && is_string($title) && $title !== '') {
-                    $entries[] = ff_entry(ff_absolute_url($url, $baseUrl), $title, null);
+                    $entries[] = nr_entry(nr_absolute_url($url, $baseUrl), $title, null);
                 }
             }
 
@@ -384,10 +384,10 @@ function ff_listing_jsonld(DOMDocument $dom, string $baseUrl): array
         }
     }
 
-    return ff_finalize_entries($entries, false);
+    return nr_finalize_entries($entries, false);
 }
 
-function ff_listing_articles(DOMDocument $dom, string $baseUrl): array
+function nr_listing_articles(DOMDocument $dom, string $baseUrl): array
 {
     $xp = new DOMXPath($dom);
     $entries = [];
@@ -399,29 +399,29 @@ function ff_listing_articles(DOMDocument $dom, string $baseUrl): array
         $link ??= $xp->query('.//a[@href]', $article)->item(0);
         if (!$link instanceof DOMElement) continue;
 
-        $url = ff_absolute_url($link->getAttribute('href'), $baseUrl);
-        $title = ff_clean_text($heading ? $heading->textContent : $link->textContent);
-        if ($title === '' || ff_normalize_url($url) === ff_normalize_url($baseUrl)) continue;
+        $url = nr_absolute_url($link->getAttribute('href'), $baseUrl);
+        $title = nr_clean_text($heading ? $heading->textContent : $link->textContent);
+        if ($title === '' || nr_normalize_url($url) === nr_normalize_url($baseUrl)) continue;
 
         $date = null;
         $time = $xp->query('.//time', $article)->item(0);
         if ($time instanceof DOMElement) {
-            $date = ff_parse_date($time->getAttribute('datetime') ?: $time->textContent);
+            $date = nr_parse_date($time->getAttribute('datetime') ?: $time->textContent);
         }
-        $date ??= ff_find_date_in_text($article->textContent);
+        $date ??= nr_find_date_in_text($article->textContent);
 
         $p = $xp->query('.//p', $article)->item(0);
-        $entries[] = ff_entry($url, $title, $date, null, $p ? $p->textContent : null);
+        $entries[] = nr_entry($url, $title, $date, null, $p ? $p->textContent : null);
     }
 
-    return ff_finalize_entries($entries, false);
+    return nr_finalize_entries($entries, false);
 }
 
 /**
  * Links whose path is *below* the listing path. For https://example.com/news
  * this collects /news/<slug>; for a root URL only typical article paths qualify.
  */
-function ff_listing_path_links(DOMDocument $dom, string $baseUrl): array
+function nr_listing_path_links(DOMDocument $dom, string $baseUrl): array
 {
     $xp = new DOMXPath($dom);
     $base = parse_url($baseUrl);
@@ -432,24 +432,24 @@ function ff_listing_path_links(DOMDocument $dom, string $baseUrl): array
 
     foreach ($xp->query('//a[@href][not(ancestor::nav) and not(ancestor::header) and not(ancestor::footer)]') as $a) {
         /** @var DOMElement $a */
-        $url = ff_absolute_url($a->getAttribute('href'), $baseUrl);
+        $url = nr_absolute_url($a->getAttribute('href'), $baseUrl);
         $u = parse_url($url);
         if (strtolower((string)($u['host'] ?? '')) !== $host) continue;
 
         $path = rtrim((string)($u['path'] ?? ''), '/');
-        if (!ff_is_article_path($path, $basePath)) continue;
+        if (!nr_is_article_path($path, $basePath)) continue;
 
-        [$title, $date] = ff_title_and_date_from_link($a, $xp);
+        [$title, $date] = nr_title_and_date_from_link($a, $xp);
         if ($title === '' || mb_strlen($title) < 8) continue;
 
         $url = preg_replace('/#.*$/', '', $url) ?? $url;
-        $entries[] = ff_entry($url, $title, $date);
+        $entries[] = nr_entry($url, $title, $date);
     }
 
-    return ff_finalize_entries($entries, false);
+    return nr_finalize_entries($entries, false);
 }
 
-function ff_is_article_path(string $path, string $basePath): bool
+function nr_is_article_path(string $path, string $basePath): bool
 {
     if ($path === '' || $path === $basePath) return false;
 
@@ -469,7 +469,7 @@ function ff_is_article_path(string $path, string $basePath): bool
 }
 
 /** @return array{0:string,1:?string} */
-function ff_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
+function nr_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
 {
     // Date: <time> inside the link or its card
     $date = null;
@@ -481,7 +481,7 @@ function ff_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
     }
     $time = $xp->query('.//time', $a)->item(0) ?? $xp->query('.//time', $card)->item(0);
     if ($time instanceof DOMElement) {
-        $date = ff_parse_date($time->getAttribute('datetime') ?: $time->textContent);
+        $date = nr_parse_date($time->getAttribute('datetime') ?: $time->textContent);
     }
 
     // Title: heading inside link > [class*=title] > longest text segment
@@ -492,18 +492,18 @@ function ff_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
 
     $segments = [];
     foreach ($xp->query('.//text()', $a) as $t) {
-        $s = ff_clean_text($t->nodeValue ?? '');
+        $s = nr_clean_text($t->nodeValue ?? '');
         if ($s !== '') $segments[] = $s;
     }
-    $date ??= ff_find_date_in_text(implode(' | ', $segments));
+    $date ??= nr_find_date_in_text(implode(' | ', $segments));
 
     if ($h !== null) {
-        $title = ff_clean_text($h->textContent);
+        $title = nr_clean_text($h->textContent);
     } else {
-        $candidates = array_filter($segments, fn($s) => ff_find_date_in_text($s) === null || mb_strlen($s) > 40);
+        $candidates = array_filter($segments, fn($s) => nr_find_date_in_text($s) === null || mb_strlen($s) > 40);
         usort($candidates, fn($x, $y) => mb_strlen($y) <=> mb_strlen($x));
         $title = $candidates[0] ?? '';
-        if ($title === '') $title = ff_clean_text($a->getAttribute('title') ?: $a->getAttribute('aria-label'));
+        if ($title === '') $title = nr_clean_text($a->getAttribute('title') ?: $a->getAttribute('aria-label'));
     }
 
     if (mb_strlen($title) > 250) $title = rtrim(mb_substr($title, 0, 249)) . '…';
@@ -516,16 +516,16 @@ function ff_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
 // =====================================================================
 
 /** Candidate sitemap URLs: robots.txt declarations first, then defaults. */
-function ff_sitemap_candidates(string $url): array
+function nr_sitemap_candidates(string $url): array
 {
-    $origin = ff_origin($url);
+    $origin = nr_origin($url);
     $candidates = [];
 
-    $robots = ff_fetch($origin . '/robots.txt');
+    $robots = nr_fetch($origin . '/robots.txt');
     if ($robots['ok']) {
         foreach (preg_split('/\R/', $robots['body']) ?: [] as $line) {
             if (preg_match('/^\s*sitemap:\s*(\S+)/i', $line, $m)) {
-                $candidates[] = ff_absolute_url($m[1], $origin);
+                $candidates[] = nr_absolute_url($m[1], $origin);
             }
         }
     }
@@ -539,9 +539,9 @@ function ff_sitemap_candidates(string $url): array
  * Parse a sitemap (or sitemap index), keep URLs below the requested path.
  * Returns entries sorted by lastmod / news publication date.
  */
-function ff_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl, int $depth = 0): array
+function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl, int $depth = 0): array
 {
-    $dom = ff_load_xml($body);
+    $dom = nr_load_xml($body);
     if ($dom === null) return [];
 
     $root = $dom->documentElement;
@@ -551,12 +551,12 @@ function ff_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
 
     if ($name === 'sitemapindex' && $depth === 0) {
         $children = [];
-        foreach (ff_child_elements($root, 'sitemap') as $sm) {
-            $loc = ff_child_text($sm, ['loc']);
+        foreach (nr_child_elements($root, 'sitemap') as $sm) {
+            $loc = nr_child_text($sm, ['loc']);
             if ($loc === '') continue;
             $children[] = [
-                'loc'     => ff_absolute_url($loc, $sitemapUrl),
-                'lastmod' => ff_parse_date(ff_child_text($sm, ['lastmod'])) ?? '',
+                'loc'     => nr_absolute_url($loc, $sitemapUrl),
+                'lastmod' => nr_parse_date(nr_child_text($sm, ['lastmod'])) ?? '',
             ];
         }
 
@@ -569,46 +569,46 @@ function ff_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
         });
 
         $entries = [];
-        foreach (array_slice($children, 0, FF_MAX_CHILD_SITEMAPS) as $child) {
-            $res = ff_fetch($child['loc']);
+        foreach (array_slice($children, 0, NR_MAX_CHILD_SITEMAPS) as $child) {
+            $res = nr_fetch($child['loc']);
             if ($res['ok']) {
-                $entries = array_merge($entries, ff_parse_sitemap($res['body'], $res['finalUrl'], $requestedUrl, 1));
+                $entries = array_merge($entries, nr_parse_sitemap($res['body'], $res['finalUrl'], $requestedUrl, 1));
             }
         }
-        return ff_finalize_entries($entries, true);
+        return nr_finalize_entries($entries, true);
     }
 
     if ($name !== 'urlset') return [];
 
     $entries = [];
-    foreach (ff_child_elements($root, 'url') as $node) {
-        $loc = ff_child_text($node, ['loc']);
+    foreach (nr_child_elements($root, 'url') as $node) {
+        $loc = nr_child_text($node, ['loc']);
         if ($loc === '') continue;
 
         $path = rtrim((string)parse_url($loc, PHP_URL_PATH), '/');
-        if (!ff_is_article_path($path, $basePath)) continue;
+        if (!nr_is_article_path($path, $basePath)) continue;
 
         // Google News sitemap extension
         $newsTitle = '';
         $newsDate = null;
-        foreach (ff_child_elements($node, 'news') as $news) {
-            $newsTitle = ff_child_text($news, ['title']);
-            $newsDate = ff_parse_date(ff_child_text($news, ['publication_date']));
+        foreach (nr_child_elements($node, 'news') as $news) {
+            $newsTitle = nr_child_text($news, ['title']);
+            $newsDate = nr_parse_date(nr_child_text($news, ['publication_date']));
         }
 
-        $lastmod = ff_parse_date(ff_child_text($node, ['lastmod']));
-        $entries[] = ff_entry(
+        $lastmod = nr_parse_date(nr_child_text($node, ['lastmod']));
+        $entries[] = nr_entry(
             $loc,
-            $newsTitle !== '' ? $newsTitle : ff_title_from_slug($loc),
+            $newsTitle !== '' ? $newsTitle : nr_title_from_slug($loc),
             $newsDate,
             $lastmod
         );
     }
 
-    return ff_finalize_entries($entries, true);
+    return nr_finalize_entries($entries, true);
 }
 
-function ff_title_from_slug(string $url): string
+function nr_title_from_slug(string $url): string
 {
     $slug = basename(rtrim((string)parse_url($url, PHP_URL_PATH), '/'));
     $slug = preg_replace('/\.(html?|php|aspx?)$/i', '', $slug) ?? $slug;
