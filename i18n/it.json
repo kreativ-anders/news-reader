@@ -1,7 +1,9 @@
 {
   "meta": {
     "title": "News Reader – lettore RSS self-hosted con sync cifrata",
-    "description": "Lettore RSS open source per smartphone e desktop: leggi ora, più tardi o salta. Sync cifrata end-to-end, senza account. L’alternativa a Feedly da ospitare tu."
+    "description": "Lettore RSS open source per smartphone e desktop: leggi ora, più tardi o salta. Sync cifrata end-to-end, senza account. L’alternativa a Feedly da ospitare tu.",
+    "og_title": "News – leggi ciò che conta, salta il resto",
+    "og_description": "Un lettore RSS tranquillo con sincronizzazione cifrata end-to-end. Senza account, senza tracciamento. Open source – ospita il tuo."
   },
   "ui": {
     "language": "Lingua",

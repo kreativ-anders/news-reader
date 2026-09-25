@@ -5,16 +5,23 @@ declare(strict_types=1);
 //  Entry model
 // =====================================================================
 
-function nr_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = ''): array
+function nr_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = '', ?string $image = null, ?string $content = null): array
 {
-    return [
+    $entry = [
         'id'          => hash('sha256', $guid !== '' ? $guid : nr_normalize_url($url)),
         'url'         => $url,
         'title'       => nr_clean_text($title),
         'publishedAt' => $publishedAt,
         'updatedAt'   => $updatedAt,
         'summary'     => $summary !== null && $summary !== '' ? nr_summary($summary) : null,
+        'image'       => $image,
     ];
+    // Full text (only kept in the server cache; /api/collect strips it, /api/article serves it)
+    if ($content !== null && $content !== '' && function_exists('nr_fulltext')) {
+        $full = nr_fulltext($content, $url);
+        if ($full !== null) $entry['content'] = $full;
+    }
+    return $entry;
 }
 
 /** Deduplicate by URL (first wins). Optionally sort newest first. */
@@ -50,11 +57,76 @@ function nr_clean_text(string $s): string
 
 function nr_summary(string $html): string
 {
-    $text = nr_clean_text(strip_tags(preg_replace('/<(script|style)\b.*?<\/\1>/is', '', $html) ?? ''));
+    $html = preg_replace('/<(script|style|figcaption)\b.*?<\/\1>/is', '', $html) ?? '';
+    // block boundaries become spaces, otherwise "…Uses</h3><p>From…" turns into "UsesFrom"
+    $html = preg_replace('/<(?:br|hr|img)\b[^>]*>|<\/(?:p|div|h[1-6]|li|ul|ol|blockquote|figure|pre|tr|td|th|section|article)>/i', ' ', $html) ?? $html;
+    $text = nr_clean_text(strip_tags($html));
     if (mb_strlen($text) > NR_SUMMARY_LENGTH) {
         $text = rtrim(mb_substr($text, 0, NR_SUMMARY_LENGTH - 1)) . '…';
     }
     return $text;
+}
+
+/**
+ * Preview image of a feed item: media:thumbnail / media:content, image enclosure,
+ * itunes:image, then the first real <img> of the item's HTML. Tracking pixels are skipped.
+ */
+function nr_item_image(DOMXPath $xp, DOMElement $item, string $html, string $baseUrl): ?string
+{
+    $queries = [
+        './/*[local-name()="thumbnail"]/@url',
+        './/*[local-name()="content" and (starts-with(@type,"image/") or @medium="image")]/@url',
+        './*[local-name()="enclosure" and starts-with(@type,"image/")]/@url',
+        './*[local-name()="image"]/@href',
+    ];
+    foreach ($queries as $q) {
+        foreach ($xp->query($q, $item) ?: [] as $attr) {
+            $url = nr_image_url($attr->nodeValue ?? '', $baseUrl);
+            if ($url !== null) return $url;
+        }
+    }
+    return nr_html_image($html, $baseUrl);
+}
+
+/** First <img> in an HTML fragment that is not a tracking pixel / emoji / avatar. */
+function nr_html_image(string $html, string $baseUrl): ?string
+{
+    if ($html === '' || stripos($html, '<img') === false) return null;
+    if (!preg_match_all('/<img\b[^>]*>/i', $html, $tags)) return null;
+    foreach (array_slice($tags[0], 0, 10) as $tag) {
+        $attrs = [];
+        preg_match_all('/([a-z-]+)\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', $tag, $m, PREG_SET_ORDER);
+        foreach ($m as $a) $attrs[strtolower($a[1])] ??= trim($a[2], '"\'');
+        foreach (['width', 'height'] as $dim) {
+            if (isset($attrs[$dim]) && is_numeric($attrs[$dim]) && (int)$attrs[$dim] < 40) continue 2;
+        }
+        $src = $attrs['src'] ?? '';
+        if ($src === '' || str_starts_with($src, 'data:')) $src = $attrs['data-src'] ?? $attrs['data-lazy-src'] ?? '';
+        $url = nr_image_url($src, $baseUrl);
+        if ($url !== null) return $url;
+    }
+    return null;
+}
+
+/** Absolute http(s) image URL, or null for junk, pixels and trackers. */
+function nr_image_url(string $src, string $baseUrl): ?string
+{
+    $src = trim(html_entity_decode($src, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($src === '' || str_starts_with($src, 'data:')) return null;
+    $url = nr_absolute_url($src, $baseUrl);
+    if (strlen($url) > 2048 || !preg_match('#^https?://[^/\s]+#i', $url)) return null;
+    if (preg_match('#/_/stat\?|/pixel|[/._-](?:beacon|tracker|tracking|spacer|blank)[/._?-]|feedburner\.com|feedblitz|doubleclick\.net|/wp-includes/images/smilies/|s\.w\.org/images/core/emoji|gravatar\.com/avatar|\.svg(?:$|\?)#i', $url)) return null;
+    return $url;
+}
+
+/** Concatenated text of all direct children with one of the given local names. */
+function nr_children_text(DOMElement $el, array $names): string
+{
+    $out = '';
+    foreach ($el->childNodes as $c) {
+        if ($c instanceof DOMElement && in_array(strtolower($c->localName), $names, true)) $out .= $c->textContent . ' ';
+    }
+    return $out;
 }
 
 function nr_parse_date(?string $value): ?string
@@ -169,13 +241,16 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             if ($link === '' && preg_match('#^https?://#i', $guid)) $link = $guid;
             if ($link === '') continue;
 
+            $url = nr_absolute_url($link, $baseUrl);
             $entries[] = nr_entry(
-                nr_absolute_url($link, $baseUrl),
+                $url,
                 nr_child_text($item, ['title']),
                 nr_parse_date(nr_child_text($item, ['pubdate', 'date', 'published'])),
                 nr_parse_date(nr_child_text($item, ['updated', 'modified'])),
                 nr_child_text($item, ['description', 'encoded', 'summary']),
-                $guid
+                $guid,
+                nr_item_image($xp, $item, nr_children_text($item, ['description', 'encoded']), $url),
+                nr_child_text($item, ['encoded', 'description'])
             );
         }
 
@@ -211,13 +286,16 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             $published = nr_parse_date(nr_child_text($item, ['published', 'issued', 'created']));
             $updated   = nr_parse_date(nr_child_text($item, ['updated', 'modified']));
 
+            $url = nr_absolute_url($link, $baseUrl);
             $entries[] = nr_entry(
-                nr_absolute_url($link, $baseUrl),
+                $url,
                 nr_child_text($item, ['title']),
                 $published ?? $updated,
                 $updated,
                 nr_child_text($item, ['summary', 'content']),
-                $id
+                $id,
+                nr_item_image($xp, $item, nr_children_text($item, ['summary', 'content']), $url),
+                nr_child_text($item, ['content', 'summary'])
             );
         }
 
@@ -366,7 +444,9 @@ function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
                             $title,
                             nr_parse_date(is_string($node['datePublished'] ?? null) ? $node['datePublished'] : null),
                             nr_parse_date(is_string($node['dateModified'] ?? null) ? $node['dateModified'] : null),
-                            is_string($node['description'] ?? null) ? $node['description'] : null
+                            is_string($node['description'] ?? null) ? $node['description'] : null,
+                            '',
+                            nr_jsonld_image($node['image'] ?? null, $absolute)
                         );
                     }
                 }
@@ -385,6 +465,14 @@ function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
     }
 
     return nr_finalize_entries($entries, false);
+}
+
+/** JSON-LD "image": string, ImageObject, or a list of either. */
+function nr_jsonld_image(mixed $img, string $baseUrl): ?string
+{
+    if (is_array($img) && array_is_list($img)) $img = $img[0] ?? null;
+    if (is_array($img)) $img = $img['url'] ?? $img['contentUrl'] ?? null;
+    return is_string($img) ? nr_image_url($img, $baseUrl) : null;
 }
 
 function nr_listing_articles(DOMDocument $dom, string $baseUrl): array
@@ -411,7 +499,13 @@ function nr_listing_articles(DOMDocument $dom, string $baseUrl): array
         $date ??= nr_find_date_in_text($article->textContent);
 
         $p = $xp->query('.//p', $article)->item(0);
-        $entries[] = nr_entry($url, $title, $date, null, $p ? $p->textContent : null);
+        $image = null;
+        foreach ($xp->query('.//img', $article) as $i => $img) {
+            if ($i >= 3) break;
+            $image = nr_html_image($dom->saveHTML($img) ?: '', $baseUrl);
+            if ($image !== null) break;
+        }
+        $entries[] = nr_entry($url, $title, $date, null, $p ? $p->textContent : null, '', $image);
     }
 
     return nr_finalize_entries($entries, false);
@@ -597,11 +691,19 @@ function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
         }
 
         $lastmod = nr_parse_date(nr_child_text($node, ['lastmod']));
+        $image = null;
+        foreach (nr_child_elements($node, 'image') as $img) {   // Google image sitemap extension
+            $image = nr_image_url(nr_child_text($img, ['loc']), $loc);
+            if ($image !== null) break;
+        }
         $entries[] = nr_entry(
             $loc,
             $newsTitle !== '' ? $newsTitle : nr_title_from_slug($loc),
             $newsDate,
-            $lastmod
+            $lastmod,
+            null,
+            '',
+            $image
         );
     }
 

@@ -1,9 +1,10 @@
-// News service worker – offline app shell. Collector (/api/collect) and sync always go to the network.
-const VERSION = 'news-0.4.0';
+// News service worker – offline app shell. Collector (/api/collect), articles (/api/article) and sync always go to the network;
+// offline copies of articles live in IndexedDB (js/offline.js), not in this cache.
+const VERSION = 'news-0.5.0';
 const SHELL = [
   './', 'index.html', 'app.css', 'theme.css', 'manifest.webmanifest',
   'fonts/newsreader.woff2', 'fonts/source-sans-3.woff2',
-  'js/app.js', 'js/db.js', 'js/sync.js', 'js/feeds.js', 'js/i18n.js', 'vendor/qrcode.js',
+  'js/app.js', 'js/db.js', 'js/sync.js', 'js/feeds.js', 'js/i18n.js', 'js/offline.js', 'vendor/qrcode.js',
   'i18n/en.json', 'i18n/de.json', 'i18n/fr.json', 'i18n/it.json', 'i18n/es.json',
   'icons/news.svg', 'icons/favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
 ];

@@ -1,7 +1,9 @@
 {
   "meta": {
     "title": "News Reader – lecteur RSS auto-hébergé, sync chiffrée",
-    "description": "Lecteur RSS open source pour mobile et ordinateur : lire, plus tard ou ignorer. Sync chiffrée de bout en bout, sans compte. L’alternative à Feedly auto-hébergée."
+    "description": "Lecteur RSS open source pour mobile et ordinateur : lire, plus tard ou ignorer. Sync chiffrée de bout en bout, sans compte. L’alternative à Feedly auto-hébergée.",
+    "og_title": "News – lisez l’essentiel, oubliez le reste",
+    "og_description": "Un lecteur RSS serein avec synchronisation chiffrée de bout en bout. Sans compte, sans pistage. Open source – hébergez le vôtre."
   },
   "ui": {
     "language": "Langue",

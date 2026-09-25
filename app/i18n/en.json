@@ -7,13 +7,14 @@
     "settings": "Settings",
     "views": "Views"
   },
-  "nav": { "inbox": "Inbox", "reading": "Read now", "later": "Later", "done": "Done", "feeds": "Feeds" },
+  "nav": { "inbox": "Inbox", "reading": "Read now", "later": "Later", "done": "Done", "feeds": "Feeds", "toggle_feeds": "Show/hide feeds" },
   "act": {
     "reading": "Read now", "later": "Later", "dismissed": "Not interested", "done": "Done",
     "drop": "Drop", "remove": "Remove", "again": "Read again", "none": "Nothing"
   },
   "toast": {
-    "reading": "Moved to Read now", "later": "Saved for later", "done": "Marked as done",
+    "cleared": "Done list cleared",
+    "reading": "Moved to Read now", "later": "Saved for later", "done": "Marked as done", "all_done": "{n} marked as done",
     "dismissed": "Not interested", "new": "Back in inbox",
     "many": "{n} × {what}", "undo": "Undo", "details": "Details",
     "refresh_failed_one": "{n} feed could not be refreshed",
@@ -49,11 +50,12 @@
   },
   "views": {
     "reading": { "title": "Read now", "text": "What you are reading right now. Mark it done when you are through.", "empty": "Nothing in progress.", "hint": "Pick something from your inbox or your later list." },
-    "later": { "title": "Later", "text": "Your reading list – synced across your devices.", "empty": "Your reading list is empty.", "hint": "Save entries from the inbox with “Later”." },
-    "done": { "title": "Done", "text": "Finished reading. The most recent 300 are shown.", "empty": "Nothing finished yet.", "hint": "" }
+    "later": { "title": "Later", "text": "Your reading list – synced across your devices.", "empty": "Your reading list is empty.", "hint": "Save entries from the inbox with “Later”.", "all_done": "Mark all done" },
+    "done": { "title": "Done", "text": "Finished reading. The most recent 300 are shown.", "empty": "All done.", "hint": "", "clear": "Clear list" }
   },
   "untitled": "(untitled)",
   "feeds": {
+    "unfollowed": "unfollowed",
     "title": "Feeds",
     "count_one": "{n} followed · collected by your server",
     "count_other": "{n} followed · collected by your server",
@@ -116,6 +118,7 @@
     "reset": "Reset this device"
   },
   "dlg": {
+    "clear_done_title": "Clear the Done list?", "clear_done_ok": "Clear", "clear_done_body_one": "<p>{n} finished entry will be removed. It won’t reappear in the inbox.</p>", "clear_done_body_other": "<p>{n} finished entries will be removed. They won’t reappear in the inbox.</p>",
     "ok": "OK", "cancel": "Cancel",
     "link_title": "Pairing link",
     "unpair_title": "Unpair this device?", "unpair_body": "<p>This device stops syncing. Your local data stays here, and other devices keep the vault.</p>", "unpair_ok": "Unpair",
@@ -139,5 +142,11 @@
     "conflict": "Too many concurrent changes – will retry.",
     "decrypt": "Vault could not be decrypted – wrong key or damaged data.",
     "format": "Unknown vault format on the server."
+  },
+  "reader": {
+    "close": "Close", "minutes_one": "{n} min read", "minutes_other": "{n} min read",
+    "saved": "Saved for offline reading", "read_done": "Read – marked as done",
+    "unavailable": "You are offline – this article was not saved for offline reading.",
+    "partial": "Only part of this article could be saved – the page is behind a paywall or built with JavaScript."
   }
 }

@@ -5,6 +5,7 @@ It ships with two small server parts, both behind one PHP front controller (`api
 
 - **Sync** (`/api/sync`) – end-to-end encrypted, account-free and database-free.
 - **Collector** (`/api/collect`) – turns any website or feed URL into normalized JSON entries.
+- **Articles** (`/api/article`) – readable offline copies for the *Later* list.
 
 Project site: `index.html` (planned: https://newsreader.app). MIT-licensed, self-hostable and white-label.
 
@@ -12,10 +13,12 @@ Project site: `index.html` (planned: https://newsreader.app). MIT-licensed, self
 
 Plain ES modules, no build step.
 
-- Flow per entry: **Inbox** → *Read now* (opens the article) → *Done* · *Later* (reading list) · *Not interested*.
+- Flow per entry: **Inbox** → *Read now* (opens the article in a new tab and marks it *Done*, undo via toast) · *Later* (reading list) · *Not interested*. Opening an entry from *Later* or *Read now* also marks it *Done*; *Read again* in *Done* moves it back to *Read now*.
+- Opened entries are saved as *Done* immediately, but the card stays dimmed in its list until News is visible again – then it slides out and the undo toast appears. Middle click / Ctrl-/Cmd-click open a background tab; the card leaves right away. *Later* has a *Mark all done* button (respects the feed filter, undo via toast).
 - Data in IndexedDB (`news`): feed list + item states (synced), entries (per device, fetched from the Collector).
 - New subscriptions show entries of the last 14 days; unseen entries that left the feed are kept 30 days.
 - Offline: service worker caches the app shell; changes are queued (outbox) until the server is reachable.
+- **Offline reading** (`js/offline.js`): an entry moved to *Later* is saved once as a readable copy (IndexedDB `articles`, per device, not synced). Online, a click always opens the original in a new tab – straight from the source, never through the server. Offline, the copy opens in a full-screen reader (one column, big ✕, `Esc`/back closes). Scrolled to the end → *Done* (with undo); closed earlier → stays in *Later*, position is kept. Copies of done/dismissed items are dropped after one day. Paywalled or script-rendered pages give whatever content was readable (marked as partial).
 - Add feeds via URL field, Android share sheet (Web Share Target), bookmarklet (`?add=<url>`) or OPML import; OPML export included.
 - Swipe on touch (right: later · left: not interested); keyboard: `j`/`k`, `o` read now, `l` later, `x` not interested, `d` done, `u` undo, `r` refresh, `1`–`5` views.
 - Server address: default is the server News is served from (`app/../`); changeable under *Settings*.
@@ -60,6 +63,19 @@ GET /api/collect?url=<url-encoded URL>[&refresh=1][&limit=1..100]
 | `refresh=1` | Bypass the cache; only honoured if the cache is older than 15 min |
 | `limit` | Max. entries returned (default/max 100) |
 
+## Articles (`/api/article`)
+
+```
+GET /api/article?url=<article url>[&feed=<feed url>&id=<entry id>]
+```
+
+1. `feed` + `id` given and the **cached** feed carries the full text (`content:encoded` / Atom `content`, at least `NR_FULLTEXT_MIN_CHARS`) → served from the cache (`"source": "feed"`, no upstream request, no rate limit). Full texts are kept in the Collector cache only; `/api/collect` strips them.
+2. Otherwise the page is fetched once and reduced to its main content (`src/readable.php`: JSON-LD/meta for title, author, date; Readability-style paragraph scoring; JSON-LD `articleBody` for script-rendered pages; description as last resort, `"partial": true`) → cached `NR_ARTICLE_TTL` (7 d), errors `NR_ARTICLE_ERROR_TTL` (1 h), `NR_RATE_ARTICLE_MISS` 30 fetches / 10 min per IP.
+
+Response: `{ "article": { url, title, byline, siteName, lang, publishedAt, image, content, words, source: "feed"|"page", partial } }`. `content` is whitelisted HTML (`p`, headings, lists, quotes, code, tables, `a[href]`, `img[src|alt]`, absolute http(s) URLs only, no attributes otherwise); the app sanitizes it again before rendering.
+
+SSRF protection (both endpoints): only http(s); every redirect hop re-validated; loopback, private, link-local, CGNAT, ULA and IPv4-mapped IPv6 addresses rejected; curl connects to exactly the validated IPs (`CURLOPT_RESOLVE`, no DNS rebinding); body size, timeouts and redirects capped.
+
 ## Resolution order
 
 0. Platform rule (`src/feed-rules.php`): known page URLs of large platforms are mapped to their native feed **before** the page is fetched → `rule` (the rule id is returned as `source.rule`). Avoids bot protection on profile pages (e.g. `medium.com/@user` → `medium.com/feed/@user`). Covers Medium, Substack, WordPress.com, Blogger, Tumblr, dev.to, Hashnode, YouTube, Vimeo, Apple Podcasts, Reddit, Mastodon, Bluesky, Hacker News, Lobsters, Stack Exchange, Pinterest, Letterboxd, GitHub, GitLab, Codeberg, PyPI, RubyGems, arXiv, Google News, Steam, Kickstarter, itch.io and more. If the rule's feeds fail, resolution continues with step 1. Platforms without any feeds (X, Meta, LinkedIn, TikTok, Spotify) end with `PLATFORM_NO_FEED` without contacting the platform.
@@ -76,7 +92,8 @@ GET /api/collect?url=<url-encoded URL>[&refresh=1][&limit=1..100]
   "source":  { "inputUrl": "...", "url": "...", "type": "rss|rdf|atom|html|sitemap",
                "strategy": "...", "rule": "...|null", "feedUrl": "...|null", "title": "..." },
   "entries": [ { "id": "sha256", "url": "...", "title": "...",
-                 "publishedAt": "ISO-8601|null", "updatedAt": "ISO-8601|null", "summary": "...|null" } ],
+                 "publishedAt": "ISO-8601|null", "updatedAt": "ISO-8601|null", "summary": "...|null",
+                 "image": "https://…|null" } ],
   "meta":    { "count": 42, "fetchedAt": "...", "cached": true, "stale": false,
                "cachedAt": "...", "nextRefreshAfter": "...", "version": "0.2.0" }
 }
@@ -115,6 +132,7 @@ File-based fixed windows per client IP (`var/rate/`, only a salted hash of the I
 | Setting | Default |
 |---|---|
 | `NR_RATE_COLLECT_MISS` – Collector upstream fetches (cache hits are free; when limited, a stale copy is served if available) | 60 / 10 min |
+| `NR_RATE_ARTICLE_MISS` – article page fetches (feed full text and cache hits are free) | 30 / 10 min |
 | `NR_RATE_SYNC` – all sync requests | 300 / 10 min |
 | `NR_RATE_SYNC_CREATE` – new vaults | 5 / day |
 
@@ -136,13 +154,31 @@ English (default), German, French, Italian, Spanish – shared loader `app/js/i1
 - One JSON file per language with nested keys: `i18n/<lang>.json` (site), `app/i18n/<lang>.json` (app).
 - `en.json` is the source and must contain every key; other languages may be partial – missing keys fall back to English **per key**.
 - Placeholders `{name}`; plurals via `key_one` / `key_other` (`Intl.PluralRules`) when `n` is passed.
-- Static markup: `data-i18n="section.key"` (innerHTML) and `data-i18n-attr="aria-label:key;title:key"`. English stays in the HTML (works without JS, indexable).
-- Language choice: saved choice (`localStorage` `nr.lang`, shared by site and app) → browser languages → English.
-- Add a language: copy `en.json` to `xx.json` in both folders, translate, add `xx` to `LANGS` in `app/js/i18n.js` and to the site's language `<select>`.
+- Markup: `data-i18n="section.key"` (innerHTML) and `data-i18n-attr="aria-label:key;title:key"`.
+
+**Site (SEO):** one static URL per language – `/` (English, `x-default`), `/de/`, `/fr/`, `/it/`, `/es/`.
+Each page is fully translated in the HTML (title, meta, Open Graph, FAQ structured data), carries `hreflang` alternates and its own canonical; `sitemap.xml` lists all five with alternates. The language switcher links to these URLs; there are no automatic redirects. The generated pages are built by `tools/build-i18n.php` (see *Deploy*) – never edit `de/`, `fr/`, `it/`, `es/` by hand.
+
+**App:** `noindex`, language chosen in the browser – saved choice (`localStorage` `nr.lang`, also set by the site switcher) → browser languages → English.
+
+**Add a language:** copy `en.json` to `xx.json` in `i18n/` and `app/i18n/`, translate, add `xx` to `LANGS` in `app/js/i18n.js` and `tools/build-i18n.php`, add an `<option>` to the site's language `<select>`, run the build.
 
 ## Swipe gestures (app)
 
 *Settings → Swipe gestures*: action for swipe right / left – Later, Not interested, Done, Read now or nothing. Saved per device (IndexedDB `kv.swipe`, not synced); only actions the current view offers are used. Default: right = Later, left = Not interested.
+
+## Deploy
+
+Run on **every deploy** (and after changing `index.html` or `i18n/*.json`):
+
+```
+php tools/build-i18n.php --site=https://newsreader.app/
+```
+
+- Generates `de/index.html`, `fr/index.html`, `it/index.html`, `es/index.html`, refreshes the `hreflang` block in `index.html` and rewrites `sitemap.xml`.
+- `--site` is the public base URL (canonical, hreflang, sitemap). Self-hosters pass their own domain, e.g. `--site=https://news.example.com/`.
+- CLI only (refuses to run via the web server); `tools/` is blocked by the nginx configs.
+- Static hosting without PHP at deploy time: run it locally and commit the generated folders.
 
 ## Setup
 

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // News Reader – server configuration (Collector + Sync)
-const NR_VERSION          = '0.3.0';
+const NR_VERSION          = '0.4.0';
 const NR_VAR_DIR          = __DIR__ . '/../var';
 
 // ------------------------------------------------------------------ Collector (/api/collect)
@@ -18,7 +18,16 @@ const NR_REQUEST_TIMEOUT  = 15;
 const NR_MAX_REDIRECTS    = 5;
 const NR_MAX_CHILD_SITEMAPS = 3;      // sitemap index: only the newest N child sitemaps are fetched
 const NR_SUMMARY_LENGTH   = 300;
+const NR_CACHE_SCHEMA     = 3;        // bump when the entry format changes (2: + image, 3: + content) → old cache files are ignored
 const NR_USER_AGENT       = 'NewsReader-Collector/' . NR_VERSION . ' (+https://newsreader.app)';
+
+// ------------------------------------------------------------------ Articles (/api/article) – offline copies for "Later"
+// Full text comes from the cached feed (content:encoded / Atom content) whenever it is long enough;
+// only otherwise the article page is fetched once and reduced to its readable content.
+const NR_FULLTEXT_MIN_CHARS = 1200;     // feed content shorter than this counts as teaser, not full text
+const NR_ARTICLE_MAX_BYTES  = 400_000;  // cap for the cleaned article HTML
+const NR_ARTICLE_TTL        = 604800;   // 7 d: extracted article is served from cache
+const NR_ARTICLE_ERROR_TTL  = 3600;     // 1 h: failed extraction is cached (protects the source)
 
 // SSRF protection: block loopback / private / link-local targets.
 // Set to true only for local testing against private hosts.
@@ -47,5 +56,6 @@ const NR_SYNC_ALLOWED_NETS = [];
 // [requests, window in seconds]. Only the IP's salted hash is stored, for one window.
 const NR_RATE_DIR            = NR_VAR_DIR . '/rate';
 const NR_RATE_COLLECT_MISS   = [60, 600];   // Collector: upstream fetches (cache hits are free)
+const NR_RATE_ARTICLE_MISS   = [30, 600];   // Articles: page fetches (feed full text and cache hits are free)
 const NR_RATE_SYNC           = [300, 600];  // Sync: all requests
 const NR_RATE_SYNC_CREATE    = [5, 86400];  // Sync: new vaults per IP and day

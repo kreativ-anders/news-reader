@@ -1,9 +1,10 @@
 {
   "app": { "tagline": "News Reader", "skip": "Vai al contenuto", "noscript": "News richiede JavaScript.", "refresh": "Aggiorna i feed (r)", "settings": "Impostazioni", "views": "Viste" },
-  "nav": { "inbox": "In arrivo", "reading": "Da leggere", "later": "Più tardi", "done": "Fatto", "feeds": "Feed" },
+  "nav": { "inbox": "In arrivo", "reading": "Da leggere", "later": "Più tardi", "done": "Fatto", "feeds": "Feed", "toggle_feeds": "Mostra/nascondi feed" },
   "act": { "reading": "Leggi ora", "later": "Più tardi", "dismissed": "Non mi interessa", "done": "Fatto", "drop": "Scarta", "remove": "Rimuovi", "again": "Rileggi", "none": "Niente" },
   "toast": {
-    "reading": "Spostato in «Da leggere»", "later": "Salvato per più tardi", "done": "Segnato come fatto",
+    "cleared": "Elenco svuotato",
+    "reading": "Spostato in «Da leggere»", "later": "Salvato per più tardi", "done": "Segnato come fatto", "all_done": "{n} segnati come fatti",
     "dismissed": "Non mi interessa", "new": "Di nuovo in arrivo",
     "many": "{n} × {what}", "undo": "Annulla", "details": "Dettagli",
     "refresh_failed_one": "{n} feed non è stato aggiornato",
@@ -39,11 +40,12 @@
   },
   "views": {
     "reading": { "title": "Da leggere", "text": "Ciò che stai leggendo adesso. Segnalo come fatto quando hai finito.", "empty": "Niente in corso.", "hint": "Scegli qualcosa da In arrivo o dalla lista Più tardi." },
-    "later": { "title": "Più tardi", "text": "La tua lista di lettura – sincronizzata su tutti i dispositivi.", "empty": "La tua lista di lettura è vuota.", "hint": "Salva articoli da In arrivo con «Più tardi»." },
-    "done": { "title": "Fatto", "text": "Letture concluse. Vengono mostrate le 300 più recenti.", "empty": "Ancora niente di concluso.", "hint": "" }
+    "later": { "title": "Più tardi", "text": "La tua lista di lettura – sincronizzata su tutti i dispositivi.", "empty": "La tua lista di lettura è vuota.", "hint": "Salva articoli da In arrivo con «Più tardi».", "all_done": "Segna tutto come fatto" },
+    "done": { "title": "Fatto", "text": "Letture concluse. Vengono mostrate le 300 più recenti.", "empty": "Tutto fatto.", "hint": "", "clear": "Svuota elenco" }
   },
   "untitled": "(senza titolo)",
   "feeds": {
+    "unfollowed": "non più seguito",
     "title": "Feed",
     "count_one": "{n} seguito · raccolto dal tuo server",
     "count_other": "{n} seguiti · raccolti dal tuo server",
@@ -106,6 +108,7 @@
     "reset": "Reimposta questo dispositivo"
   },
   "dlg": {
+    "clear_done_title": "Svuotare l’elenco «Fatto»?", "clear_done_ok": "Svuota", "clear_done_body_one": "<p>{n} voce conclusa verrà rimossa. Non ricomparirà in arrivo.</p>", "clear_done_body_other": "<p>{n} voci concluse verranno rimosse. Non ricompariranno in arrivo.</p>",
     "ok": "OK", "cancel": "Annulla",
     "link_title": "Link di associazione",
     "unpair_title": "Dissociare questo dispositivo?", "unpair_body": "<p>Questo dispositivo smette di sincronizzarsi. I tuoi dati locali restano qui e gli altri dispositivi mantengono la cassaforte.</p>", "unpair_ok": "Dissocia",
@@ -129,5 +132,11 @@
     "conflict": "Troppe modifiche simultanee – nuovo tentativo in arrivo.",
     "decrypt": "Impossibile decifrare la cassaforte – chiave errata o dati danneggiati.",
     "format": "Formato della cassaforte sconosciuto sul server."
+  },
+  "reader": {
+    "close": "Chiudi", "minutes_one": "{n} min di lettura", "minutes_other": "{n} min di lettura",
+    "saved": "Salvato per la lettura offline", "read_done": "Letto – segnato come fatto",
+    "unavailable": "Sei offline – questo articolo non è stato salvato per la lettura offline.",
+    "partial": "È stato possibile salvare solo una parte dell’articolo – la pagina è dietro un paywall o generata con JavaScript."
   }
 }

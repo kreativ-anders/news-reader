@@ -5,9 +5,11 @@
 //   outbox   [kind, id] → { kind, id, updatedAt }         local changes not yet pushed
 //   entries  id         → { id, feedId, url, title, summary, publishedAt, firstSeen }
 //   kv       k          → { k, v }                         local settings (server, vault key, etag …)
+//   articles id         → { id, ok, url, title, content, words, partial, pos, savedAt } | { id, ok:false, code, triedAt }
+//                          offline copies of "Later" items (per device, never synced) – see js/offline.js
 
 export const DB_NAME = 'news';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 2: + articles
 
 let dbPromise = null;
 
@@ -24,6 +26,7 @@ function open() {
         s.createIndex('feedId', 'feedId');
       }
       if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'k' });
+      if (!db.objectStoreNames.contains('articles')) db.createObjectStore('articles', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

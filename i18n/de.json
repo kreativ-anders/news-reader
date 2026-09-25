@@ -1,7 +1,9 @@
 {
   "meta": {
     "title": "News Reader – RSS-Reader zum Selbsthosten, mit E2E-Sync",
-    "description": "Open-Source-RSS-Reader für Smartphone und Desktop: jetzt lesen, später oder weg. E2E-verschlüsselter Sync ohne Konto. Die Feedly-Alternative zum Selbsthosten."
+    "description": "Open-Source-RSS-Reader für Smartphone und Desktop: jetzt lesen, später oder weg. E2E-verschlüsselter Sync ohne Konto. Die Feedly-Alternative zum Selbsthosten.",
+    "og_title": "News – lies, was zählt, überspring den Rest",
+    "og_description": "Ein ruhiger RSS-Reader mit Ende-zu-Ende-verschlüsseltem Sync. Kein Konto, kein Tracking. Open Source – selbst hosten."
   },
   "ui": {
     "language": "Sprache",

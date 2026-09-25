@@ -1,7 +1,9 @@
 {
   "meta": {
     "title": "News Reader – Self-hosted RSS Reader with Encrypted Sync",
-    "description": "Open-source RSS reader for phone and desktop: read now, later or skip. End-to-end encrypted sync, no account. A Feedly alternative you can host yourself."
+    "description": "Open-source RSS reader for phone and desktop: read now, later or skip. End-to-end encrypted sync, no account. A Feedly alternative you can host yourself.",
+    "og_title": "News – read what matters, skip the rest",
+    "og_description": "A calm RSS reader with end-to-end encrypted sync. No account, no tracking. Open source – host your own."
   },
   "ui": {
     "language": "Language",

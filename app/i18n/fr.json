@@ -1,9 +1,10 @@
 {
   "app": { "tagline": "News Reader", "skip": "Aller au contenu", "noscript": "News nécessite JavaScript.", "refresh": "Actualiser les flux (r)", "settings": "Réglages", "views": "Vues" },
-  "nav": { "inbox": "Réception", "reading": "À lire", "later": "Plus tard", "done": "Terminé", "feeds": "Flux" },
+  "nav": { "inbox": "Réception", "reading": "À lire", "later": "Plus tard", "done": "Terminé", "feeds": "Flux", "toggle_feeds": "Afficher/masquer les flux" },
   "act": { "reading": "Lire maintenant", "later": "Plus tard", "dismissed": "Pas intéressé", "done": "Terminé", "drop": "Abandonner", "remove": "Retirer", "again": "Relire", "none": "Rien" },
   "toast": {
-    "reading": "Déplacé vers « À lire »", "later": "Gardé pour plus tard", "done": "Marqué comme terminé",
+    "cleared": "Liste vidée",
+    "reading": "Déplacé vers « À lire »", "later": "Gardé pour plus tard", "done": "Marqué comme terminé", "all_done": "{n} marqués comme terminés",
     "dismissed": "Pas intéressé", "new": "De retour dans la réception",
     "many": "{n} × {what}", "undo": "Annuler", "details": "Détails",
     "refresh_failed_one": "{n} flux n’a pas pu être actualisé",
@@ -39,11 +40,12 @@
   },
   "views": {
     "reading": { "title": "À lire", "text": "Ce que vous lisez en ce moment. Marquez-le comme terminé une fois lu.", "empty": "Rien en cours.", "hint": "Choisissez quelque chose dans votre réception ou votre liste « Plus tard »." },
-    "later": { "title": "Plus tard", "text": "Votre liste de lecture – synchronisée sur vos appareils.", "empty": "Votre liste de lecture est vide.", "hint": "Gardez des articles de la réception avec « Plus tard »." },
-    "done": { "title": "Terminé", "text": "Lectures terminées. Les 300 plus récentes sont affichées.", "empty": "Rien de terminé pour l’instant.", "hint": "" }
+    "later": { "title": "Plus tard", "text": "Votre liste de lecture – synchronisée sur vos appareils.", "empty": "Votre liste de lecture est vide.", "hint": "Gardez des articles de la réception avec « Plus tard ».", "all_done": "Tout marquer comme terminé" },
+    "done": { "title": "Terminé", "text": "Lectures terminées. Les 300 plus récentes sont affichées.", "empty": "Tout est terminé.", "hint": "", "clear": "Vider la liste" }
   },
   "untitled": "(sans titre)",
   "feeds": {
+    "unfollowed": "plus suivi",
     "title": "Flux",
     "count_one": "{n} suivi · collecté par votre serveur",
     "count_other": "{n} suivis · collectés par votre serveur",
@@ -106,6 +108,7 @@
     "reset": "Réinitialiser cet appareil"
   },
   "dlg": {
+    "clear_done_title": "Vider la liste « Terminé » ?", "clear_done_ok": "Vider", "clear_done_body_one": "<p>{n} entrée terminée sera retirée. Elle ne réapparaîtra pas dans la réception.</p>", "clear_done_body_other": "<p>{n} entrées terminées seront retirées. Elles ne réapparaîtront pas dans la réception.</p>",
     "ok": "OK", "cancel": "Annuler",
     "link_title": "Lien d’association",
     "unpair_title": "Dissocier cet appareil ?", "unpair_body": "<p>Cet appareil cesse de se synchroniser. Vos données locales restent ici, et les autres appareils gardent le coffre.</p>", "unpair_ok": "Dissocier",
@@ -129,5 +132,11 @@
     "conflict": "Trop de modifications simultanées – nouvel essai à venir.",
     "decrypt": "Le coffre n’a pas pu être déchiffré – mauvaise clé ou données endommagées.",
     "format": "Format de coffre inconnu sur le serveur."
+  },
+  "reader": {
+    "close": "Fermer", "minutes_one": "{n} min de lecture", "minutes_other": "{n} min de lecture",
+    "saved": "Enregistré pour la lecture hors ligne", "read_done": "Lu – marqué comme terminé",
+    "unavailable": "Vous êtes hors ligne – cet article n’a pas été enregistré pour la lecture hors ligne.",
+    "partial": "Seule une partie de cet article a pu être enregistrée – la page est derrière un paywall ou générée en JavaScript."
   }
 }

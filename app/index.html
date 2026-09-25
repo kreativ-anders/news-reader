@@ -42,10 +42,14 @@
 
   <div class="shell">
     <nav class="nav" aria-label="Views" data-i18n-attr="aria-label:app.views">
-      <button type="button" data-view="inbox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><span data-i18n="nav.inbox">Inbox</span><b class="badge" data-count="inbox"></b></button>
-      <button type="button" data-view="reading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span data-i18n="nav.reading">Read now</span><b class="badge" data-count="reading"></b></button>
-      <button type="button" data-view="later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span data-i18n="nav.later">Later</span><b class="badge" data-count="later"></b></button>
-      <button type="button" data-view="done"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="nav.done">Done</span></button>
+      <div class="nav-group">
+        <button type="button" data-view="inbox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><span data-i18n="nav.inbox">Inbox</span><b class="badge" data-count="inbox"></b></button>
+        <button type="button" class="twisty" id="feedNavToggle" aria-expanded="true" aria-controls="feedNav" title="Show/hide feeds" aria-label="Show/hide feeds" data-i18n-attr="title:nav.toggle_feeds;aria-label:nav.toggle_feeds" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      </div>
+      <div class="subnav" id="feedNav" hidden></div>
+      <div class="nav-group"><button type="button" data-view="reading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span data-i18n="nav.reading">Read now</span><b class="badge" data-count="reading"></b></button></div>
+      <div class="nav-group"><button type="button" data-view="later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span data-i18n="nav.later">Later</span><b class="badge" data-count="later"></b></button></div>
+      <div class="nav-group"><button type="button" data-view="done"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="nav.done">Done</span></button></div>
       <button type="button" data-view="feeds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg><span data-i18n="nav.feeds">Feeds</span></button>
     </nav>
     <main id="view" tabindex="-1" aria-live="polite"></main>

@@ -1,7 +1,9 @@
 {
   "meta": {
     "title": "News Reader – lector RSS autoalojado con sync cifrada",
-    "description": "Lector RSS de código abierto para móvil y escritorio: leer ahora, más tarde o saltar. Sync cifrada sin cuenta. La alternativa a Feedly que alojas tú."
+    "description": "Lector RSS de código abierto para móvil y escritorio: leer ahora, más tarde o saltar. Sync cifrada sin cuenta. La alternativa a Feedly que alojas tú.",
+    "og_title": "News – lee lo que importa, sáltate el resto",
+    "og_description": "Un lector RSS tranquilo con sincronización cifrada de extremo a extremo. Sin cuenta, sin rastreo. Código abierto – aloja el tuyo."
   },
   "ui": {
     "language": "Idioma",

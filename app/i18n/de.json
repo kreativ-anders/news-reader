@@ -1,9 +1,10 @@
 {
   "app": { "tagline": "News Reader", "skip": "Zum Inhalt springen", "noscript": "News benötigt JavaScript.", "refresh": "Feeds aktualisieren (r)", "settings": "Einstellungen", "views": "Ansichten" },
-  "nav": { "inbox": "Eingang", "reading": "Jetzt lesen", "later": "Später", "done": "Erledigt", "feeds": "Feeds" },
+  "nav": { "inbox": "Eingang", "reading": "Jetzt lesen", "later": "Später", "done": "Erledigt", "feeds": "Feeds", "toggle_feeds": "Feeds ein-/ausklappen" },
   "act": { "reading": "Jetzt lesen", "later": "Später", "dismissed": "Nicht interessiert", "done": "Erledigt", "drop": "Verwerfen", "remove": "Entfernen", "again": "Nochmal lesen", "none": "Nichts" },
   "toast": {
-    "reading": "Nach „Jetzt lesen“ verschoben", "later": "Für später gemerkt", "done": "Als erledigt markiert",
+    "cleared": "Erledigt-Liste geleert",
+    "reading": "Nach „Jetzt lesen“ verschoben", "later": "Für später gemerkt", "done": "Als erledigt markiert", "all_done": "{n} als erledigt markiert",
     "dismissed": "Nicht interessiert", "new": "Zurück im Eingang",
     "many": "{n} × {what}", "undo": "Rückgängig", "details": "Details",
     "refresh_failed_one": "{n} Feed konnte nicht aktualisiert werden",
@@ -39,11 +40,12 @@
   },
   "views": {
     "reading": { "title": "Jetzt lesen", "text": "Was du gerade liest. Markiere es als erledigt, wenn du fertig bist.", "empty": "Nichts in Arbeit.", "hint": "Wähle etwas aus deinem Eingang oder deiner Später-Liste." },
-    "later": { "title": "Später", "text": "Deine Leseliste – auf allen Geräten synchron.", "empty": "Deine Leseliste ist leer.", "hint": "Merke dir Einträge im Eingang mit „Später“." },
-    "done": { "title": "Erledigt", "text": "Fertig gelesen. Die letzten 300 werden angezeigt.", "empty": "Noch nichts erledigt.", "hint": "" }
+    "later": { "title": "Später", "text": "Deine Leseliste – auf allen Geräten synchron.", "empty": "Deine Leseliste ist leer.", "hint": "Merke dir Einträge im Eingang mit „Später“.", "all_done": "Alle erledigt" },
+    "done": { "title": "Erledigt", "text": "Fertig gelesen. Die letzten 300 werden angezeigt.", "empty": "Alles erledigt.", "hint": "", "clear": "Liste leeren" }
   },
   "untitled": "(ohne Titel)",
   "feeds": {
+    "unfollowed": "nicht mehr abonniert",
     "title": "Feeds",
     "count_one": "{n} abonniert · gesammelt von deinem Server",
     "count_other": "{n} abonniert · gesammelt von deinem Server",
@@ -106,6 +108,7 @@
     "reset": "Dieses Gerät zurücksetzen"
   },
   "dlg": {
+    "clear_done_title": "Erledigt-Liste leeren?", "clear_done_ok": "Leeren", "clear_done_body_one": "<p>{n} erledigter Eintrag wird entfernt. Er taucht nicht wieder im Eingang auf.</p>", "clear_done_body_other": "<p>{n} erledigte Einträge werden entfernt. Sie tauchen nicht wieder im Eingang auf.</p>",
     "ok": "OK", "cancel": "Abbrechen",
     "link_title": "Kopplungslink",
     "unpair_title": "Dieses Gerät entkoppeln?", "unpair_body": "<p>Dieses Gerät hört auf zu synchronisieren. Deine lokalen Daten bleiben hier, und andere Geräte behalten den Tresor.</p>", "unpair_ok": "Entkoppeln",
@@ -129,5 +132,11 @@
     "conflict": "Zu viele gleichzeitige Änderungen – neuer Versuch folgt.",
     "decrypt": "Tresor konnte nicht entschlüsselt werden – falscher Schlüssel oder beschädigte Daten.",
     "format": "Unbekanntes Tresor-Format auf dem Server."
+  },
+  "reader": {
+    "close": "Schließen", "minutes_one": "{n} Min. Lesezeit", "minutes_other": "{n} Min. Lesezeit",
+    "saved": "Offline gespeichert", "read_done": "Gelesen – als erledigt markiert",
+    "unavailable": "Du bist offline – dieser Artikel wurde nicht zum Offline-Lesen gespeichert.",
+    "partial": "Nur ein Teil des Artikels ließ sich speichern – die Seite steht hinter einer Paywall oder wird per JavaScript aufgebaut."
   }
 }

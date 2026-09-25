@@ -5,6 +5,8 @@
  *   GET /api/collect?url=<encoded-url>[&refresh=1][&limit=50]   Collector (alias: /api/?url=…)
  *       Resolves any website / feed URL into normalized JSON entries.
  *       Results are cached per source URL for 24 h (shared across all clients).
+ *   GET /api/article?url=<article-url>[&feed=<feed-url>&id=<entry-id>]   readable offline copy (src/readable.php)
+ *       Full text from the cached feed if available, otherwise extracted from the page (cached 7 d).
  *   GET|PUT|DELETE /api/sync                                     encrypted sync vault (src/sync.php)
  */
 declare(strict_types=1);
@@ -16,6 +18,7 @@ require __DIR__ . '/../src/cache.php';
 require __DIR__ . '/../src/rules.php';
 require __DIR__ . '/../src/resolver.php';
 require __DIR__ . '/../src/ratelimit.php';
+require __DIR__ . '/../src/readable.php';
 
 ini_set('display_errors', '0'); // warnings must never corrupt the output
 ini_set('log_errors', '1');
@@ -25,10 +28,14 @@ if (preg_match('#/api/sync/?$#', $nrPath)) {
     require __DIR__ . '/../src/sync.php';
     nr_sync_handle();
 }
+if (preg_match('#/api/article/?$#', $nrPath)) {
+    set_time_limit(60);
+    nr_article_handle();
+}
 if (!preg_match('#/api/(collect/?|index\.php)?$#', $nrPath)) {
     http_response_code(404);
     header('Content-Type: application/json; charset=utf-8');
-    echo '{"error":{"code":"NOT_FOUND","message":"Unknown endpoint. Use /api/collect or /api/sync."}}';
+    echo '{"error":{"code":"NOT_FOUND","message":"Unknown endpoint. Use /api/collect, /api/article or /api/sync."}}';
     exit;
 }
 
@@ -158,7 +165,7 @@ function nr_serve_cached(array $cached, string $state, int $limit): never
 {
     $data = $cached['data'];
     $cachedAt = (int)$data['cachedAt'];
-    unset($data['cachedAt']);
+    unset($data['cachedAt'], $data['schema']);
 
     header('X-Collector-Cache: ' . $state);
 
@@ -171,7 +178,8 @@ function nr_serve_cached(array $cached, string $state, int $limit): never
         ]], 422);
     }
 
-    $data['entries'] = array_slice($data['entries'], 0, $limit);
+    // full texts stay on the server – they are served one by one via /api/article
+    $data['entries'] = array_map(function (array $e): array { unset($e['content']); return $e; }, array_slice($data['entries'], 0, $limit));
     $data['meta']['count']            = count($data['entries']);
     $data['meta']['cached']           = $state !== 'MISS';
     $data['meta']['stale']            = $state === 'STALE';

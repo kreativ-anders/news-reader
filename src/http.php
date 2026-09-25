@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  * @return array{ok:bool, body?:string, contentType?:string, finalUrl?:string, status?:int, code?:string, message?:string}
  */
-function nr_fetch(string $url): array
+function nr_fetch(string $url, string $accept = NR_ACCEPT): array
 {
     $current = $url;
 
@@ -17,7 +17,7 @@ function nr_fetch(string $url): array
             return $check;
         }
 
-        $res = extension_loaded('curl') ? nr_request_curl($current) : nr_request_stream($current);
+        $res = extension_loaded('curl') ? nr_request_curl($current, $accept) : nr_request_stream($current, $accept);
 
         if ($res['tooLarge']) {
             return nr_err('UPSTREAM_TOO_LARGE', 'The source response exceeded ' . NR_MAX_BODY_BYTES . ' bytes.');
@@ -51,12 +51,13 @@ function nr_fetch(string $url): array
 }
 
 const NR_ACCEPT = 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.1';
+const NR_ACCEPT_HTML = 'text/html, application/xhtml+xml;q=0.9, */*;q=0.1';
 
 /**
  * Single HTTP GET without following redirects.
  * @return array{status:int, headers:array<string,string>, body:string, error:?string, tooLarge:bool}
  */
-function nr_request_curl(string $url): array
+function nr_request_curl(string $url, string $accept = NR_ACCEPT): array
 {
     $body = '';
     $tooLarge = false;
@@ -70,7 +71,7 @@ function nr_request_curl(string $url): array
         CURLOPT_USERAGENT      => NR_USER_AGENT,
         CURLOPT_ENCODING       => '',   // accept gzip/deflate/br
         CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-        CURLOPT_HTTPHEADER     => ['Accept: ' . NR_ACCEPT, 'Accept-Language: en,de;q=0.8'],
+        CURLOPT_HTTPHEADER     => ['Accept: ' . $accept, 'Accept-Language: en,de;q=0.8'],
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,
         CURLOPT_HEADERFUNCTION => function ($ch, string $line) use (&$headers): int {
@@ -93,6 +94,16 @@ function nr_request_curl(string $url): array
         },
     ]);
 
+    // DNS pinning: connect to exactly the addresses nr_validate_target() checked
+    // (closes the DNS-rebinding gap between validation and connect)
+    $pin = nr_pinned_ips((string)parse_url($url, PHP_URL_HOST));
+    if ($pin) {
+        $port = (int)(parse_url($url, PHP_URL_PORT) ?: (str_starts_with(strtolower($url), 'https:') ? 443 : 80));
+        $host = trim((string)parse_url($url, PHP_URL_HOST), '[]');
+        $addr = str_contains($pin[0], ':') ? '[' . $pin[0] . ']' : $pin[0];
+        curl_setopt($ch, CURLOPT_RESOLVE, [$host . ':' . $port . ':' . $addr]);
+    }
+
     // CA certificates: explicit bundle > OS certificate store (Windows) > curl default
     if (NR_CA_BUNDLE !== '' && is_file(NR_CA_BUNDLE)) {
         curl_setopt($ch, CURLOPT_CAINFO, NR_CA_BUNDLE);
@@ -112,7 +123,7 @@ function nr_request_curl(string $url): array
 }
 
 /** Fallback when ext-curl is not loaded: PHP stream wrapper (needs ext-openssl for HTTPS). */
-function nr_request_stream(string $url): array
+function nr_request_stream(string $url, string $accept = NR_ACCEPT): array
 {
     $fail = fn(string $msg) => ['status' => 0, 'headers' => [], 'body' => '', 'error' => $msg, 'tooLarge' => false];
 
@@ -132,7 +143,7 @@ function nr_request_stream(string $url): array
             'protocol_version'=> 1.1,
             'header'          => implode("\r\n", [
                 'User-Agent: ' . NR_USER_AGENT,
-                'Accept: ' . NR_ACCEPT,
+                'Accept: ' . $accept,
                 'Accept-Language: en,de;q=0.8',
                 'Accept-Encoding: gzip',
                 'Connection: close',
@@ -215,12 +226,48 @@ function nr_validate_target(string $url): ?array
     }
 
     foreach ($ips as $ip) {
-        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+        if (!nr_is_public_ip($ip)) {
             return nr_err('FORBIDDEN_HOST', 'Private, loopback or reserved addresses are not allowed.');
         }
     }
 
+    nr_pinned_ips($host, $ips);
     return null;
+}
+
+/** Public unicast address? Also unwraps IPv4-mapped / NAT64-style IPv6 (::ffff:127.0.0.1). */
+function nr_is_public_ip(string $ip): bool
+{
+    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return false;
+    if (str_contains($ip, ':')) {
+        $bin = inet_pton($ip);
+        if ($bin === false) return false;
+        // ::ffff:a.b.c.d (mapped), ::a.b.c.d (compatible), 64:ff9b::a.b.c.d (NAT64)
+        $prefix = substr($bin, 0, 12);
+        if ($prefix === str_repeat("\0", 10) . "\xff\xff" || $prefix === str_repeat("\0", 12) || $prefix === "\x00\x64\xff\x9b" . str_repeat("\0", 8)) {
+            $v4 = inet_ntop(substr($bin, 12));
+            return $v4 !== false && nr_is_public_ip($v4);
+        }
+        $first = ord($bin[0]);
+        if (($first & 0xfe) === 0xfc || ($first === 0xfe && (ord($bin[1]) & 0xc0) === 0x80)) return false; // ULA, link-local
+    } elseif (str_starts_with($ip, '100.') && (int)explode('.', $ip)[1] >= 64 && (int)explode('.', $ip)[1] <= 127) {
+        return false; // 100.64.0.0/10 carrier-grade NAT
+    } elseif (str_starts_with($ip, '0.')) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Remembers the validated addresses of a host for this request (set) and returns them (get).
+ * @return string[]
+ */
+function nr_pinned_ips(string $host, ?array $ips = null): array
+{
+    static $pins = [];
+    $host = strtolower(trim($host, '[]'));
+    if ($ips !== null) $pins[$host] = array_values($ips);
+    return $pins[$host] ?? [];
 }
 
 function nr_resolve_host(string $host): array
