@@ -28,7 +28,7 @@
   --ok:#7cc88a; --warn:#FFC04B; --err:#ff7a66;
 
   /* Collector strategies – derivations of the brand colour */
-  --v-direct:#FFA500; --v-discovered:#FFC54D; --v-guessed:#FFE196; --v-html:#FA7C20; --v-sitemap:#EAB084; --on-v:#000000;
+  --v-direct:#FFA500; --v-discovered:#FFC54D; --v-guessed:#FFE196; --v-html:#FA7C20; --v-sitemap:#EAB084; --v-rule:#FFB020; --on-v:#000000;
 
   /* Shape: straight editorial lines. Set e.g. 8px for a rounder white-label look. */
   --radius:0;
@@ -45,7 +45,7 @@
     --fg:#000000; --muted:#5A5A5A; --faint:#8E8E8E; --logo:#000000;
     --brand-ink:#A35A00; --glow:rgba(255,165,0,.10);
     --ok:#2f7d3e; --warn:#A35A00; --err:#b23a22;
-    --v-direct:#A25C01; --v-discovered:#986603; --v-guessed:#8A6E1F; --v-html:#AF4803; --v-sitemap:#8C5C41; --on-v:#fff;
+    --v-direct:#A25C01; --v-discovered:#986603; --v-guessed:#8A6E1F; --v-html:#AF4803; --v-sitemap:#8C5C41; --v-rule:#9A5F00; --on-v:#fff;
     color-scheme:light;
   }
 }
@@ -54,7 +54,7 @@
     --fg:#000000; --muted:#5A5A5A; --faint:#8E8E8E; --logo:#000000;
     --brand-ink:#A35A00; --glow:rgba(255,165,0,.10);
     --ok:#2f7d3e; --warn:#A35A00; --err:#b23a22;
-    --v-direct:#A25C01; --v-discovered:#986603; --v-guessed:#8A6E1F; --v-html:#AF4803; --v-sitemap:#8C5C41; --on-v:#fff;
+    --v-direct:#A25C01; --v-discovered:#986603; --v-guessed:#8A6E1F; --v-html:#AF4803; --v-sitemap:#8C5C41; --v-rule:#9A5F00; --on-v:#fff;
     color-scheme:light;
 }
 

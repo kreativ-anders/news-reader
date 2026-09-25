@@ -62,6 +62,7 @@ GET /api/collect?url=<url-encoded URL>[&refresh=1][&limit=1..100]
 
 ## Resolution order
 
+0. Platform rule (`src/feed-rules.php`): known page URLs of large platforms are mapped to their native feed **before** the page is fetched → `rule` (the rule id is returned as `source.rule`). Avoids bot protection on profile pages (e.g. `medium.com/@user` → `medium.com/feed/@user`). Covers Medium, Substack, WordPress.com, Blogger, Tumblr, dev.to, Hashnode, YouTube, Vimeo, Apple Podcasts, Reddit, Mastodon, Bluesky, Hacker News, Lobsters, Stack Exchange, Pinterest, Letterboxd, GitHub, GitLab, Codeberg, PyPI, RubyGems, arXiv, Google News, Steam, Kickstarter, itch.io and more. If the rule's feeds fail, resolution continues with step 1. Platforms without any feeds (X, Meta, LinkedIn, TikTok, Spotify) end with `PLATFORM_NO_FEED` without contacting the platform.
 1. URL is RSS 2.0 / RSS 1.0 (RDF) / Atom → `strategy: direct`
 2. Feed declared in HTML (`<link rel="alternate">`, visible `…/rss.xml` links) → `discovered`
 3. Common feed paths (`<path>/feed`, `/rss.xml`, `/feed.xml`, `/atom.xml`, `/index.xml`, …) → `guessed`
@@ -73,7 +74,7 @@ GET /api/collect?url=<url-encoded URL>[&refresh=1][&limit=1..100]
 ```json
 {
   "source":  { "inputUrl": "...", "url": "...", "type": "rss|rdf|atom|html|sitemap",
-               "strategy": "...", "feedUrl": "...|null", "title": "..." },
+               "strategy": "...", "rule": "...|null", "feedUrl": "...|null", "title": "..." },
   "entries": [ { "id": "sha256", "url": "...", "title": "...",
                  "publishedAt": "ISO-8601|null", "updatedAt": "ISO-8601|null", "summary": "...|null" } ],
   "meta":    { "count": 42, "fetchedAt": "...", "cached": true, "stale": false,
@@ -83,8 +84,18 @@ GET /api/collect?url=<url-encoded URL>[&refresh=1][&limit=1..100]
 
 - `id` = sha256 of the feed GUID, otherwise of the normalized article URL → stable key for the client's `processed` / saved index.
 - HTML sources keep the page order; feeds and sitemaps are sorted newest first.
-- Errors: HTTP 4xx with `{ "error": { "code", "message" } }`. Codes: `INVALID_URL`, `UNSUPPORTED_URL`, `FORBIDDEN_HOST`, `DNS_FAILED`, `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR`, `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS`, `NO_FEED_DETECTED`.
+- Errors: HTTP 4xx with `{ "error": { "code", "message" } }`. Codes: `INVALID_URL`, `UNSUPPORTED_URL`, `FORBIDDEN_HOST`, `DNS_FAILED`, `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR`, `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS`, `NO_FEED_DETECTED`, `PLATFORM_NO_FEED`.
 - Response header `X-Collector-Cache: HIT | MISS | STALE`.
+
+## Platform rules
+
+`src/feed-rules.php` is a curated one-off snapshot (2026-09-25) of URL → native feed mappings, written from the platforms' public feed conventions and cross-checked against [get-rss-feed-url-extension](https://github.com/shevabam/get-rss-feed-url-extension) (MIT) and [RSSHub Radar](https://github.com/DIYgod/RSSHub-Radar) (AGPL-3.0, consulted only – no rules copied). Only native feeds, no third-party bridges. Each rule carries `examples`; after changes run:
+
+```
+php tests/feed-rules-test.php
+```
+
+Own rules go into `src/feed-rules.local.php` (same format, `return [ … ];`, gitignored) – they are checked before the bundled ones. Pages without a rule (YouTube `@handle`, other Mastodon instances, Substack/Ghost/WordPress on custom domains) are handled by discovery.
 
 ## Cache
 

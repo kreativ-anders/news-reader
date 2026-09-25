@@ -13,6 +13,7 @@ require __DIR__ . '/../src/config.php';
 require __DIR__ . '/../src/http.php';
 require __DIR__ . '/../src/parsers.php';
 require __DIR__ . '/../src/cache.php';
+require __DIR__ . '/../src/rules.php';
 require __DIR__ . '/../src/resolver.php';
 require __DIR__ . '/../src/ratelimit.php';
 
@@ -141,9 +142,10 @@ if ($cached !== null && !isset($cached['data']['error']) && $cached['age'] < NR_
 $error = ['code' => $result['code'], 'message' => $result['message']];
 if (isset($result['tried'])) $error['tried'] = $result['tried'];
 if (isset($result['status'])) $error['upstreamStatus'] = $result['status'];
+if (isset($result['rule'])) $error['rule'] = $result['rule'];
 
 // Cache "no feed" results briefly to protect the source from repeated probing
-if ($result['code'] === 'NO_FEED_DETECTED') {
+if (in_array($result['code'], ['NO_FEED_DETECTED', 'PLATFORM_NO_FEED'], true)) {
     nr_cache_write($url, ['error' => $error]);
 }
 nr_unlock($lock);

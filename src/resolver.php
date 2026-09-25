@@ -5,6 +5,8 @@ declare(strict_types=1);
  * Resolve any URL into a normalized list of entries.
  *
  * Order – from machine-readable to heuristic:
+ *   0. Platform rule (src/feed-rules.php): known page URL → native feed URL, without fetching the page
+ *      (avoids bot protection on profile pages); platforms without feeds stop here
  *   1. URL itself is RSS / Atom / RDF
  *   2. Feed declared in the HTML (<link rel="alternate">, visible feed links)
  *   3. Common feed paths (/feed, /rss.xml, …)
@@ -16,11 +18,22 @@ declare(strict_types=1);
  */
 function nr_resolve(string $url): array
 {
+    $tried = [];
+
+    // 0. Platform rule – falls through to the generic chain if its feeds fail
+    $rule = nr_rule_match($url);
+    if ($rule !== null) {
+        if ($rule['none'] !== null) {
+            return nr_err('PLATFORM_NO_FEED', $rule['none'], ['rule' => $rule['id']]);
+        }
+        $hit = nr_resolve_rule($url, $rule, $tried);
+        if ($hit !== null) return $hit;
+    }
+
     $page = nr_fetch($url);
-    if (!$page['ok']) return $page;
+    if (!$page['ok']) return $tried ? $page + ['tried' => $tried] : $page;
 
     $finalUrl = $page['finalUrl'];
-    $tried = [];
 
     // 1. Direct feed
     $feed = nr_parse_feed($page['body'], $finalUrl);
@@ -84,6 +97,33 @@ function nr_resolve(string $url): array
     return nr_err('NO_FEED_DETECTED', 'No RSS/Atom feed, article listing or matching sitemap entries were found.', ['tried' => $tried]);
 }
 
+/**
+ * Probe the feeds of a matched platform rule. First feed with entries wins;
+ * a valid but empty feed (e.g. a repo without releases) is only used if no other has entries.
+ */
+function nr_resolve_rule(string $url, array $rule, array &$tried): ?array
+{
+    $feeds = $rule['feeds'];
+    if ($rule['lookup'] !== null) {
+        $tried[] = $rule['lookup']['url'];
+        $found = nr_rule_lookup($rule['lookup']);
+        if ($found !== null) $feeds[] = $found;
+    }
+
+    $empty = null;
+    foreach ($feeds as $feedUrl) {
+        $tried[] = $feedUrl;
+        $res = nr_fetch($feedUrl);
+        if (!$res['ok']) continue;
+        $feed = nr_parse_feed($res['body'], $res['finalUrl']);
+        if ($feed === null) continue;
+        $hit = nr_success($url, $url, $feed['type'], 'rule', $feed['title'], $res['finalUrl'], $feed['entries'], $rule['id']);
+        if (count($feed['entries']) > 0) return $hit;
+        $empty ??= $hit;
+    }
+    return $empty;
+}
+
 /** Add sitemap dates to HTML entries that have none. */
 function nr_enrich_with_sitemap(array $entries, array $sitemapEntries): array
 {
@@ -121,7 +161,7 @@ function nr_titles_from_page(array $entries, DOMDocument $dom, string $baseUrl):
     return $entries;
 }
 
-function nr_success(string $inputUrl, string $finalUrl, string $type, string $strategy, ?string $title, ?string $feedUrl, array $entries): array
+function nr_success(string $inputUrl, string $finalUrl, string $type, string $strategy, ?string $title, ?string $feedUrl, array $entries, ?string $rule = null): array
 {
     $entries = array_slice($entries, 0, NR_MAX_ENTRIES);
     return [
@@ -131,7 +171,8 @@ function nr_success(string $inputUrl, string $finalUrl, string $type, string $st
                 'inputUrl' => $inputUrl,
                 'url'      => $finalUrl,
                 'type'     => $type,       // rss | rdf | atom | html | sitemap
-                'strategy' => $strategy,   // direct | discovered | guessed | sitemap | html-jsonld | html-article | html-links
+                'strategy' => $strategy,   // rule | direct | discovered | guessed | sitemap | html-jsonld | html-article | html-links
+                'rule'     => $rule,       // id from src/feed-rules.php (strategy "rule" only)
                 'feedUrl'  => $feedUrl,
                 'title'    => $title,
             ],

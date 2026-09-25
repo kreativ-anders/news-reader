@@ -66,7 +66,7 @@ const ICON = {
 function strategyVar(strategy) {
   if (!strategy) return 'var(--brand)';
   const k = strategy.startsWith('html') ? 'html' : strategy;
-  return ['direct', 'discovered', 'guessed', 'html', 'sitemap'].includes(k) ? `var(--v-${k})` : 'var(--brand)';
+  return ['rule', 'direct', 'discovered', 'guessed', 'html', 'sitemap'].includes(k) ? `var(--v-${k})` : 'var(--brand)';
 }
 
 let rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'short' });

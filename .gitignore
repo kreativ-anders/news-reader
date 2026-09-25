@@ -2,3 +2,4 @@
 !/var/cache/.gitkeep
 /var/sync/
 /var/rate/
+/src/feed-rules.local.php
