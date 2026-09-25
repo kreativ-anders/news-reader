@@ -48,7 +48,7 @@
     "count_one": "{n} abonniert · gesammelt von deinem Server",
     "count_other": "{n} abonniert · gesammelt von deinem Server",
     "follow_title": "Einer Website folgen",
-    "follow_text": "Eine Feed-URL oder irgendeine Seite – der Collector findet die Einträge (direct, discovered, guessed, HTML oder Sitemap).",
+    "follow_text": "Eine Feed-URL oder irgendeine Seite – der Collector findet die Einträge (direct, discovered, guessed, Sitemap oder HTML).",
     "url_label": "Website- oder Feed-URL", "follow": "Folgen",
     "shared": "Geteilter Link empfangen – tippe auf Folgen, um ihn zu abonnieren.",
     "asking": "Frage den Collector…",

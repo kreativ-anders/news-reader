@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "News Reader – un lettore di feed tranquillo con sincronizzazione cifrata. Ospitalo tu.",
-    "description": "News è un lettore di feed tranquillo e local-first per smartphone e desktop: ogni articolo riceve una decisione – leggi ora, più tardi o non mi interessa. Sincronizzazione cifrata end-to-end senza account e senza database. Open source – ospita il tuo, con il tuo marchio."
+    "title": "News Reader – lettore RSS self-hosted con sync cifrata",
+    "description": "Lettore RSS open source per smartphone e desktop: leggi ora, più tardi o salta. Sync cifrata end-to-end, senza account. L’alternativa a Feedly da ospitare tu."
   },
   "ui": {
     "language": "Lingua",
@@ -20,9 +20,9 @@
     "open_news": "Apri News"
   },
   "hero": {
-    "news_reader": "News Reader",
+    "news_reader": "Lettore RSS open source",
     "read_what_matters_skip": "Leggi ciò che conta. <em class=\"accent\">Salta il resto.</em>",
-    "news_is_a_calm": "News è un lettore di feed tranquillo per il tuo smartphone e il tuo desktop. Nessuna timeline infinita, nessun algoritmo – ogni nuovo articolo riceve una decisione: leggi ora, più tardi o non mi interessa. I tuoi dispositivi restano sincronizzati, con cifratura end-to-end, senza account.",
+    "news_is_a_calm": "News è un lettore RSS tranquillo per il tuo smartphone e il tuo desktop. Nessuna timeline infinita, nessun algoritmo – ogni nuovo articolo riceve una decisione: leggi ora, più tardi o non mi interessa. I tuoi dispositivi restano sincronizzati, con cifratura end-to-end, senza account.",
     "open_news": "Apri News",
     "host_your_own": "Ospitalo tu",
     "free_amp_open_source": "Gratuito &amp; open source · web app installabile · funziona offline",
@@ -55,7 +55,7 @@
     "gone_without_guilt_one": "Sparito, senza sensi di colpa. Uno swipe sullo smartphone, un tasto sul desktop. <kbd>x</kbd>"
   },
   "features": {
-    "everything_a_reader_needs": "Tutto ciò che serve a un lettore. Niente di più.",
+    "everything_a_reader_needs": "Tutto ciò che serve a un lettore RSS. Niente di più.",
     "no_ads_no_tracking": "Niente pubblicità, niente tracciamento, nessun feed che non hai chiesto – solo le tue fonti, in un posto tranquillo.",
     "phone_and_desktop": "Smartphone e desktop",
     "install_news_from_the": "Installa News dal browser come un’app. Scorri per smistare sullo smartphone, usa <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> sul desktop, condividi qualsiasi pagina con News per seguirla.",
@@ -103,23 +103,23 @@
     "the_page_declares_its": "La pagina dichiara il suo feed – tramite &lt;link rel=\"alternate\"&gt; o un link …/rss.xml visibile. Il Collector lo segue.",
     "guessed_common_paths": "Indovinato <small>percorsi comuni</small>",
     "nothing_declared_the_collector": "Niente di dichiarato? Il Collector prova i soliti sospetti: /feed, /rss.xml, /feed.xml, /atom.xml, /index.xml …",
-    "html_json_ld_article": "HTML <small>JSON-LD · article · link</small>",
-    "no_feed_at_all": "Nessun feed. Gli articoli vengono estratti da JSON-LD, elementi &lt;article&gt; o link sotto il percorso richiesto.",
     "sitemap_robots_txt_sitemap": "Sitemap <small>robots.txt → sitemap.xml</small>",
-    "the_last_resort_the": "L’ultima risorsa: la sitemap, trovata tramite robots.txt, filtrata sul percorso richiesto.",
+    "sitemap_desc": "Nessun feed? La sitemap, trovata tramite robots.txt e filtrata sul percorso richiesto – usata se le sue voci hanno una data. I titoli vengono presi dalla pagina quando possibile.",
+    "html_json_ld_article": "HTML <small>JSON-LD · article · link</small>",
+    "html_desc": "L’ultima risorsa: gli articoli vengono estratti dalla pagina stessa – JSON-LD, elementi &lt;article&gt; o link sotto il percorso richiesto.",
     "direct_url_is_a": "<span class=\"pill\">direct</span> L’URL è un feed nativo",
     "discovered_feed_declared_in": "<span class=\"pill\">discovered</span> Feed dichiarato nell’HTML",
     "guessed_feed_found_at": "<span class=\"pill\">guessed</span> Feed trovato in un percorso comune",
-    "html_article_entries_extracted": "<span class=\"pill\">html-article</span> Articoli estratti dalla pagina",
     "sitemap_entries_built_from": "<span class=\"pill\">sitemap</span> Articoli ricavati dalla sitemap",
+    "html_article_entries_extracted": "<span class=\"pill\">html-article</span> Articoli estratti dalla pagina",
     "fact_cache": "<b>24 h</b> di cache condivisa per fonte",
     "fact_ssrf": "<b>Protetto da SSRF</b> – host privati bloccati, ogni reindirizzamento ricontrollato",
     "fact_rate": "<b>Frequenza limitata</b> per client"
   },
   "build": {
-    "build_your_own": "Crea il tuo",
+    "build_your_own": "Ospita il tuo",
     "your_server_your_name": "Il tuo server. Il tuo nome. I tuoi lettori.",
-    "news_reader_is_open": "News Reader è open source con licenza MIT. Ospitalo per te, la tua famiglia, il tuo team o la tua community – con il tuo dominio e il tuo marchio. Il white-label non è un’aggiunta: è un solo file di tema.",
+    "news_reader_is_open": "News Reader è un lettore RSS self-hosted, open source con licenza MIT. Ospitalo per te, la tua famiglia, il tuo team o la tua community – con il tuo dominio e il tuo marchio. Il white-label non è un’aggiunta: è un solo file di tema.",
     "clone": "Clona",
     "a_handful_of_php": "Una manciata di file PHP e una web app statica. Nessun server di database, nessuna fase di build, nessun container.",
     "rebrand": "Personalizza",
@@ -141,9 +141,9 @@
     "what_if_i_lose": "E se perdo tutti i miei dispositivi?",
     "then_the_vault_cannot": "Allora la cassaforte non può più essere decifrata – nemmeno da noi. È il prezzo di una vera cifratura end-to-end. Esporta ogni tanto le tue iscrizioni in OPML se vuoi un backup.",
     "what_is_the_collector": "Che cos’è il Collector?",
-    "the_collector_is_the": "Il Collector è l’endpoint REST incluso in News Reader: <code>GET /api/collect?url=…</code> trasforma qualsiasi URL di sito o feed in articoli JSON normalizzati. Prova prima un feed nativo, poi un feed dichiarato, i percorsi comuni, l’HTML della pagina e infine la sitemap.",
+    "the_collector_is_the": "Il Collector è l’endpoint REST incluso in News Reader: <code>GET /api/collect?url=…</code> trasforma qualsiasi URL di sito o feed in articoli JSON normalizzati. Prova prima un feed nativo, poi un feed dichiarato, i percorsi comuni, la sitemap e infine l’HTML della pagina.",
     "what_if_a_website": "E se un sito non ha un feed RSS?",
-    "news_can_still_follow": "News può seguirlo lo stesso. Il Collector estrae gli articoli dalla pagina stessa (JSON-LD, elementi article o link sotto il percorso richiesto) oppure ripiega sulla sitemap del sito.",
+    "news_can_still_follow": "News può seguirlo lo stesso. Il Collector usa la sitemap del sito se contiene date, altrimenti estrae gli articoli dalla pagina stessa (JSON-LD, elementi article o link sotto il percorso richiesto).",
     "can_i_host_my": "Posso ospitare il mio News Reader con il mio marchio?",
     "yes_it_is_mit": "Sì. È sotto licenza MIT. Colori e font sono in un file di tema, nome e icone nel manifest della web app. Fallo girare per te, la tua famiglia, il tuo team o i tuoi lettori, con il tuo dominio.",
     "what_do_i_need": "Cosa mi serve per ospitarlo?",

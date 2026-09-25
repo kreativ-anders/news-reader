@@ -58,7 +58,7 @@
     "count_one": "{n} followed · collected by your server",
     "count_other": "{n} followed · collected by your server",
     "follow_title": "Follow a website",
-    "follow_text": "A feed URL or any page – the Collector finds the entries (direct, discovered, guessed, HTML or sitemap).",
+    "follow_text": "A feed URL or any page – the Collector finds the entries (direct, discovered, guessed, sitemap or HTML).",
     "url_label": "Website or feed URL", "follow": "Follow",
     "shared": "Shared link received – press Follow to subscribe.",
     "asking": "Asking the Collector…",

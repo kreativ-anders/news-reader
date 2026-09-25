@@ -65,8 +65,8 @@ GET /api/collect?url=<url-encoded URL>[&refresh=1][&limit=1..100]
 1. URL is RSS 2.0 / RSS 1.0 (RDF) / Atom → `strategy: direct`
 2. Feed declared in HTML (`<link rel="alternate">`, visible `…/rss.xml` links) → `discovered`
 3. Common feed paths (`<path>/feed`, `/rss.xml`, `/feed.xml`, `/atom.xml`, `/index.xml`, …) → `guessed`
-4. HTML listing → `html-jsonld` (JSON-LD Article/ItemList), `html-article` (`<article>`), `html-links` (links below the requested path, e.g. `/news/<slug>`)
-5. Sitemap (`robots.txt` → `/sitemap.xml` → `/sitemap_index.xml`), filtered to the requested path → `sitemap`
+4. Sitemap (`robots.txt` → `/sitemap.xml` → `/sitemap_index.xml`), filtered to the requested path → `sitemap` – only accepted if at least half of the entries carry a date; slug titles are replaced by the real link titles from the requested page (no extra request)
+5. HTML listing as last resort → `html-jsonld` (JSON-LD Article/ItemList), `html-article` (`<article>`), `html-links` (links below the requested path, e.g. `/news/<slug>`); missing dates are filled from the sitemap if one was found in step 4
 
 ## Response
 
@@ -112,6 +112,7 @@ Limited requests get `429` + `Retry-After`.
 ## White-label & brand
 
 - Colours and fonts: `app/theme.css` (used by the site and the app). Palette „3b.1“: `#FFA500` · `#000000` · `#FFFFFF` · `#292929`.
+- Shape: straight editorial lines – `--radius: 0` in `app/theme.css` (one token for site and app; e.g. `8px` for a rounder white-label look).
 - Light/dark: follows the OS; the site toggle (header) and the app (*Settings → Appearance*) override it via `html[data-theme]`, stored in `localStorage` (`nr.theme`).
 - Logo 3b.1 (`brand/`): `news-mark.svg` (light), `news-mark-dark.svg` (dark), `news-icon.svg` (orange app tile), `news-icon-dark.svg` (graphite tile). Inline copies use `.nr-mark` and follow the theme.
 - Name and icons: `app/manifest.webmanifest`, `app/index.html`, `app/icons/`, `brand/`.

@@ -4,12 +4,13 @@ declare(strict_types=1);
 /**
  * Resolve any URL into a normalized list of entries.
  *
- * Order:
+ * Order – from machine-readable to heuristic:
  *   1. URL itself is RSS / Atom / RDF
  *   2. Feed declared in the HTML (<link rel="alternate">, visible feed links)
  *   3. Common feed paths (/feed, /rss.xml, …)
- *   4. HTML article listing (JSON-LD, <article>, links below the path)
- *   5. sitemap.xml (filtered to the requested path)
+ *   4. sitemap.xml (filtered to the requested path) – only if most entries are dated;
+ *      slug titles are replaced by real titles from the page where the URL appears there
+ *   5. HTML listing as last resort (JSON-LD, <article>, links below the path)
  *
  * @return array{ok:true,payload:array}|array{ok:false,code:string,message:string}
  */
@@ -50,52 +51,72 @@ function nr_resolve(string $url): array
         }
     }
 
-    // 4. HTML listing
+    // 4. Sitemap – structured, but only a feed if it carries dates
+    $sitemap = null; // first non-empty sitemap result, reused for date enrichment in step 5
+    foreach (nr_sitemap_candidates($finalUrl) as $sitemapUrl) {
+        $tried[] = $sitemapUrl;
+        $res = nr_fetch($sitemapUrl);
+        if (!$res['ok']) continue;
+        $entries = nr_parse_sitemap($res['body'], $res['finalUrl'], $finalUrl);
+        if (!$entries) continue;
+        $sitemap ??= ['url' => $res['finalUrl'], 'entries' => $entries];
+        $dated = count(array_filter($entries, fn($e) => ($e['publishedAt'] ?? $e['updatedAt']) !== null));
+        if (count($entries) >= 3 && $dated >= count($entries) / 2) {
+            $entries = nr_titles_from_page($entries, $dom, $finalUrl);
+            return nr_success($url, $finalUrl, 'sitemap', 'sitemap', $pageTitle, $res['finalUrl'], $entries);
+        }
+    }
+
+    // 5. HTML listing – last resort
     $listing = nr_parse_html_listing($dom, $finalUrl);
     if ($listing !== null) {
         $entries = $listing['entries'];
 
         // Enrich with sitemap dates if the page shows hardly any dates
         $dated = count(array_filter($entries, fn($e) => $e['publishedAt'] !== null));
-        if ($dated < count($entries) / 2) {
-            $entries = nr_enrich_with_sitemap($entries, $finalUrl);
+        if ($sitemap !== null && $dated < count($entries) / 2) {
+            $entries = nr_enrich_with_sitemap($entries, $sitemap['entries']);
         }
 
         return nr_success($url, $finalUrl, 'html', $listing['strategy'], $pageTitle, null, $entries);
     }
 
-    // 5. Sitemap
-    foreach (nr_sitemap_candidates($finalUrl) as $sitemapUrl) {
-        $tried[] = $sitemapUrl;
-        $res = nr_fetch($sitemapUrl);
-        if (!$res['ok']) continue;
-        $entries = nr_parse_sitemap($res['body'], $res['finalUrl'], $finalUrl);
-        if (count($entries) >= 3) {
-            return nr_success($url, $finalUrl, 'sitemap', 'sitemap', $pageTitle, $res['finalUrl'], $entries);
-        }
-    }
-
     return nr_err('NO_FEED_DETECTED', 'No RSS/Atom feed, article listing or matching sitemap entries were found.', ['tried' => $tried]);
 }
 
-function nr_enrich_with_sitemap(array $entries, string $pageUrl): array
+/** Add sitemap dates to HTML entries that have none. */
+function nr_enrich_with_sitemap(array $entries, array $sitemapEntries): array
 {
     $dates = [];
-    foreach (nr_sitemap_candidates($pageUrl) as $sitemapUrl) {
-        $res = nr_fetch($sitemapUrl);
-        if (!$res['ok']) continue;
-        foreach (nr_parse_sitemap($res['body'], $res['finalUrl'], $pageUrl) as $e) {
-            $dates[nr_normalize_url($e['url'])] = $e['publishedAt'] ?? $e['updatedAt'];
-        }
-        if ($dates) break;
+    foreach ($sitemapEntries as $e) {
+        $dates[nr_normalize_url($e['url'])] = $e['publishedAt'] ?? $e['updatedAt'];
     }
-    if (!$dates) return $entries;
-
     foreach ($entries as &$e) {
         $key = nr_normalize_url($e['url']);
         if ($e['updatedAt'] === null && isset($dates[$key])) {
             $e['updatedAt'] = $dates[$key];
         }
+    }
+    return $entries;
+}
+
+/**
+ * Sitemaps rarely carry titles (only Google News sitemaps do), so entries get a title
+ * derived from the URL slug. If the requested page links the same URL, use its real title.
+ * No extra request: the page is already loaded.
+ */
+function nr_titles_from_page(array $entries, DOMDocument $dom, string $baseUrl): array
+{
+    $titles = [];
+    foreach ([nr_listing_path_links($dom, $baseUrl), nr_listing_articles($dom, $baseUrl), nr_listing_jsonld($dom, $baseUrl)] as $list) {
+        foreach ($list as $e) $titles[nr_normalize_url($e['url'])] = $e; // later lists (more reliable) win
+    }
+    if (!$titles) return $entries;
+    foreach ($entries as &$e) {
+        $hit = $titles[nr_normalize_url($e['url'])] ?? null;
+        if ($hit === null) continue;
+        if ($e['title'] === nr_clean_text(nr_title_from_slug($e['url']))) $e['title'] = $hit['title'];
+        $e['summary'] ??= $hit['summary'];
     }
     return $entries;
 }
@@ -110,7 +131,7 @@ function nr_success(string $inputUrl, string $finalUrl, string $type, string $st
                 'inputUrl' => $inputUrl,
                 'url'      => $finalUrl,
                 'type'     => $type,       // rss | rdf | atom | html | sitemap
-                'strategy' => $strategy,   // direct | discovered | guessed | html-jsonld | html-article | html-links | sitemap
+                'strategy' => $strategy,   // direct | discovered | guessed | sitemap | html-jsonld | html-article | html-links
                 'feedUrl'  => $feedUrl,
                 'title'    => $title,
             ],

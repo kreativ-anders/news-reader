@@ -48,7 +48,7 @@
     "count_one": "{n} seguido · recopilado por tu servidor",
     "count_other": "{n} seguidos · recopilados por tu servidor",
     "follow_title": "Seguir una web",
-    "follow_text": "Una URL de feed o cualquier página – el Collector encuentra las entradas (direct, discovered, guessed, HTML o sitemap).",
+    "follow_text": "Una URL de feed o cualquier página – el Collector encuentra las entradas (direct, discovered, guessed, sitemap o HTML).",
     "url_label": "URL de la web o del feed", "follow": "Seguir",
     "shared": "Enlace compartido recibido – pulsa Seguir para suscribirte.",
     "asking": "Consultando al Collector…",

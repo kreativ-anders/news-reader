@@ -48,7 +48,7 @@
     "count_one": "{n} suivi · collecté par votre serveur",
     "count_other": "{n} suivis · collectés par votre serveur",
     "follow_title": "Suivre un site",
-    "follow_text": "Une URL de flux ou n’importe quelle page – le Collector trouve les articles (direct, discovered, guessed, HTML ou sitemap).",
+    "follow_text": "Une URL de flux ou n’importe quelle page – le Collector trouve les articles (direct, discovered, guessed, sitemap ou HTML).",
     "url_label": "URL du site ou du flux", "follow": "Suivre",
     "shared": "Lien partagé reçu – appuyez sur Suivre pour vous abonner.",
     "asking": "Demande au Collector…",
