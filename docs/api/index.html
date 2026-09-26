@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <script>try{var t=localStorage.getItem("nr.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API – News Reader</title>
+  <meta name="description" content="The News Reader REST API: turn any website or feed into JSON entries, fetch readable article copies and sync devices end-to-end encrypted. Three endpoints, no API key.">
+  <link rel="canonical" href="https://news-reader.app/docs/api/">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="kreativ-anders">
+  <meta name="color-scheme" content="dark light">
+  <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="m4MxtiKjOBnyv9GEhLXBIcrjrwiP0tzu"></script>
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="../../favicon-32.png" sizes="32x32" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../../favicon-32-dark.png" sizes="32x32" type="image/png" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="../../app/theme.css">
+  <style>
+    *{box-sizing:border-box;margin:0}
+    body{font-family:var(--font);font-size:17px;line-height:1.6;background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased}
+    a{color:var(--brand-ink)}
+    .wrap{max-width:760px;margin:0 auto;padding:0 20px}
+    header{border-bottom:1px solid var(--line)}
+    header .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg);font:600 1.35rem var(--serif)}
+    .brand svg{width:32px;height:32px}
+    main{padding:56px 0 72px}
+    h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.015em}
+    h1{font-size:clamp(2.2rem,5vw,3.2rem);line-height:1.1}
+    h2{font-size:1.6rem;margin:44px 0 8px}
+    p{margin:12px 0;color:var(--muted)}
+    code,pre{font-family:var(--mono);font-size:.88em}
+    code{padding:.1em .35em;border-radius:var(--radius);background:color-mix(in srgb,var(--brand) 11%,transparent)}
+    pre{margin:14px 0;padding:14px 16px;overflow-x:auto;background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);line-height:1.5}
+    pre code{padding:0;background:none;font-size:inherit}
+    footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:.92rem}
+    footer a{color:inherit}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="../../" aria-label="News Reader home"><svg class="nr-mark" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="i" x="8" y="8" width="48" height="48" rx="6" stroke-width="4"/><rect class="f" x="16" y="16" width="32" height="7" rx="1.5"/><path class="i" d="M40.5 30.5H46.5M40.5 38.5H46.5M40.5 46.5H43.5" stroke-width="3"/><path class="r" d="M19 37.5A7.5 7.5 0 0 1 26.5 45M19 31A14 14 0 0 1 33 45" stroke-width="4"/><circle class="d" cx="19" cy="45" r="3"/></svg>News Reader</a>
+      <a href="../../app/">Open News</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>API</h1>
+    <p>Three JSON endpoints, served by every News Reader installation. No API key. Errors come back as <code>{"error":{"code","message"}}</code> with a 4xx/5xx status.</p>
+
+    <h2>Collector</h2>
+    <p>Any website or feed URL → normalized entries. Works for sites without an RSS feed, too.</p>
+    <pre><code>GET /api/collect?url=https://example.com/blog</code></pre>
+    <pre><code>{
+  "source":  { "url": "…", "type": "rss", "strategy": "discovered", "title": "…" },
+  "entries": [ { "id": "…", "url": "…", "title": "…", "publishedAt": "…", "summary": "…", "image": "…" } ],
+  "meta":    { "count": 20, "cached": true }
+}</code></pre>
+
+    <h2>Article</h2>
+    <p>A readable copy of one article, e.g. for offline reading.</p>
+    <pre><code>GET /api/article?url=https://example.com/blog/post</code></pre>
+    <pre><code>{ "article": { "url": "…", "title": "…", "byline": "…", "content": "&lt;p&gt;…&lt;/p&gt;", "words": 812 } }</code></pre>
+
+    <h2>Sync</h2>
+    <p>Stores one end-to-end encrypted blob per device group. The server never sees the key.</p>
+    <pre><code>GET | PUT | DELETE /api/sync
+Authorization: Bearer &lt;token&gt;</code></pre>
+
+    <p>Full details: <a href="https://github.com/kreativ-anders/news-reader#collector-apicollect" rel="noopener">README on GitHub</a>.</p>
+  </main>
+
+  <footer>
+    <div class="wrap">© News Reader · <a href="../../">Home</a> · <a href="https://github.com/kreativ-anders/news-reader" rel="noopener">GitHub</a> · MIT license · <a href="../../privacy.html">Privacy</a> · <a href="../../imprint.html">Imprint</a></div>
+  </footer>
+</body>
+</html>

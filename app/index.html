@@ -3,24 +3,27 @@
 <head>
   <meta charset="utf-8">
   <!-- WARNING: changing the inline script below requires a new sha256 hash in this CSP -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-9lQjb134mvyOB3xes/iDiL6x7sn/Fna2QxvI5oHQJIg='; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' https: http:; connect-src 'self' https:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-9lQjb134mvyOB3xes/iDiL6x7sn/Fna2QxvI5oHQJIg=' https://api.pirsch.io; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' https: http:; connect-src 'self' https:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <script>try{var t=localStorage.getItem("nr.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>News</title>
   <meta name="description" content="News is a calm, local-first feed reader: every entry gets one decision – read now, later or not interested. End-to-end encrypted sync between your devices, no account.">
-  <meta name="robots" content="noindex">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://news-reader.app/app/">
   <meta name="theme-color" content="#292929" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
   <meta name="color-scheme" content="dark light">
   <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="icons/favicon-32-dark.png" sizes="32x32" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preload" href="fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="app.css">
   <script type="module" src="js/app.js"></script>
+  <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="m4MxtiKjOBnyv9GEhLXBIcrjrwiP0tzu"></script>
 </head>
 <body>
   <a class="skip" href="#view" data-i18n="app.skip">Skip to content</a>
@@ -71,6 +74,6 @@
     </form>
   </dialog>
 
-  <noscript><p class="empty">News needs JavaScript.</p></noscript>
+  <noscript><p class="empty"><strong>News needs JavaScript.</strong>A calm, local-first RSS reader: every entry gets one decision – read now, later or not interested. Encrypted sync, no account. <a href="../">About News Reader</a></p></noscript>
 </body>
 </html>

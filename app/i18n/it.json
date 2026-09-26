@@ -79,6 +79,8 @@
   "settings": {
     "title": "Impostazioni",
     "subtitle": "News {version} · i tuoi dati restano sui tuoi dispositivi – il server vede sempre e solo dati cifrati.",
+    "privacy": "Privacy",
+    "imprint": "Note legali",
     "look_title": "Lingua e aspetto",
     "language": "Lingua",
     "theme": "Aspetto",

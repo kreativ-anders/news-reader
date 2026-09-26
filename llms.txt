@@ -7,11 +7,12 @@ Project by kreativ-anders (https://kreativ-anders.de). Planned home: https://new
 Key facts:
 
 - Components: `app/` (the News PWA, plain ES modules, IndexedDB), `api/index.php` (front controller), `/api/sync` (encrypted sync), `/api/collect` (Collector).
-- Not a hosted SaaS with accounts: there is no sign-up, no tracking, no analytics, no third-party requests; fonts are self-hosted.
+- Not a hosted SaaS with accounts: there is no sign-up, no cookies, no ads, no user profiles; fonts are self-hosted. news-reader.app counts visits with cookie-free Pirsch Analytics (self-hosters remove or replace the snippet, see README → White-label).
 - Sync: the first device creates a random 32-byte vault key; other devices join via QR code or pairing link (`app/#pair=<key>`). HKDF-SHA256 derives a bearer token and an AES-256-GCM key from it. The server stores one opaque encrypted blob per vault (file named after the hash of the token) and never sees the key. Losing all devices means the vault cannot be decrypted; OPML export is the backup.
 - Collector resolution order: platform rule (known page URLs of Medium, YouTube, Reddit, GitHub, Mastodon etc. mapped to their native feed without fetching the page) → direct feed (RSS 2.0, RSS 1.0/RDF, Atom) → feed declared in HTML (`discovered`) → common feed paths (`guessed`) → sitemap (only if at least half of the entries carry a date) → HTML extraction as last resort (JSON-LD, `<article>`, links below the requested path).
 - Collector API: `GET /api/collect?url=<url>[&refresh=1][&limit=1..100]` → `{source, entries[{id,url,title,publishedAt,updatedAt,summary}], meta}`; errors as `{error:{code,message}}` with 4xx status. 24 h shared cache, stale copies up to 7 days, SSRF protection (private hosts blocked, every redirect re-validated), per-IP rate limits.
-- Migration: OPML import and export (e.g. from Feedly).
+- Migration: OPML import and export – works with virtually every other feed reader.
+- Digital sovereignty: run it on your own infrastructure (company, public sector, intranet); no accounts, no database, end-to-end encrypted sync, MIT license without per-seat fees; internal sources on private hosts can be enabled explicitly.
 - Languages: English (default), German, French, Italian, Spanish.
 - Hosting requirements: PHP 8.1+ with dom, libxml, mbstring (curl recommended), HTTPS, writable `var/`. No database server, no background workers. nginx config included.
 
@@ -19,10 +20,12 @@ Key facts:
 
 - [README](https://github.com/kreativ-anders/news-reader/blob/main/README.md): full technical reference – app behaviour, sync protocol and blob format, Collector API, cache, rate limits, white-label, i18n, setup and security
 - [Landing page](https://news-reader.app/): product overview, features, sync explanation, Collector strategies, self-hosting and FAQ
+- [Privacy policy](https://news-reader.app/privacy.html) · [Imprint](https://news-reader.app/imprint.html)
+- [API](https://news-reader.app/docs/api/): short overview of the three endpoints (Collector, Article, Sync)
 
 ## App
 
-- [Open News](https://news-reader.app/app/): the installable web app (requires JavaScript; not indexed)
+- [Open News](https://news-reader.app/app/): the installable web app (requires JavaScript)
 
 ## Source
 

@@ -15,6 +15,11 @@ for (const f of readdirSync(join(ROOT, 'app/js')).filter((f) => f.endsWith('.js'
   });
 }
 
+test('site.js parses as ES module', () => {
+  const r = check(readFileSync(join(ROOT, 'site.js'), 'utf8'), 'module');
+  assert.equal(r.status, 0, r.stderr);
+});
+
 for (const f of ['app/sw.js', 'app/vendor/qrcode.js']) {
   test(`${f} parses as script`, () => {
     const r = check(readFileSync(join(ROOT, f), 'utf8'), 'commonjs');
@@ -23,7 +28,9 @@ for (const f of ['app/sw.js', 'app/vendor/qrcode.js']) {
 }
 
 // inline <script> blocks of the site and the app
-for (const page of ['index.html', 'de/index.html', 'fr/index.html', 'it/index.html', 'es/index.html', 'app/index.html', '404.html']) {
+const SITE_PAGES = ['index.html', 'privacy.html', 'imprint.html', 'thanks.html']
+  .flatMap((p) => ['', 'de/', 'fr/', 'it/', 'es/'].map((dir) => dir + p));
+for (const page of [...SITE_PAGES, 'app/index.html', 'docs/api/index.html', '404.html']) {
   test(`${page}: inline scripts parse`, () => {
     const html = readFileSync(join(ROOT, page), 'utf8');
     for (const m of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)) {

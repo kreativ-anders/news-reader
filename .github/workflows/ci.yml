@@ -87,7 +87,7 @@ jobs:
         run: |
           php tools/build-i18n.php --site=https://news-reader.app/
           # <lastmod> carries the build date – everything else must be committed as generated
-          if ! git diff --exit-code -I '<lastmod>' -- index.html de fr it es sitemap.xml; then
+          if ! git diff --exit-code -I '<lastmod>' -- index.html privacy.html imprint.html thanks.html de fr it es app/index.html docs/api/index.html sitemap.xml; then
             echo "::error::Generated language pages are outdated – run: php tools/build-i18n.php --site=https://news-reader.app/"
             exit 1
           fi

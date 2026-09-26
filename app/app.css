@@ -212,3 +212,4 @@ html.reader-open,html.reader-open body{overflow:hidden}
 .reader-fin{font-size:.7rem;color:var(--brand)}
 @media (max-width:760px){.reader-doc{font-size:1.12rem;padding-top:calc(80px + env(safe-area-inset-top))}.reader-x{width:52px;height:52px}}
 @media (prefers-reduced-motion:no-preference){.reader{animation:reader-in .18s ease-out}@keyframes reader-in{from{opacity:0;transform:translateY(8px)}}}
+.vh .legal a{color:inherit;text-underline-offset:3px}

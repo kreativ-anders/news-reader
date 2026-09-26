@@ -89,6 +89,8 @@
   "settings": {
     "title": "Settings",
     "subtitle": "News {version} · your data stays on your devices – the server only ever sees encrypted data.",
+    "privacy": "Privacy",
+    "imprint": "Imprint",
     "look_title": "Language &amp; appearance",
     "language": "Language",
     "theme": "Appearance",

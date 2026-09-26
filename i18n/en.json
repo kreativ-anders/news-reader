@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "News Reader – Self-hosted RSS Reader with Encrypted Sync",
-    "description": "A calm RSS reader for phone and desktop: read now, later or skip. Encrypted sync, no account, no tracking. A Feedly alternative you can host yourself.",
+    "description": "A calm RSS reader for phone and desktop: read now, later or skip. Encrypted sync, no account, no tracking. Open source – run it on your own servers.",
     "og_title": "News – read what matters, skip the rest",
     "og_description": "A calm RSS reader with end-to-end encrypted sync. No account, no tracking, no algorithm. Open source – host your own."
   },
@@ -67,10 +67,10 @@
     "everything_lives_in_your": "Everything lives in your browser. News starts instantly, keeps going in a tunnel and catches up once you are back online.",
     "feed_or_no_feed": "Feed or no feed",
     "follow_any_website_the": "Follow any website – even one that has never heard of RSS. The built-in Collector finds the new posts anyway.",
-    "leave_feedly_behind": "Leave Feedly behind",
-    "import_your_opml_export": "Import your OPML file and all your sources move in. Export is just as easy – no lock-in, ever.",
+    "bring_your_feeds": "Bring your feeds along",
+    "import_your_opml_export": "Coming from another reader? Import your OPML file and all your sources move in. Export is just as easy – no lock-in, ever.",
     "private_and_light": "Private and light",
-    "no_analytics_no_third": "No analytics, no third-party requests, no framework. Just a few kilobytes of plain JavaScript and self-hosted fonts."
+    "no_cookies_no_profiles": "No cookies, no ads, no profiles, no framework. Just a few kilobytes of plain JavaScript and self-hosted fonts – plus cookie-free, anonymous visitor counts."
   },
   "sync": {
     "sync": "Sync",
@@ -122,22 +122,31 @@
     "fact_rate": "<b>Rate limited</b> per client"
   },
   "build": {
-    "build_your_own": "Self-host your own",
-    "your_server_your_name": "Your server. Your name. Your readers.",
-    "news_reader_is_open": "News Reader is open source under the MIT license. Run it for yourself, your family, your team or your community – on your own domain, under your own brand. White-label is not an add-on: it is one theme file.",
+    "build_your_own": "Self-host · digital sovereignty",
+    "your_server_your_name": "Your server. Your data. Your rules.",
+    "news_reader_is_open": "News Reader is open source under the MIT license. Run it for yourself, your team or your whole organisation – on your own infrastructure, under your own domain and brand. No vendor decides where your data lives, what it costs per seat or when the service ends.",
     "clone": "Clone",
     "a_handful_of_php": "A handful of PHP files and a static web app. No database server, no build step, no container.",
     "rebrand": "Rebrand",
     "colours_and_fonts_live": "Colours and fonts live in <code>app/theme.css</code>. Swap the icons and the app name in the manifest – done. Your users see your reader, not ours.",
     "deploy": "Deploy",
     "any_web_server_with": "Any web server with PHP 8.1+ and HTTPS. The bundled nginx config blocks everything except the app and the API.",
-    "requires_php_8_1": "Requires PHP 8.1+ with <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recommended) and a writable <code>var/</code>. That's it."
+    "requires_php_8_1": "Requires PHP 8.1+ with <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recommended) and a writable <code>var/</code>. That's it.",
+    "sov_label": "Digital sovereignty",
+    "sov_data": "Data stays in-house",
+    "sov_data_text": "Feeds, reading lists and sync vaults live on servers you control – your data centre, your cloud region, your jurisdiction.",
+    "sov_gdpr": "GDPR-friendly by design",
+    "sov_gdpr_text": "No user accounts, no personal profiles, no database. Sync data is end-to-end encrypted – not even your own admins can read it.",
+    "sov_lockin": "No vendor lock-in",
+    "sov_lockin_text": "MIT license, OPML in and out, plain PHP. No per-seat fees, no forced upgrades, no roadmap you depend on.",
+    "sov_audit": "Auditable and intranet-ready",
+    "sov_audit_text": "Every line is open for your security review. Internal sources on private hosts can be enabled explicitly in one config setting."
   },
   "faq": {
     "questions_amp_answers": "Questions &amp; answers",
     "what_is_news": "What is News?",
     "news_is_a_calm": "A calm feed reader for your phone and your desktop browser. Every new post lands in your inbox and gets one decision: read now, later or not interested. It installs like an app, works offline and is free and open source.",
-    "how_is_it_different": "How is it different from Feedly and co.?",
+    "how_is_it_different": "How is it different from other feed readers?",
     "no_account_no_ads": "No account, no ads, no tracking and no algorithm deciding what you see. Your reading progress lives on your devices, sync is end-to-end encrypted, and you can run the whole thing on your own server.",
     "how_does_sync_work": "How does sync work without an account?",
     "the_first_device_creates": "Your first device creates a random secret key. Other devices join by scanning a QR code or opening the pairing link. From that key, each device derives an access token and an encryption key. The server only ever gets the token and one encrypted file – the key itself never leaves your devices.",
@@ -151,18 +160,96 @@
     "news_can_still_follow": "News can still follow it. The Collector uses the site&#x27;s sitemap if it carries dates, and otherwise picks the posts straight from the page (JSON-LD, article elements or links below the requested path).",
     "can_i_host_my": "Can I host my own News Reader under my own brand?",
     "yes_it_is_mit": "Yes – it is MIT-licensed. Colours and fonts live in one theme file, name and icons in the web app manifest. Run it for yourself, your family, your team or your readers, on your own domain.",
+    "for_organisations": "Is News Reader suitable for companies and public institutions?",
+    "for_organisations_text": "Yes. You run it on your own infrastructure, so all data stays under your control and within your jurisdiction. There are no user accounts, no personal profiles and no database, sync data is end-to-end encrypted, and the MIT license means no per-seat fees and no dependency on a vendor. Internal sources on private hosts can be allowed explicitly.",
     "what_do_i_need": "What do I need to host it?",
     "php_8_1_with": "PHP 8.1+ with dom, libxml and mbstring (curl recommended), a web server with HTTPS and a writable var/ folder. No database server, no build step, no background workers. An nginx config is included.",
-    "can_i_move_from": "Can I move from Feedly?",
-    "yes_export_your_subscriptions": "Yes. Export your subscriptions from Feedly as OPML and import the file in News under Feeds. News exports OPML too, so you are free to leave any time."
+    "can_i_switch": "Can I bring my feeds from another reader?",
+    "yes_export_opml": "Yes. Almost every feed reader can export your subscriptions as an OPML file – import it in News under Feeds and you are done. News exports OPML too, so you are free to leave any time."
   },
   "final": {
     "start_reading": "Start reading.",
-    "open_news_in_your": "Open News in your browser, follow your first website and put it on your phone’s home screen – takes a minute. Or run your own News Reader, for you, your team or your readers.",
+    "open_news_in_your": "Open News in your browser, follow your first website and put it on your phone’s home screen – takes a minute. Or run your own News Reader, for you, your team or your whole organisation.",
     "open_news": "Open News",
-    "source_on_github": "Source on GitHub"
+    "source_on_github": "Source on GitHub",
+    "support": "News Reader is free and stays free. If it is worth something to you: <a href=\"https://buy.stripe.com/aFa9ATbxpe2u03T2aies002\" rel=\"noopener\">pay what you want</a>."
   },
   "footer": {
-    "copyright": "© <span id=\"y\">2026</span> News Reader · a project by <a href=\"https://kreativ-anders.de\" rel=\"noopener\">kreativ-anders</a> · MIT license"
+    "copyright": "© <span id=\"y\">2026</span> News Reader · a project by <a href=\"https://kreativ-anders.de\" rel=\"noopener\">kreativ-anders</a> · MIT license",
+    "privacy": "Privacy",
+    "imprint": "Imprint",
+    "support": "Pay what you want"
+  },
+  "legal": {
+    "home": "Home",
+    "germany": "Germany",
+    "email": "E-mail",
+    "phone": "Phone",
+    "binding": "Translations of this page are provided for convenience; the German version is legally binding."
+  },
+  "privacy": {
+    "meta_title": "Privacy policy – News Reader",
+    "meta_description": "Which data news-reader.app and the News app process: cookie-free visitor statistics (Pirsch), server logs, voluntary payments via Stripe, Collector, offline copies and end-to-end encrypted sync.",
+    "title": "Privacy policy",
+    "lead": "What happens to your data when you visit news-reader.app and use the News app hosted there – in plain words.",
+    "summary": "<b>In short:</b> no cookies, no user accounts, no advertising, no profiles. Visitor statistics are cookie-free and anonymous (Pirsch, servers in Germany). Your feeds and reading list stay on your devices, and sync is end-to-end encrypted – we cannot read it.",
+    "controller_h": "Controller",
+    "controller_text": "The controller within the meaning of the GDPR for this website and the News app hosted at news-reader.app is:",
+    "site_h": "Visiting the website",
+    "logs_h": "Server log files",
+    "logs_text": "With every request, the web server automatically processes the data your browser transmits: IP address, date and time, requested address, HTTP status, amount of data transferred, referrer and user agent. This is technically necessary to deliver the pages and the app and to keep them secure, for example to detect attacks. Log files are kept only as long as these purposes require and are then deleted. If a hosting provider operates the server for us, it acts as a processor bound by our instructions (Art. 28 GDPR). Legal basis: Art. 6(1)(f) GDPR.",
+    "pirsch_h": "Visitor statistics with Pirsch Analytics",
+    "pirsch_1": "All pages of this website and the News app hosted here use Pirsch Analytics, a cookie-free web analytics service built on privacy by design. To count visitors, Pirsch derives a visitor ID from the IP address, the user agent, the date and a salt using a one-way hash function when a page view arrives.",
+    "pirsch_2": "The IP address is stored neither in full nor in part and is irreversibly anonymised by the hash. Because the date and a per-website salt are included, visitors cannot be recognised for longer than 24 hours and cannot be tracked across websites. A rough location (country, city) is derived from a locally hosted database. Pirsch sets no cookies and stores nothing on your device. Only the page viewed is recorded – never the content of your feeds or your reading list.",
+    "pirsch_3": "Provider: Emvi Software GmbH, Nickelstraße 1b, 33378 Rheda-Wiedenbrück, Germany. Processing takes place on servers in Germany; no data is transferred to third countries. Legal basis: Art. 6(1)(f) GDPR – our legitimate interest in understanding which content is found and used. More: <a href=\"https://docs.pirsch.io/privacy\" rel=\"noopener\">privacy at Pirsch Analytics</a>.",
+    "storage_h": "Local settings instead of cookies",
+    "storage_text": "This website sets no cookies. If you choose a language or a colour theme, that choice is saved in your browser’s local storage (<code>nr.lang</code>, <code>nr.theme</code>) and never transmitted. This is strictly necessary to provide the function you asked for (§ 25(2) no. 2 TDDDG). You can delete it at any time in your browser settings.",
+    "stripe_h": "Voluntary support via Stripe",
+    "stripe_1": "News Reader is free. If you want to support it, the “Pay what you want” link takes you to a payment page hosted by Stripe (Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Grand Canal Dock, Dublin, D02 H210, Ireland). No Stripe script is embedded on this website – data only reaches Stripe once you click the link. Stripe processes the payment details you enter there; we never see full card or bank details. We receive the amount, the time, the name and e-mail address you entered and, depending on the payment method, limited details such as the card brand and the last four digits. After the payment, Stripe sends you back to our thank-you page.",
+    "stripe_2": "Legal basis: Art. 6(1)(b) GDPR (carrying out the payment you initiated) and Art. 6(1)(c) GDPR in conjunction with the retention obligations under German commercial and tax law (up to 10 years). Stripe may also process data in the USA; Stripe, Inc. is certified under the EU–US Data Privacy Framework. Details: <a href=\"https://stripe.com/privacy\" rel=\"noopener\">Stripe privacy policy</a>.",
+    "links_h": "External links",
+    "links_text": "Links to other websites, for example GitHub, are ordinary links. Only when you click one does your browser connect to that website; from then on, its operator’s privacy policy applies.",
+    "app_h": "Using the News app",
+    "app_intro": "News is local-first: your feeds, entries, reading list and reading progress are stored in your browser (IndexedDB) on your device, not on our server. The server only steps in where a browser cannot do the job alone:",
+    "collector_h": "Loading feeds (Collector)",
+    "collector_text": "When you follow a website or refresh your feeds, the app sends the source’s address to <code>/api/collect</code>. The server fetches the source on your behalf and returns its entries. Feed contents are cached for all users together for up to 14 days, stored by source address only and without any link to you. To prevent abuse, the server counts requests per client in short time windows; for this it keeps a salted hash of your IP address (for IPv6, of your network prefix) and deletes it automatically after about two days. Legal basis: Art. 6(1)(f) GDPR.",
+    "article_h": "Offline copies for your Later list",
+    "article_text": "When you move an entry to Later, the app requests a readable copy of the article from <code>/api/article</code>. The server fetches the page and returns its text, which is then stored on your device. On the server, the copy is cached for up to 14 days by article address only, without any link to you. Legal basis: Art. 6(1)(f) GDPR.",
+    "sync_h": "End-to-end encrypted sync",
+    "sync_text": "Sync is optional. When you pair devices, your data is encrypted on your device (AES-256-GCM) before it is uploaded. The key never leaves your devices, so we cannot read the content. The server stores one encrypted file per vault, named after a hash of the access token, together with its size and modification time. A vault is deleted when you remove it in the app, and automatically 180 days after it was last used. Legal basis: Art. 6(1)(b) GDPR.",
+    "sources_h": "Content from the sources you follow",
+    "sources_text": "Entries may contain images that your browser loads directly from the source website or its image server, and “Read now” opens the article on the original website. In both cases the respective operator receives your IP address and is responsible for that processing. The app sends no referrer.",
+    "selfhost_h": "Other News Reader instances",
+    "selfhost_text": "This policy applies to news-reader.app only. News Reader is open source – if you use an instance run by someone else, that operator is the controller.",
+    "rights_h": "Your rights",
+    "rights_1": "You have the right of access (Art. 15 GDPR), rectification (Art. 16), erasure (Art. 17), restriction of processing (Art. 18), data portability (Art. 20) and to object (Art. 21). To exercise them, contact us using the details above. You may also lodge a complaint with a data protection supervisory authority, for example the one responsible for us: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach, Germany, <a href=\"https://www.lda.bayern.de\" rel=\"noopener\">www.lda.bayern.de</a>.",
+    "rights_2": "Statistics and caches contain no data that could be attributed to you (no cookies, no stored IP addresses, recognition for at most 24 hours), so we usually cannot assign individual records to a person.",
+    "rights_3": "Your reading data is on your devices, and the sync vault is encrypted with a key only you hold. You can export your feeds as OPML at any time and delete everything in the app.",
+    "updated": "Last updated: September 2026."
+  },
+  "imprint": {
+    "meta_title": "Imprint – News Reader",
+    "meta_description": "Legal notice for news-reader.app: provider, contact and person responsible for the content.",
+    "title": "Imprint",
+    "lead": "Information according to § 5 DDG (German Digital Services Act)",
+    "contact_h": "Contact",
+    "vat_h": "VAT",
+    "vat_text": "Small business according to § 19 UStG – no VAT is charged.",
+    "responsible_h": "Responsible for the content according to § 18(2) MStV",
+    "dispute_h": "Consumer dispute resolution",
+    "dispute_text": "We are neither obliged nor willing to participate in dispute resolution proceedings before a consumer arbitration board.",
+    "liability_h": "Liability",
+    "liability_content": "We create the content of these pages with great care but cannot guarantee that it is correct, complete and up to date. As a service provider, we are responsible for our own content under general law (§ 7(1) DDG).",
+    "liability_links": "This website links to external websites whose content we cannot influence; their operators are responsible for it. If we become aware of any legal violation, we will remove the link immediately.",
+    "license_h": "Copyright and license",
+    "license_text": "News Reader is open source under the <a href=\"https://opensource.org/licenses/MIT\" rel=\"noopener\">MIT license</a>. Source code: <a href=\"https://github.com/kreativ-anders/news-reader\" rel=\"noopener\">github.com/kreativ-anders/news-reader</a>."
+  },
+  "thanks": {
+    "meta_title": "Thank you – News Reader",
+    "meta_description": "Thank you for supporting News Reader.",
+    "title": "Thank you!",
+    "lead": "Your support has arrived. News Reader stays free and open source for everyone – and your contribution goes straight into its further development.",
+    "receipt": "Stripe sends your receipt by e-mail. Questions about your payment, or need an invoice? Just <a href=\"https://kreativ-anders.de/kontakt\" rel=\"noopener\">send us a message</a>.",
+    "back": "Back to the start page"
   }
 }

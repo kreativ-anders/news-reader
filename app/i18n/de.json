@@ -79,6 +79,8 @@
   "settings": {
     "title": "Einstellungen",
     "subtitle": "News {version} · deine Daten bleiben auf deinen Geräten – der Server sieht immer nur verschlüsselte Daten.",
+    "privacy": "Datenschutz",
+    "imprint": "Impressum",
     "look_title": "Sprache &amp; Darstellung",
     "language": "Sprache",
     "theme": "Darstellung",

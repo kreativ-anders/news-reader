@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "News Reader – lector RSS autoalojado con sincronización cifrada",
-    "description": "Lector RSS tranquilo para móvil y escritorio: leer ahora, más tarde o pasar. Sincronización cifrada, sin cuenta ni rastreo. Alternativa a Feedly autoalojada.",
+    "description": "Un lector RSS tranquilo para móvil y escritorio: leer ahora, después o descartar. Sincronización cifrada, sin cuenta ni rastreo. Código abierto – alójalo en tus propios servidores.",
     "og_title": "News – lee lo que importa, sáltate el resto",
     "og_description": "Un lector RSS tranquilo con sincronización cifrada de extremo a extremo. Sin cuenta, sin rastreo, sin algoritmo. Código abierto – alójalo tú."
   },
@@ -67,10 +67,10 @@
     "everything_lives_in_your": "Todo vive en tu navegador. News arranca al instante, sigue funcionando en el túnel y se pone al día en cuanto vuelves a tener conexión.",
     "feed_or_no_feed": "Con feed o sin feed",
     "follow_any_website_the": "Sigue cualquier web – incluso una que nunca ha oído hablar de RSS. El Collector integrado encuentra igualmente las entradas nuevas.",
-    "leave_feedly_behind": "Adiós, Feedly",
-    "import_your_opml_export": "Importa tu archivo OPML y todas tus fuentes se mudan. Exportar es igual de fácil – sin ataduras, nunca.",
+    "bring_your_feeds": "Llévate tus feeds",
+    "import_your_opml_export": "¿Vienes de otro lector? Importa tu archivo OPML y todas tus fuentes se mudan. Exportar es igual de fácil – sin ataduras, nunca.",
     "private_and_light": "Privado y ligero",
-    "no_analytics_no_third": "Sin analítica, sin peticiones a terceros, sin framework. Solo unos kilobytes de JavaScript sencillo y fuentes alojadas en el propio servidor."
+    "no_cookies_no_profiles": "Sin cookies, sin anuncios, sin perfiles, sin framework. Solo unos kilobytes de JavaScript sencillo y fuentes alojadas en el propio servidor – más un recuento de visitas anónimo y sin cookies."
   },
   "sync": {
     "sync": "Sincronización",
@@ -122,22 +122,31 @@
     "fact_rate": "<b>Límite de frecuencia</b> por cliente"
   },
   "build": {
-    "build_your_own": "Aloja el tuyo",
-    "your_server_your_name": "Tu servidor. Tu nombre. Tus lectores.",
-    "news_reader_is_open": "News Reader es de código abierto con licencia MIT. Úsalo para ti, tu familia, tu equipo o tu comunidad – en tu dominio y con tu marca. La marca blanca no es un extra: es un solo archivo de tema.",
+    "build_your_own": "Autoalojamiento · soberanía digital",
+    "your_server_your_name": "Tu servidor. Tus datos. Tus reglas.",
+    "news_reader_is_open": "News Reader es código abierto con licencia MIT. Ejecútalo para ti, tu equipo o toda tu organización – en tu propia infraestructura, con tu dominio y tu marca. Ningún proveedor decide dónde están tus datos, cuánto cuesta cada puesto ni cuándo termina el servicio.",
     "clone": "Clonar",
     "a_handful_of_php": "Un puñado de archivos PHP y una web app estática. Sin servidor de base de datos, sin paso de build, sin contenedor.",
     "rebrand": "Personalizar",
     "colours_and_fonts_live": "Colores y fuentes están en <code>app/theme.css</code>. Cambia los iconos y el nombre de la app en el manifest – listo. Tus usuarios ven tu lector, no el nuestro.",
     "deploy": "Desplegar",
     "any_web_server_with": "Cualquier servidor web con PHP 8.1+ y HTTPS. La configuración de nginx incluida bloquea todo salvo la app y la API.",
-    "requires_php_8_1": "Requiere PHP 8.1+ con <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recomendado) y una carpeta <code>var/</code> con permiso de escritura. Eso es todo."
+    "requires_php_8_1": "Requiere PHP 8.1+ con <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recomendado) y una carpeta <code>var/</code> con permiso de escritura. Eso es todo.",
+    "sov_label": "Soberanía digital",
+    "sov_data": "Los datos se quedan en casa",
+    "sov_data_text": "Feeds, listas de lectura y cajas fuertes de sincronización residen en servidores que tú controlas – tu centro de datos, tu región cloud, tu jurisdicción.",
+    "sov_gdpr": "Conforme al RGPD desde el diseño",
+    "sov_gdpr_text": "Sin cuentas de usuario, sin perfiles personales, sin base de datos. Los datos sincronizados están cifrados de extremo a extremo – ni siquiera tus propios administradores pueden leerlos.",
+    "sov_lockin": "Sin dependencia del proveedor",
+    "sov_lockin_text": "Licencia MIT, OPML de entrada y salida, PHP sencillo. Sin costes por puesto, sin actualizaciones forzadas, sin hojas de ruta ajenas.",
+    "sov_audit": "Auditable y listo para la intranet",
+    "sov_audit_text": "Cada línea está abierta a tu revisión de seguridad. Las fuentes internas en hosts privados se pueden habilitar explícitamente con un solo ajuste."
   },
   "faq": {
     "questions_amp_answers": "Preguntas &amp; respuestas",
     "what_is_news": "¿Qué es News?",
     "news_is_a_calm": "Un lector de feeds tranquilo para tu móvil y el navegador de tu escritorio. Cada entrada nueva llega a la bandeja y recibe una decisión: leer ahora, más tarde o no me interesa. Se instala como una app, funciona sin conexión y es gratis y de código abierto.",
-    "how_is_it_different": "¿En qué se diferencia de Feedly y compañía?",
+    "how_is_it_different": "¿En qué se diferencia de otros lectores de feeds?",
     "no_account_no_ads": "Sin cuenta, sin anuncios, sin rastreo y sin algoritmo que decida lo que ves. Tu progreso de lectura vive en tus dispositivos, la sincronización está cifrada de extremo a extremo y puedes ejecutarlo todo en tu propio servidor.",
     "how_does_sync_work": "¿Cómo funciona la sincronización sin cuenta?",
     "the_first_device_creates": "Tu primer dispositivo crea una clave secreta aleatoria. Los demás se unen escaneando un código QR o abriendo el enlace de vinculación. A partir de esa clave, cada dispositivo deriva un token de acceso y una clave de cifrado. El servidor solo recibe el token y un archivo cifrado – la clave nunca sale de tus dispositivos.",
@@ -151,18 +160,96 @@
     "news_can_still_follow": "News puede seguirla igualmente. El Collector usa el sitemap de la web si lleva fechas y, si no, saca las entradas directamente de la página (JSON-LD, elementos article o enlaces bajo la ruta solicitada).",
     "can_i_host_my": "¿Puedo alojar mi propio News Reader con mi propia marca?",
     "yes_it_is_mit": "Sí – tiene licencia MIT. Colores y fuentes están en un archivo de tema; el nombre y los iconos, en el manifest de la web app. Úsalo para ti, tu familia, tu equipo o tus lectores, en tu propio dominio.",
+    "for_organisations": "¿Es News Reader adecuado para empresas e instituciones públicas?",
+    "for_organisations_text": "Sí. Lo ejecutas en tu propia infraestructura, así que todos los datos quedan bajo tu control y en tu jurisdicción. No hay cuentas de usuario, perfiles personales ni base de datos, la sincronización está cifrada de extremo a extremo y la licencia MIT significa sin costes por puesto y sin depender de un proveedor. Las fuentes internas en hosts privados se pueden permitir explícitamente.",
     "what_do_i_need": "¿Qué necesito para alojarlo?",
     "php_8_1_with": "PHP 8.1+ con dom, libxml y mbstring (curl recomendado), un servidor web con HTTPS y una carpeta var/ con permiso de escritura. Sin servidor de base de datos, sin paso de build, sin procesos en segundo plano. Incluye una configuración de nginx.",
-    "can_i_move_from": "¿Puedo dejar Feedly?",
-    "yes_export_your_subscriptions": "Sí. Exporta tus suscripciones de Feedly en OPML e importa el archivo en News, en Feeds. News también exporta OPML, así que eres libre de irte cuando quieras."
+    "can_i_switch": "¿Puedo traer mis feeds de otro lector?",
+    "yes_export_opml": "Sí. Casi todos los lectores de feeds exportan tus suscripciones como archivo OPML – impórtalo en News en Feeds y listo. News también exporta OPML, así que eres libre de irte cuando quieras."
   },
   "final": {
     "start_reading": "Empieza a leer.",
-    "open_news_in_your": "Abre News en tu navegador, sigue tu primera web y añádela a la pantalla de inicio de tu móvil – en un minuto. O ejecuta tu propio News Reader, para ti, tu equipo o tus lectores.",
+    "open_news_in_your": "Abre News en tu navegador, sigue tu primera web y añádela a la pantalla de inicio de tu móvil – en un minuto. O ejecuta tu propio News Reader, para ti, tu equipo o toda tu organización.",
     "open_news": "Abrir News",
-    "source_on_github": "Código fuente en GitHub"
+    "source_on_github": "Código fuente en GitHub",
+    "support": "News Reader es gratis y lo seguirá siendo. Si para ti vale algo: <a href=\"https://buy.stripe.com/aFa9ATbxpe2u03T2aies002\" rel=\"noopener\">paga lo que quieras</a>."
   },
   "footer": {
-    "copyright": "© <span id=\"y\">2026</span> News Reader · un proyecto de <a href=\"https://kreativ-anders.de\" rel=\"noopener\">kreativ-anders</a> · licencia MIT"
+    "copyright": "© <span id=\"y\">2026</span> News Reader · un proyecto de <a href=\"https://kreativ-anders.de\" rel=\"noopener\">kreativ-anders</a> · licencia MIT",
+    "privacy": "Privacidad",
+    "imprint": "Aviso legal",
+    "support": "Paga lo que quieras"
+  },
+  "legal": {
+    "home": "Inicio",
+    "germany": "Alemania",
+    "email": "Correo",
+    "phone": "Teléfono",
+    "binding": "Las traducciones de esta página son informativas; la versión alemana es la jurídicamente vinculante."
+  },
+  "privacy": {
+    "meta_title": "Política de privacidad – News Reader",
+    "meta_description": "Qué datos tratan news-reader.app y la app News: estadísticas de visitas sin cookies (Pirsch), registros del servidor, pagos voluntarios con Stripe, Collector, copias sin conexión y sincronización cifrada de extremo a extremo.",
+    "title": "Política de privacidad",
+    "lead": "Qué ocurre con tus datos cuando visitas news-reader.app y usas la app News alojada allí – en palabras claras.",
+    "summary": "<b>En resumen:</b> sin cookies, sin cuentas de usuario, sin publicidad, sin perfiles. Las estadísticas de visitas son anónimas y sin cookies (Pirsch, servidores en Alemania). Tus feeds y tu lista de lectura se quedan en tus dispositivos, y la sincronización está cifrada de extremo a extremo – no podemos leerla.",
+    "controller_h": "Responsable del tratamiento",
+    "controller_text": "El responsable del tratamiento en el sentido del RGPD para este sitio web y la app News alojada en news-reader.app es:",
+    "site_h": "Visita al sitio web",
+    "logs_h": "Registros del servidor",
+    "logs_text": "Con cada solicitud, el servidor web trata automáticamente los datos que transmite tu navegador: dirección IP, fecha y hora, dirección solicitada, estado HTTP, cantidad de datos transferidos, referente y agente de usuario. Es técnicamente necesario para servir las páginas y la app y protegerlas, por ejemplo para detectar ataques. Los registros solo se conservan el tiempo que requieren estos fines y después se eliminan. Si un proveedor de alojamiento gestiona el servidor por nosotros, actúa como encargado del tratamiento sujeto a nuestras instrucciones (art. 28 RGPD). Base jurídica: art. 6, apdo. 1, letra f RGPD.",
+    "pirsch_h": "Estadísticas de visitas con Pirsch Analytics",
+    "pirsch_1": "Todas las páginas de este sitio y la app News alojada aquí usan Pirsch Analytics, un servicio de analítica web sin cookies diseñado según el principio de privacidad desde el diseño. Para contar visitantes, al recibir una visita a una página Pirsch obtiene un ID de visitante a partir de la dirección IP, el agente de usuario, la fecha y un salt mediante una función hash unidireccional.",
+    "pirsch_2": "La dirección IP no se almacena ni total ni parcialmente y queda anonimizada de forma irreversible por el hash. Como se incluyen la fecha y un salt propio de cada sitio, los visitantes no pueden ser reconocidos durante más de 24 horas ni rastreados entre sitios. Una ubicación aproximada (país, ciudad) se obtiene de una base de datos local. Pirsch no instala cookies ni guarda nada en tu dispositivo. Solo se registra la página visitada – nunca el contenido de tus feeds ni de tu lista de lectura.",
+    "pirsch_3": "Proveedor: Emvi Software GmbH, Nickelstraße 1b, 33378 Rheda-Wiedenbrück, Alemania. El tratamiento se realiza en servidores en Alemania; no se transfieren datos a terceros países. Base jurídica: art. 6, apdo. 1, letra f RGPD – nuestro interés legítimo en entender qué contenidos se encuentran y se usan. Más información: <a href=\"https://docs.pirsch.io/privacy\" rel=\"noopener\">privacidad en Pirsch Analytics</a>.",
+    "storage_h": "Ajustes locales en lugar de cookies",
+    "storage_text": "Este sitio no instala cookies. Si eliges un idioma o un tema de color, esa elección se guarda en el almacenamiento local de tu navegador (<code>nr.lang</code>, <code>nr.theme</code>) y nunca se transmite. Es estrictamente necesario para ofrecer la función que has pedido (§ 25, apdo. 2, n.º 2 TDDDG). Puedes borrarla en cualquier momento en los ajustes del navegador.",
+    "stripe_h": "Apoyo voluntario a través de Stripe",
+    "stripe_1": "News Reader es gratis. Si quieres apoyarlo, el enlace «Paga lo que quieras» te lleva a una página de pago alojada por Stripe (Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Grand Canal Dock, Dublín, D02 H210, Irlanda). En este sitio no hay ningún script de Stripe – los datos solo llegan a Stripe cuando haces clic en el enlace. Stripe trata los datos de pago que introduces allí; nosotros nunca vemos los datos completos de la tarjeta o la cuenta. Recibimos el importe, la hora, el nombre y el correo electrónico introducidos y, según el medio de pago, datos limitados como la marca de la tarjeta y sus cuatro últimos dígitos. Tras el pago, Stripe te devuelve a nuestra página de agradecimiento.",
+    "stripe_2": "Base jurídica: art. 6, apdo. 1, letra b RGPD (ejecución del pago que iniciaste) y art. 6, apdo. 1, letra c RGPD en relación con las obligaciones de conservación del derecho mercantil y fiscal alemán (hasta 10 años). Stripe también puede tratar datos en EE. UU.; Stripe, Inc. está certificada en el marco del EU-US Data Privacy Framework. Detalles: <a href=\"https://stripe.com/es/privacy\" rel=\"noopener\">política de privacidad de Stripe</a>.",
+    "links_h": "Enlaces externos",
+    "links_text": "Los enlaces a otros sitios, por ejemplo GitHub, son enlaces normales. Solo cuando haces clic en uno tu navegador se conecta con ese sitio; a partir de entonces se aplica la política de privacidad de su operador.",
+    "app_h": "Uso de la app News",
+    "app_intro": "News funciona en local: tus feeds, entradas, lista de lectura y progreso se guardan en tu navegador (IndexedDB) en tu dispositivo, no en nuestro servidor. El servidor solo interviene donde un navegador no puede hacerlo solo:",
+    "collector_h": "Carga de feeds (Collector)",
+    "collector_text": "Cuando sigues una web o actualizas tus feeds, la app envía la dirección de la fuente a <code>/api/collect</code>. El servidor obtiene la fuente por ti y devuelve sus entradas. El contenido de los feeds se guarda en caché para todos los usuarios juntos hasta 14 días, solo bajo la dirección de la fuente y sin relación contigo. Para evitar abusos, el servidor cuenta las solicitudes por cliente en intervalos cortos; para ello conserva un hash con salt de tu dirección IP (en IPv6, de tu prefijo de red) y lo borra automáticamente al cabo de unos dos días. Base jurídica: art. 6, apdo. 1, letra f RGPD.",
+    "article_h": "Copias sin conexión para «Después»",
+    "article_text": "Cuando mueves una entrada a «Después», la app solicita a <code>/api/article</code> una copia legible del artículo. El servidor obtiene la página y devuelve su texto, que luego se guarda en tu dispositivo. En el servidor, la copia se guarda en caché hasta 14 días, solo bajo la dirección del artículo y sin relación contigo. Base jurídica: art. 6, apdo. 1, letra f RGPD.",
+    "sync_h": "Sincronización cifrada de extremo a extremo",
+    "sync_text": "La sincronización es opcional. Cuando vinculas dispositivos, tus datos se cifran en tu dispositivo (AES-256-GCM) antes de subirse. La clave nunca sale de tus dispositivos, así que no podemos leer el contenido. El servidor guarda un archivo cifrado por caja fuerte, con el nombre de un hash del token de acceso, junto con su tamaño y fecha de modificación. Una caja fuerte se elimina cuando la quitas en la app, y automáticamente 180 días después de su último uso. Base jurídica: art. 6, apdo. 1, letra b RGPD.",
+    "sources_h": "Contenido de las fuentes que sigues",
+    "sources_text": "Las entradas pueden contener imágenes que tu navegador carga directamente del sitio de origen o de su servidor de imágenes, y «Leer ahora» abre el artículo en la web original. En ambos casos, el operador correspondiente recibe tu dirección IP y es responsable de ese tratamiento. La app no envía referente.",
+    "selfhost_h": "Otras instancias de News Reader",
+    "selfhost_text": "Esta política se aplica solo a news-reader.app. News Reader es código abierto – si usas una instancia gestionada por otra persona, su operador es el responsable del tratamiento.",
+    "rights_h": "Tus derechos",
+    "rights_1": "Tienes derecho de acceso (art. 15 RGPD), rectificación (art. 16), supresión (art. 17), limitación del tratamiento (art. 18), portabilidad (art. 20) y oposición (art. 21). Para ejercerlos, contáctanos con los datos indicados arriba. También puedes presentar una reclamación ante una autoridad de control, por ejemplo la competente para nosotros: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach, Alemania, <a href=\"https://www.lda.bayern.de\" rel=\"noopener\">www.lda.bayern.de</a>.",
+    "rights_2": "Las estadísticas y las cachés no contienen datos que se te puedan atribuir (sin cookies, sin direcciones IP guardadas, reconocimiento de 24 horas como máximo), por lo que normalmente no podemos asignar registros concretos a una persona.",
+    "rights_3": "Tus datos de lectura están en tus dispositivos, y la caja fuerte de sincronización está cifrada con una clave que solo tienes tú. Puedes exportar tus feeds como OPML en cualquier momento y borrarlo todo en la app.",
+    "updated": "Última actualización: septiembre de 2026."
+  },
+  "imprint": {
+    "meta_title": "Aviso legal – News Reader",
+    "meta_description": "Aviso legal de news-reader.app: proveedor, contacto y responsable del contenido.",
+    "title": "Aviso legal",
+    "lead": "Información conforme al § 5 DDG (ley alemana de servicios digitales)",
+    "contact_h": "Contacto",
+    "vat_h": "IVA",
+    "vat_text": "Pequeña empresa conforme al § 19 UStG – no se repercute IVA.",
+    "responsible_h": "Responsable del contenido conforme al § 18, apdo. 2 MStV",
+    "dispute_h": "Resolución de litigios de consumo",
+    "dispute_text": "No estamos obligados ni dispuestos a participar en procedimientos de resolución de litigios ante una entidad de arbitraje de consumo.",
+    "liability_h": "Responsabilidad",
+    "liability_content": "Elaboramos el contenido de estas páginas con el máximo cuidado, pero no podemos garantizar que sea correcto, completo y actual. Como proveedores de servicios, somos responsables de nuestros propios contenidos según la legislación general (§ 7, apdo. 1 DDG).",
+    "liability_links": "Este sitio enlaza a webs externas sobre cuyo contenido no tenemos influencia; sus operadores son responsables de él. Si tenemos conocimiento de alguna infracción, retiraremos el enlace de inmediato.",
+    "license_h": "Derechos de autor y licencia",
+    "license_text": "News Reader es código abierto con <a href=\"https://opensource.org/licenses/MIT\" rel=\"noopener\">licencia MIT</a>. Código fuente: <a href=\"https://github.com/kreativ-anders/news-reader\" rel=\"noopener\">github.com/kreativ-anders/news-reader</a>."
+  },
+  "thanks": {
+    "meta_title": "Gracias – News Reader",
+    "meta_description": "Gracias por apoyar News Reader.",
+    "title": "¡Gracias!",
+    "lead": "Tu apoyo ha llegado. News Reader sigue siendo gratis y de código abierto para todos – y tu aportación va directamente a su desarrollo.",
+    "receipt": "Stripe te envía el recibo por correo electrónico. ¿Dudas sobre tu pago o necesitas una factura? <a href=\"https://kreativ-anders.de/kontakt\" rel=\"noopener\">Escríbenos</a>.",
+    "back": "Volver a la página de inicio"
   }
 }

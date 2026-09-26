@@ -1,0 +1,89 @@
+/* INFO: shared by all site pages (index, privacy, imprint, thanks) – colours and fonts come from app/theme.css */
+:root{--max:1120px}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);font-size:17px;background:var(--bg);color:var(--fg);line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+img,svg{display:block;max-width:100%}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+.skip{position:absolute;left:-999px}.skip:focus{left:16px;top:16px;background:var(--brand);color:var(--on-brand);padding:8px 12px;border-radius:var(--radius);z-index:9}
+:focus-visible{outline:2px solid var(--brand-ink);outline-offset:3px;border-radius:var(--radius)}
+code{font-family:var(--mono);font-size:.86em;padding:.1em .35em;border-radius:var(--radius);background:color-mix(in srgb,var(--brand) 11%,transparent)}
+pre code{padding:0;background:none;font-size:inherit;border-radius:var(--radius)}
+
+/* type */
+h1,h2,.h1{font-family:var(--serif);font-weight:600;letter-spacing:-.015em}
+h3,h4{font-family:var(--serif);font-weight:600}
+h1{font-size:clamp(2.6rem,6vw,4.4rem);line-height:1.02}
+h2{font-size:clamp(1.9rem,3.6vw,2.8rem);line-height:1.1;margin-bottom:14px}
+h3{font-size:1.28rem;line-height:1.25;margin-bottom:8px}
+.accent{color:var(--brand-ink);font-style:normal}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--brand-ink);margin-bottom:16px}
+.eyebrow::before{content:"";width:8px;height:8px;border-radius:var(--radius);background:var(--brand)}
+.lead{font-size:1.22rem;color:var(--muted);margin:22px 0 34px;max-width:33em}
+
+/* header */
+header{position:sticky;top:0;z-index:5;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:color-mix(in srgb,var(--bg) 84%,transparent);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--serif);font-weight:600;font-size:1.35rem;letter-spacing:-.01em}
+.brand svg{width:32px;height:32px;flex:none}
+.brand small{font-family:var(--font);font-weight:600;font-size:.72rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-left:2px}
+.nav ul{display:flex;gap:26px;list-style:none;padding:0;align-items:center}
+.nav a{text-decoration:none;color:var(--muted);font-size:.96rem;font-weight:600;transition:color .2s}
+.nav a:hover{color:var(--fg)}
+@media (max-width:820px){.nav ul li:not(:last-child){display:none}.brand small{display:none}}
+@media (max-width:480px){.nav{gap:10px}.nav .btn{padding:7px 12px;font-size:.9rem}.brand{font-size:1.2rem}.brand svg{width:28px;height:28px}}
+@media (max-width:360px){.lang{padding:7px 8px}}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:var(--radius);font-weight:700;font-size:1rem;text-decoration:none;transition:transform .15s,background .2s,border-color .2s;border:1px solid transparent}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--brand);color:var(--on-brand);box-shadow:0 2px 12px var(--glow)}
+.btn-primary:hover{background:var(--brand-2)}
+.btn-ghost{border-color:var(--line-strong);color:var(--fg)}
+.btn-ghost:hover{border-color:var(--brand)}
+.nav .btn{padding:8px 16px;color:var(--fg)}
+.nav{gap:20px}.nav ul{margin-left:auto}
+.prefs{display:flex;align-items:center;gap:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.lang{appearance:none;-webkit-appearance:none;background:transparent;color:var(--fg);border:1px solid var(--line-strong);border-radius:var(--radius);padding:7px 12px;font:700 .82rem var(--font);letter-spacing:.06em;cursor:pointer}
+.lang:hover,.theme:hover{border-color:var(--brand)}
+.lang option{color:#000;background:#fff}
+.theme{display:grid;place-items:center;width:36px;height:36px;border-radius:var(--radius);border:1px solid var(--line-strong);background:transparent;color:var(--fg);cursor:pointer}
+.theme svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:none}
+.theme[data-mode="auto"] .t-auto,.theme[data-mode="light"] .t-light,.theme[data-mode="dark"] .t-dark{display:block}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:.92rem}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+footer a{text-decoration:none}footer a:hover{color:var(--brand-ink)}
+
+/* subtle "pay what you want" note (index final section) */
+.support{margin-top:26px;font-size:.92rem;color:var(--muted)}
+.support a{color:var(--brand-ink);text-underline-offset:3px}
+
+/* legal and info pages: privacy, imprint, thanks */
+.doc{max-width:780px;padding-top:64px;padding-bottom:96px}
+.doc h1{font-size:clamp(2.2rem,5vw,3.2rem);margin-bottom:10px}
+.doc h2{font-size:clamp(1.45rem,2.6vw,1.8rem);margin:52px 0 12px;scroll-margin-top:84px}
+.doc h3{font-size:1.18rem;margin:30px 0 8px;scroll-margin-top:84px}
+.doc p,.doc li{color:var(--muted)}
+.doc p+p{margin-top:12px}
+.doc ul{padding-left:1.2em;margin:12px 0}
+.doc li+li{margin-top:6px}
+.doc a{color:var(--brand-ink);text-underline-offset:3px;overflow-wrap:anywhere}
+.doc strong,.doc b{color:var(--fg)}
+.doc .lead{margin:14px 0 26px}
+.doc .note{border:1px solid var(--line);border-left:3px solid var(--brand);background:var(--card);padding:16px 20px;margin:26px 0}
+.doc .note p{color:var(--fg)}
+.doc .toc{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.doc .toc a{display:inline-block;padding:5px 12px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:.9rem;font-weight:600}
+.doc .toc a:hover{border-color:var(--brand)}
+.doc address{font-style:normal;color:var(--fg);line-height:1.7}
+.doc .stand{margin-top:48px;font-size:.9rem}
+.doc.thanks{text-align:center;max-width:640px;padding-top:96px}
+.doc.thanks .lead{margin-left:auto;margin-right:auto}
+.doc.thanks .cta{justify-content:center;margin-top:30px}
+.doc.thanks .heart{width:56px;height:56px;margin:0 auto 22px;color:var(--brand)}
+
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.doc address{margin:12px 0}

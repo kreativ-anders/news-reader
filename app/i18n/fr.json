@@ -79,6 +79,8 @@
   "settings": {
     "title": "Réglages",
     "subtitle": "News {version} · vos données restent sur vos appareils – le serveur ne voit jamais que des données chiffrées.",
+    "privacy": "Confidentialité",
+    "imprint": "Mentions légales",
     "look_title": "Langue et apparence",
     "language": "Langue",
     "theme": "Apparence",

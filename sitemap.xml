@@ -50,4 +50,112 @@
     <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/"/>
   </url>
+  <url>
+    <loc>https://news-reader.app/privacy.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/de/privacy.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/fr/privacy.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/it/privacy.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/es/privacy.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/privacy.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/imprint.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/imprint.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/de/imprint.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/imprint.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/fr/imprint.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/imprint.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/it/imprint.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/imprint.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/es/imprint.html</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/imprint.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/imprint.html"/>
+  </url>
+  <url>
+    <loc>https://news-reader.app/app/</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://news-reader.app/docs/api/</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
 </urlset>

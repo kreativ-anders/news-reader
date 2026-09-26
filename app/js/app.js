@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.5.3';
+const VERSION = '0.5.5';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -506,7 +506,8 @@ async function renderSettings() {
   const opt = (value, label, cur) => `<option value="${value}"${value === cur ? ' selected' : ''}>${label}</option>`;
   const swipeOpts = (cur) => SWIPE_CHOICES.map((s) => opt(s, t(s === 'none' ? 'act.none' : 'act.' + s), cur)).join('');
   if (S.view !== 'settings') return; // INFO: the user navigated away while the settings were loading
-  viewEl.innerHTML = `<div class="vh"><div><h1>${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p></div></div>
+  const site = '../' + (t.lang === 'en' ? '' : t.lang + '/'); // INFO: legal pages of the landing site, in the app's language
+  viewEl.innerHTML = `<div class="vh"><div><h1>${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p><p class="legal"><a href="${site}privacy.html">${t('settings.privacy')}</a> · <a href="${site}imprint.html">${t('settings.imprint')}</a></p></div></div>
     <section class="panel">
       <h2>${t('settings.look_title')}</h2>
       <div class="grid2">

@@ -40,7 +40,7 @@ for (const dir of ['i18n', 'app/i18n']) {
 }
 
 test('every data-i18n key used in the markup exists in en.json', () => {
-  for (const [page, dir] of [['index.html', 'i18n'], ['app/index.html', 'app/i18n']]) {
+  for (const [page, dir] of [['index.html', 'i18n'], ['privacy.html', 'i18n'], ['imprint.html', 'i18n'], ['thanks.html', 'i18n'], ['app/index.html', 'app/i18n']]) {
     const html = readFileSync(join(ROOT, page), 'utf8');
     const en = new Map(flat(load(dir, 'en')));
     const keys = [

@@ -1,6 +1,13 @@
 # News Reader – plain nginx (production)
 # Adjust: server_name, root, PHP-FPM socket, certificate paths
 
+# Stripe sends every supporter to /thanks.html – redirect to their browser language (first Accept-Language entry).
+# ?lang=… marks an explicit choice (set by the page script for a saved language) and is never redirected.
+map "$arg_lang:$http_accept_language" $news_reader_thanks_lang {
+  default "";
+  "~^:(?<nr_thanks_lang>de|fr|it|es)" $nr_thanks_lang;
+}
+
 # HTTP -> HTTPS
 server {
   listen 80;
@@ -87,6 +94,12 @@ server {
   }
   location ~* \.(xml|txt|webmanifest)$ {
     expires 1d;
+    try_files $uri =404;
+  }
+  # thank-you page after a Stripe payment: language redirect (map above), saved choices are handled by the page itself
+  location = /thanks.html {
+    expires -1;
+    if ($news_reader_thanks_lang) { return 302 /$news_reader_thanks_lang/thanks.html; }
     try_files $uri =404;
   }
   location / {

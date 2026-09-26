@@ -8,7 +8,7 @@ Self-hosted, local-first RSS reader. **News** (`app/`) is the PWA for phone and 
 | `/api/article` | Readable offline copies for the *Later* list |
 | `/api/sync` | End-to-end encrypted sync, no accounts, no database |
 
-Project site: `index.html` + generated `de/ fr/ it/ es/` (https://news-reader.app). MIT, white-label.
+Project site: `index.html`, `privacy.html`, `imprint.html`, `thanks.html` + generated `de/ fr/ it/ es/` (https://news-reader.app), short API page `docs/api/` (English only). Shared site assets: `site.css`, `site.js`. MIT, white-label.
 
 ## Setup
 
@@ -27,7 +27,7 @@ Run on every deploy and after changing `index.html` or `i18n/*.json`:
 php tools/build-i18n.php --site=https://news-reader.app/
 ```
 
-Writes the English text from `i18n/en.json` into `index.html`, generates `<lang>/index.html`, refreshes `hreflang`, canonical, FAQ structured data and `sitemap.xml`. `--site` = public base URL (self-hosters: own domain). CLI only. Static hosting: run locally, commit the output. Never edit `de/ fr/ it/ es/` by hand.
+Writes the English text from `i18n/en.json` into the site pages (`PAGES`: index, privacy, imprint, thanks), generates `<lang>/<page>`, refreshes `hreflang`, canonical, FAQ structured data and `sitemap.xml` (index/privacy/imprint per language + `app/` + `docs/api/`, see `EXTRA_PAGES`; `thanks.html` is `noindex`). Links starting with `./` (e.g. `./privacy.html`) stay in the page's language, all other relative links are rewritten to the root. `--site` = public base URL (self-hosters: own domain). CLI only. Static hosting: run locally, commit the output. Never edit `de/ fr/ it/ es/` by hand.
 
 ## App (`app/`)
 
@@ -149,7 +149,7 @@ Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 grouped per `/6
 - Files: `i18n/<lang>.json` (site), `app/i18n/<lang>.json` (app). Nested keys; `en.json` is complete and the source of all text; other languages fall back to English per key.
 - `{name}` placeholders; plurals `key_one` / `key_other` via `Intl.PluralRules` when `n` is passed.
 - Markup: `data-i18n="key"` (innerHTML), `data-i18n-attr="aria-label:key;title:key"`.
-- Site: one static URL per language (`/` = `en`, `x-default`), no redirects. App: `noindex`; saved choice (`localStorage` `nr.lang`) → browser languages → English.
+- Site: one static URL per language (`/` = `en`, `x-default`), no redirects – except `thanks.html` (Stripe return URL): saved choice → browser language, in the page script and in nginx (`Accept-Language` map; `?lang=en` = explicit English). App (`/app/`, indexed, one URL for all languages): saved choice (`localStorage` `nr.lang`) → browser languages → English.
 - Voice: app and site user sections are friendly and plain (informal *du/tu*; French *vous*), no jargon; *Collector*/*Self-host* sections and this README are technical.
 - New language: copy both `en.json` files to `xx.json`, add `xx` to `LANGS` in `app/js/i18n.js` and `tools/build-i18n.php`, add an `<option>` to the site switcher, run the build.
 
@@ -158,7 +158,9 @@ Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 grouped per `/6
 - Colours, fonts, `--radius` (default `0`): `app/theme.css` (site + app). Palette 3b.1: `#FFA500` · `#000000` · `#FFFFFF` · `#292929`.
 - Theme: follows the OS; override via site toggle / *Settings → Appearance* (`html[data-theme]`, `localStorage` `nr.theme`).
 - Name and icons: `app/manifest.webmanifest`, `app/index.html`, `app/icons/`, `brand/` (`news-mark[-dark].svg`, `news-icon[-dark].svg`; inline `.nr-mark` follows the theme).
+- Favicons: `favicon.svg` follows the OS colour scheme; PNG fallbacks `favicon-32.png` (light) / `favicon-32-dark.png` (dark) via `media` (root and `app/icons/`).
 - Fonts (self-hosted, `app/fonts/`): Newsreader (titles), Source Sans 3 (text).
+- Operator-specific parts of news-reader.app – remove or replace them on your own instance: Pirsch Analytics (`<script id="pianjs">` in every HTML page, `https://api.pirsch.io` in the CSP of `app/index.html`), the Stripe *pay what you want* link (`buy.stripe.com`, site footer + `final.support`), `privacy.html` / `imprint.html` / `thanks.html` (legal texts of kreativ-anders; `privacy.*`, `imprint.*`, `thanks.*` in `i18n/*.json`).
 
 ## Tests & CI
 
@@ -172,7 +174,7 @@ Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 grouped per `/6
 | JS | `npm run test:js` | syntax, `feedId()` stability (sync format), OPML, translations, service-worker shell, manifests |
 | E2E | `npm run test:e2e` | Playwright/Chromium desktop + mobile: every view and language, item flow, keyboard, swipe, OPML, share target, two-device sync, offline reader, service worker, site pages and links – any JS exception or `console.error` fails |
 
-CI also lints all PHP on 8.1–8.4 (plus one run without ext-curl) and fails if `de/ fr/ it/ es/` or `sitemap.xml` were not regenerated. Local: PHP 8.1+, Node 22+, `npm ci && npx playwright install chromium && npm test`. Known bugs are `todo` tests (reported, not failing).
+CI also lints all PHP on 8.1–8.4 (plus one run without ext-curl) and fails if the site pages, `de/ fr/ it/ es/`, the canonicals of `app/` and `docs/api/` or `sitemap.xml` were not regenerated. Local: PHP 8.1+, Node 22+, `npm ci && npx playwright install chromium && npm test`. Known bugs are `todo` tests (reported, not failing).
 
 ## License
 

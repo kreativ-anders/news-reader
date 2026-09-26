@@ -13,7 +13,15 @@ const ALLOWED_CONSOLE = [
   /images\.example\.org/,                                                       // fixture thumbnails that do not exist
 ];
 
+const PIRSCH = 'https://api.pirsch.io/**';
+
 export const test = base.extend({
+  // tests stay offline: the Pirsch analytics script is answered with an empty stub, and its URL is recorded
+  context: async ({ context }, use) => {
+    await context.route(PIRSCH, (route) => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+    await use(context);
+  },
+
   crashes: [async ({ context }, use) => {
     const problems = [];
     // only our own pages (app + site) – articles opened from the fixture "internet" may do what they want
