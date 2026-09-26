@@ -224,8 +224,14 @@ function nr_request_stream(string $url, string $accept, int $timeout): array
 // INFO: bounded gzip decoding (no decompression bombs); null if invalid or larger than NR_MAX_BODY_BYTES
 function nr_gunzip(string $data): ?string
 {
-    $out = @gzdecode($data, NR_MAX_BODY_BYTES);
-    return $out === false ? null : $out;
+    set_error_handler(fn() => true);
+    try {
+        $out = gzdecode($data, NR_MAX_BODY_BYTES);
+    } finally {
+        restore_error_handler();
+    }
+    // INFO: gzdecode()'s length limit works in buffer steps – the exact cap is checked here
+    return $out === false || strlen($out) > NR_MAX_BODY_BYTES ? null : $out;
 }
 
 // INFO: returns an error array if the URL must not be fetched, null otherwise

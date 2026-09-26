@@ -148,14 +148,13 @@ describe('cache', () => {
   });
 });
 
-// Known issues – reported, but they do not fail the pipeline. Remove `todo` once fixed.
-describe('known issues', () => {
-  it('Atom <title type="html"> is returned as text without markup', { todo: 'parsers.php: nr_clean_text() decodes &lt;em&gt; to a literal <em> in the title' }, async () => {
+describe('regressions (formerly known issues)', () => {
+  it('Atom <title type="html"> is returned as text without markup', async () => {
     const r = await s.collect(s.fx.url + '/feeds/atom.xml');
     assert.equal(r.json.entries[1].title, 'Atom entry two');
   });
 
-  it('JSON-LD listings keep the page order (README: "HTML sources keep the page order")', { todo: 'parsers.php: nr_listing_jsonld() walks the graph with array_pop → reversed order' }, async () => {
+  it('JSON-LD listings keep the page order (README: "HTML sources keep the page order")', async () => {
     const r = await s.collect(s.fx.url + '/jsonld/');
     assert.deepEqual(r.json.entries.map((e) => e.title), ['JSON-LD post one', 'JSON-LD post two', 'JSON-LD post three']);
   });

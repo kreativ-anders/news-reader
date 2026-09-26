@@ -200,6 +200,19 @@ function nr_child_text(DOMElement $el, array $names): string
     return '';
 }
 
+// INFO: RSS titles are often escaped HTML, Atom titles are HTML when type="html"/"xhtml" (type="text" stays literal).
+//       Only well-formed tags are removed, so "I <3 feeds" survives.
+function nr_feed_title(DOMElement $el, bool $atom): string
+{
+    $node = nr_child_elements($el, 'title')[0] ?? null;
+    if ($node === null) return '';
+    $text = $node->textContent;
+    if ($atom && !in_array(strtolower($node->getAttribute('type')), ['html', 'xhtml'], true)) {
+        return htmlspecialchars(trim($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+    return trim(preg_replace('#<!--.*?-->|</?[a-z][a-z0-9-]*(?:\s[^<>]*)?/?>#is', '', $text) ?? $text);
+}
+
 function nr_child_elements(DOMElement $el, string $name): array
 {
     $out = [];
@@ -222,7 +235,7 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
 
     if ($rootName === 'rss' || $rootName === 'rdf') {
         $channel = $xp->query('//*[local-name()="channel"]')->item(0);
-        $title = $channel instanceof DOMElement ? nr_child_text($channel, ['title']) : '';
+        $title = $channel instanceof DOMElement ? nr_feed_title($channel, false) : '';
         $site  = $channel instanceof DOMElement ? nr_child_text($channel, ['link']) : '';
 
         foreach ($xp->query('//*[local-name()="item"]') as $i => $item) {
@@ -235,7 +248,7 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             $url = nr_absolute_url($link, $baseUrl);
             $entries[] = nr_entry(
                 $url,
-                nr_child_text($item, ['title']),
+                nr_feed_title($item, false),
                 nr_parse_date(nr_child_text($item, ['pubdate', 'date', 'published'])),
                 nr_parse_date(nr_child_text($item, ['updated', 'modified'])),
                 nr_child_text($item, ['description', 'encoded', 'summary']),
@@ -254,7 +267,7 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
     }
 
     if ($rootName === 'feed') {
-        $title = nr_child_text($root, ['title']);
+        $title = nr_feed_title($root, true);
         $site = null;
         foreach (nr_child_elements($root, 'link') as $l) {
             $rel = $l->getAttribute('rel') ?: 'alternate';
@@ -280,7 +293,7 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             $url = nr_absolute_url($link, $baseUrl);
             $entries[] = nr_entry(
                 $url,
-                nr_child_text($item, ['title']),
+                nr_feed_title($item, true),
                 $published ?? $updated,
                 $updated,
                 nr_child_text($item, ['summary', 'content']),
@@ -432,7 +445,8 @@ function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
                 }
             }
 
-            foreach ($node as $k => $v) {
+            // INFO: children are pushed in reverse, so the depth-first walk keeps the page order
+            foreach (array_reverse($node, true) as $k => $v) {
                 if (is_array($v) && $k !== 'author' && $k !== 'publisher') $stack[] = $v;
             }
         }

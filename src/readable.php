@@ -297,8 +297,8 @@ function nr_article_jsonld(DOMXPath $xp): array
         while ($stack && ++$visited <= 10_000) {
             $o = array_pop($stack);
             if (!is_array($o)) continue;
-            if (isset($o['@graph']) && is_array($o['@graph'])) array_push($stack, ...$o['@graph']);
-            if (array_is_list($o)) { array_push($stack, ...$o); continue; }
+            if (isset($o['@graph']) && is_array($o['@graph'])) array_push($stack, ...array_reverse($o['@graph']));
+            if (array_is_list($o)) { array_push($stack, ...array_reverse($o)); continue; }
             $type = implode(' ', (array)($o['@type'] ?? []));
             if (!preg_match('/Article|BlogPosting|Report|NewsArticle/i', $type)) continue;
             $author = $o['author'] ?? null;

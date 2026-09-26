@@ -93,3 +93,18 @@ describe('sync protocol', () => {
     assert.deepEqual(codes, [201, 412, 412, 412, 412, 412]);
   });
 });
+
+describe('key change forward', () => {
+  it('an "NRF1" forward may replace a vault, other magics are refused', async () => {
+    const t = token();
+    const created = await sync(t, { method: 'PUT', body: blob(), headers: { 'If-None-Match': '*' } });
+    assert.equal(created.status, 201);
+    const forward = Buffer.concat([Buffer.from('NRF1'), Buffer.from([0]), randomBytes(12 + 64)]);
+    const moved = await sync(t, { method: 'PUT', body: forward, headers: { 'If-Match': created.header('etag') } });
+    assert.equal(moved.status, 200, moved.text);
+    const raw = Buffer.from(await (await fetch(s.api.url + '/api/sync', { headers: { Authorization: `Bearer ${t}` } })).arrayBuffer());
+    assert.equal(raw.subarray(0, 4).toString(), 'NRF1');
+    const other = Buffer.concat([Buffer.from('NRX1'), Buffer.from([0]), randomBytes(12 + 64)]);
+    assertError(await sync(t, { method: 'PUT', body: other, headers: { 'If-Match': moved.header('etag') } }), 400, 'INVALID_BODY');
+  });
+});
