@@ -1,53 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://newsreader.app/</loc>
-    <lastmod>2026-09-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://newsreader.app/"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://newsreader.app/de/"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://newsreader.app/fr/"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://newsreader.app/it/"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://newsreader.app/es/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://newsreader.app/"/>
+    <loc>https://news-reader.app/</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/"/>
   </url>
   <url>
-    <loc>https://newsreader.app/de/</loc>
-    <lastmod>2026-09-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://newsreader.app/"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://newsreader.app/de/"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://newsreader.app/fr/"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://newsreader.app/it/"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://newsreader.app/es/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://newsreader.app/"/>
+    <loc>https://news-reader.app/de/</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/"/>
   </url>
   <url>
-    <loc>https://newsreader.app/fr/</loc>
-    <lastmod>2026-09-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://newsreader.app/"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://newsreader.app/de/"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://newsreader.app/fr/"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://newsreader.app/it/"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://newsreader.app/es/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://newsreader.app/"/>
+    <loc>https://news-reader.app/fr/</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/"/>
   </url>
   <url>
-    <loc>https://newsreader.app/it/</loc>
-    <lastmod>2026-09-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://newsreader.app/"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://newsreader.app/de/"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://newsreader.app/fr/"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://newsreader.app/it/"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://newsreader.app/es/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://newsreader.app/"/>
+    <loc>https://news-reader.app/it/</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/"/>
   </url>
   <url>
-    <loc>https://newsreader.app/es/</loc>
-    <lastmod>2026-09-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://newsreader.app/"/>
-    <xhtml:link rel="alternate" hreflang="de" href="https://newsreader.app/de/"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://newsreader.app/fr/"/>
-    <xhtml:link rel="alternate" hreflang="it" href="https://newsreader.app/it/"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://newsreader.app/es/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://newsreader.app/"/>
+    <loc>https://news-reader.app/es/</loc>
+    <lastmod>2026-09-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://news-reader.app/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://news-reader.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://news-reader.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://news-reader.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://news-reader.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://news-reader.app/"/>
   </url>
 </urlset>

@@ -21,7 +21,7 @@ const NR_MAX_REDIRECTS      = 5;
 const NR_MAX_CHILD_SITEMAPS = 3;
 const NR_SUMMARY_LENGTH     = 300;
 const NR_CACHE_SCHEMA       = 3;          // INFO: bump when the entry format changes – older cache files are ignored
-const NR_USER_AGENT         = 'NewsReader-Collector/' . NR_VERSION . ' (+https://newsreader.app)';
+const NR_USER_AGENT         = 'NewsReader-Collector/' . NR_VERSION . ' (+https://news-reader.app)';
 
 // INFO: Articles (/api/article) – offline copies for "Later"
 const NR_FULLTEXT_MIN_CHARS = 1200;       // INFO: shorter feed content counts as teaser

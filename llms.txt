@@ -2,7 +2,7 @@
 
 > News is a calm, local-first RSS/Atom feed reader for phone and desktop (installable web app, works offline). Every entry gets one decision: read now, later or not interested. Devices sync end-to-end encrypted (AES-256-GCM) without an account or database. It ships with the Collector, a REST endpoint that turns any website – with or without an RSS feed – into normalized JSON entries. Open source (MIT), self-hostable and white-label; server side is plain PHP 8.1+, no build step.
 
-Project by kreativ-anders (https://kreativ-anders.de). Planned home: https://newsreader.app/.
+Project by kreativ-anders (https://kreativ-anders.de). Planned home: https://news-reader.app/.
 
 Key facts:
 
@@ -18,11 +18,11 @@ Key facts:
 ## Docs
 
 - [README](https://github.com/kreativ-anders/news-reader/blob/main/README.md): full technical reference – app behaviour, sync protocol and blob format, Collector API, cache, rate limits, white-label, i18n, setup and security
-- [Landing page](https://newsreader.app/): product overview, features, sync explanation, Collector strategies, self-hosting and FAQ
+- [Landing page](https://news-reader.app/): product overview, features, sync explanation, Collector strategies, self-hosting and FAQ
 
 ## App
 
-- [Open News](https://newsreader.app/app/): the installable web app (requires JavaScript; not indexed)
+- [Open News](https://news-reader.app/app/): the installable web app (requires JavaScript; not indexed)
 
 ## Source
 

@@ -8,7 +8,7 @@ Self-hosted, local-first RSS reader. **News** (`app/`) is the PWA for phone and 
 | `/api/article` | Readable offline copies for the *Later* list |
 | `/api/sync` | End-to-end encrypted sync, no accounts, no database |
 
-Project site: `index.html` + generated `de/ fr/ it/ es/` (https://newsreader.app). MIT, white-label.
+Project site: `index.html` + generated `de/ fr/ it/ es/` (https://news-reader.app). MIT, white-label.
 
 ## Setup
 
@@ -24,7 +24,7 @@ Project site: `index.html` + generated `de/ fr/ it/ es/` (https://newsreader.app
 Run on every deploy and after changing `index.html` or `i18n/*.json`:
 
 ```
-php tools/build-i18n.php --site=https://newsreader.app/
+php tools/build-i18n.php --site=https://news-reader.app/
 ```
 
 Writes the English text from `i18n/en.json` into `index.html`, generates `<lang>/index.html`, refreshes `hreflang`, canonical, FAQ structured data and `sitemap.xml`. `--site` = public base URL (self-hosters: own domain). CLI only. Static hosting: run locally, commit the output. Never edit `de/ fr/ it/ es/` by hand.

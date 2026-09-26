@@ -1,6 +1,6 @@
 <?php
 // INFO: builds the static language versions of the landing page – run on every deploy:
-//       php tools/build-i18n.php [--site=https://newsreader.app/]
+//       php tools/build-i18n.php [--site=https://news-reader.app/]
 //       i18n/en.json is the single text source; index.html markup + i18n/<lang>.json → <lang>/index.html,
 //       hreflang alternates, sitemap.xml. One static page per language because search engines index one language per URL.
 declare(strict_types=1);
@@ -15,7 +15,7 @@ const LOCALES = ['en' => 'en_US', 'de' => 'de_DE', 'fr' => 'fr_FR', 'it' => 'it_
 
 $root = dirname(__DIR__);
 $opts = getopt('', ['site::']);
-$site = rtrim((string)($opts['site'] ?? 'https://newsreader.app/'), '/') . '/';
+$site = rtrim((string)($opts['site'] ?? 'https://news-reader.app/'), '/') . '/';
 
 $sourceFile = $root . '/index.html';
 $source = file_get_contents($sourceFile);
