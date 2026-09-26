@@ -1,36 +1,22 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Platform rules: map a page URL to the platform's own (native) feed URL
- * before the page itself is fetched. Profile/landing pages of large platforms
- * often sit behind bot protection (HTTP 403), their feed endpoints usually don't.
- *
- * One-off snapshot (2026-09-25). URL patterns were written from the platforms'
- * public feed conventions and cross-checked against the site lists of
- * get-rss-feed-url-extension (shevabam, MIT) and RSSHub Radar (DIYgod, AGPL-3.0;
- * consulted only, no rules copied). Only native feeds – no third-party bridges.
- *
- * Extend here, or add src/feed-rules.local.php (same format, gitignored, checked first).
- * Run `php tests/feed-rules-test.php` after every change.
- *
- * Rule keys
- *   id       unique, kebab-case (returned as source.rule)
- *   hosts    exact hosts ("medium.com") or wildcard subdomains ("*.medium.com", excludes the bare host).
- *            The input host is compared without a leading "www.", "m." or "mobile.".
- *   except   optional: hosts to skip even if "hosts" matches
- *   match    regex against path + "?query" (path is "/" if empty); first matching rule wins
- *   feeds    feed URL templates, probed in order. Placeholders: {1}…{9} regex groups,
- *            {host} input host (lower case, unstripped), {origin} scheme://host[:port], {sub} wildcard part
- *   lookup   optional: ['url' => template, 'field' => 'dot.path'] – JSON endpoint that returns the feed URL
- *   none     optional: message – the platform offers no feeds; the Collector stops without probing
- *   examples input URL => expected first feed URL ("!none" for none rules, lookup URL for lookup rules)
- *
- * Page URLs without a rule still go through discovery (<link rel="alternate">), e.g. YouTube @handles,
- * Mastodon instances not listed below, Substack/Ghost/WordPress on custom domains.
- */
+// INFO: page URL → native feed URL(s), applied before the page is fetched (profile pages are often bot-protected).
+//       Curated snapshot 2026-09-25, cross-checked against get-rss-feed-url-extension (MIT) and RSSHub Radar
+//       (AGPL-3.0, consulted only – no rules copied). Native feeds only, no third-party bridges.
+//       Own rules: src/feed-rules.local.php (same format, gitignored, checked first). Test: php tests/feed-rules-test.php
+// INFO: rule keys
+//       id       unique, kebab-case (returned as source.rule)
+//       hosts    exact hosts or wildcard subdomains ("*.medium.com", excludes the bare host);
+//                compared without a leading "www.", "m." or "mobile."
+//       except   hosts to skip even if "hosts" matches
+//       match    regex against path + "?query" (path "/" if empty); first matching rule wins
+//       feeds    URL templates, probed in order: {1}…{9} regex groups, {host}, {origin}, {sub} wildcard part
+//       lookup   ['url' => template, 'field' => 'dot.path'] – JSON endpoint that returns the feed URL
+//       none     message – the platform has no feeds; the Collector stops without probing
+//       examples input URL => expected first feed URL ("!none" for none rules, lookup URL for lookup rules)
 
-// Path segments that are app routes, not user/project names.
+// INFO: path segments that are app routes, not user/project names
 $githubReserved = '(?!(?:about|apps|codespaces|collections|contact|customer-stories|enterprise|events|explore|features|login|marketplace|new|notifications|orgs|organizations|pricing|pulls|issues|readme|search|security|settings|signup|sponsors|topics|trending)(?:/|\?|$))';
 
 $mastodonHosts = [
@@ -41,7 +27,6 @@ $mastodonHosts = [
 
 return [
 
-    // ================================================================ Blogs & publishing
 
     [
         'id' => 'medium-user',
@@ -172,7 +157,6 @@ return [
         'examples' => ['https://huggingface.co/blog' => 'https://huggingface.co/blog/feed.xml'],
     ],
 
-    // ================================================================ Video & audio
 
     [
         'id' => 'youtube-channel',
@@ -198,7 +182,7 @@ return [
         'feeds' => ['https://www.youtube.com/feeds/videos.xml?user={1}'],
         'examples' => ['https://www.youtube.com/user/GoogleDevelopers' => 'https://www.youtube.com/feeds/videos.xml?user=GoogleDevelopers'],
     ],
-    // YouTube /@handle and /c/name: no rule – the page declares its feed (discovery).
+    // INFO: YouTube /@handle and /c/name need no rule – the page declares its feed (discovery)
     [
         'id' => 'vimeo-channel',
         'hosts' => ['vimeo.com'],
@@ -222,7 +206,6 @@ return [
         'examples' => ['https://podcasts.apple.com/de/podcast/some-show/id1234567890' => 'https://itunes.apple.com/lookup?id=1234567890&entity=podcast'],
     ],
 
-    // ================================================================ Social & communities
 
     [
         'id' => 'reddit-home',
@@ -349,7 +332,6 @@ return [
         'examples' => ['https://letterboxd.com/someone/' => 'https://letterboxd.com/someone/rss/'],
     ],
 
-    // ================================================================ Code & packages
 
     [
         'id' => 'github-releases',
@@ -450,7 +432,6 @@ return [
         'examples' => ['https://rubygems.org/gems/rails' => 'https://rubygems.org/gems/rails/versions.atom'],
     ],
 
-    // ================================================================ Other
 
     [
         'id' => 'arxiv-list',
@@ -495,7 +476,6 @@ return [
         'examples' => ['https://www.producthunt.com/' => 'https://www.producthunt.com/feed'],
     ],
 
-    // ================================================================ Platforms without feeds
 
     [
         'id' => 'x-twitter',

@@ -1,9 +1,5 @@
 <?php
-/**
- * Offline test for the platform rules (no network).
- *   php tests/feed-rules-test.php
- * Checks every rule's "examples" plus URLs that must NOT be rewritten.
- */
+// INFO: offline test for the platform rules (no network): php tests/feed-rules-test.php
 declare(strict_types=1);
 
 require __DIR__ . '/../src/config.php';
@@ -38,7 +34,7 @@ foreach ($rules as $i => $rule) {
     }
 }
 
-// Must not be rewritten: already feeds, or pages left to discovery
+// INFO: must not be rewritten – already feeds, or pages left to discovery
 $untouched = [
     'https://medium.com/feed/@vignarajj',
     'https://medium.com/feed/better-programming',

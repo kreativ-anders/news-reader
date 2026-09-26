@@ -1,26 +1,14 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Resolve any URL into a normalized list of entries.
- *
- * Order – from machine-readable to heuristic:
- *   0. Platform rule (src/feed-rules.php): known page URL → native feed URL, without fetching the page
- *      (avoids bot protection on profile pages); platforms without feeds stop here
- *   1. URL itself is RSS / Atom / RDF
- *   2. Feed declared in the HTML (<link rel="alternate">, visible feed links)
- *   3. Common feed paths (/feed, /rss.xml, …)
- *   4. sitemap.xml (filtered to the requested path) – only if most entries are dated;
- *      slug titles are replaced by real titles from the page where the URL appears there
- *   5. HTML listing as last resort (JSON-LD, <article>, links below the path)
- *
- * @return array{ok:true,payload:array}|array{ok:false,code:string,message:string}
- */
+const NR_MAX_FEED_PROBES = 12;
+
+// INFO: resolution order, machine-readable first (README → Resolution order):
+//       platform rule → direct feed → declared feed → guessed feed paths → dated sitemap → HTML listing
 function nr_resolve(string $url): array
 {
     $tried = [];
 
-    // 0. Platform rule – falls through to the generic chain if its feeds fail
     $rule = nr_rule_match($url);
     if ($rule !== null) {
         if ($rule['none'] !== null) {
@@ -35,7 +23,6 @@ function nr_resolve(string $url): array
 
     $finalUrl = $page['finalUrl'];
 
-    // 1. Direct feed
     $feed = nr_parse_feed($page['body'], $finalUrl);
     if ($feed !== null) {
         return nr_success($url, $finalUrl, $feed['type'], 'direct', $feed['title'], $finalUrl, $feed['entries']);
@@ -48,31 +35,30 @@ function nr_resolve(string $url): array
     $dom = nr_load_html($page['body']);
     $pageTitle = nr_page_title($dom);
 
-    // 2. Declared feeds  3. Guessed feed paths
     $declared = nr_discover_feed_links($dom, $finalUrl);
-    $candidates = array_values(array_unique(array_merge($declared, nr_guess_feed_urls($finalUrl))));
+    $candidates = array_slice(array_values(array_unique(array_merge($declared, nr_guess_feed_urls($finalUrl)))), 0, NR_MAX_FEED_PROBES);
 
-    foreach ($candidates as $i => $feedUrl) {
-        if ($i >= 12) break; // hard cap on probes
+    foreach ($candidates as $feedUrl) {
         $tried[] = $feedUrl;
         $res = nr_fetch($feedUrl);
         if (!$res['ok']) continue;
         $feed = nr_parse_feed($res['body'], $res['finalUrl']);
-        if ($feed !== null && count($feed['entries']) > 0) {
+        if ($feed !== null && $feed['entries'] !== []) {
             $strategy = in_array($feedUrl, $declared, true) ? 'discovered' : 'guessed';
             return nr_success($url, $finalUrl, $feed['type'], $strategy, $feed['title'] ?? $pageTitle, $res['finalUrl'], $feed['entries']);
         }
     }
 
-    // 4. Sitemap – structured, but only a feed if it carries dates
-    $sitemap = null; // first non-empty sitemap result, reused for date enrichment in step 5
+    // INFO: a sitemap only counts as feed if at least half of its entries are dated;
+    //       the first non-empty one is kept to add dates to an HTML listing
+    $sitemap = null;
     foreach (nr_sitemap_candidates($finalUrl) as $sitemapUrl) {
         $tried[] = $sitemapUrl;
         $res = nr_fetch($sitemapUrl);
         if (!$res['ok']) continue;
         $entries = nr_parse_sitemap($res['body'], $res['finalUrl'], $finalUrl);
         if (!$entries) continue;
-        $sitemap ??= ['url' => $res['finalUrl'], 'entries' => $entries];
+        $sitemap ??= $entries;
         $dated = count(array_filter($entries, fn($e) => ($e['publishedAt'] ?? $e['updatedAt']) !== null));
         if (count($entries) >= 3 && $dated >= count($entries) / 2) {
             $entries = nr_titles_from_page($entries, $dom, $finalUrl);
@@ -80,27 +66,20 @@ function nr_resolve(string $url): array
         }
     }
 
-    // 5. HTML listing – last resort
     $listing = nr_parse_html_listing($dom, $finalUrl);
     if ($listing !== null) {
         $entries = $listing['entries'];
-
-        // Enrich with sitemap dates if the page shows hardly any dates
         $dated = count(array_filter($entries, fn($e) => $e['publishedAt'] !== null));
         if ($sitemap !== null && $dated < count($entries) / 2) {
-            $entries = nr_enrich_with_sitemap($entries, $sitemap['entries']);
+            $entries = nr_enrich_with_sitemap($entries, $sitemap);
         }
-
         return nr_success($url, $finalUrl, 'html', $listing['strategy'], $pageTitle, null, $entries);
     }
 
     return nr_err('NO_FEED_DETECTED', 'No RSS/Atom feed, article listing or matching sitemap entries were found.', ['tried' => $tried]);
 }
 
-/**
- * Probe the feeds of a matched platform rule. First feed with entries wins;
- * a valid but empty feed (e.g. a repo without releases) is only used if no other has entries.
- */
+// INFO: first feed with entries wins; a valid but empty feed is only used if no other has entries
 function nr_resolve_rule(string $url, array $rule, array &$tried): ?array
 {
     $feeds = $rule['feeds'];
@@ -118,13 +97,12 @@ function nr_resolve_rule(string $url, array $rule, array &$tried): ?array
         $feed = nr_parse_feed($res['body'], $res['finalUrl']);
         if ($feed === null) continue;
         $hit = nr_success($url, $url, $feed['type'], 'rule', $feed['title'], $res['finalUrl'], $feed['entries'], $rule['id']);
-        if (count($feed['entries']) > 0) return $hit;
+        if ($feed['entries'] !== []) return $hit;
         $empty ??= $hit;
     }
     return $empty;
 }
 
-/** Add sitemap dates to HTML entries that have none. */
 function nr_enrich_with_sitemap(array $entries, array $sitemapEntries): array
 {
     $dates = [];
@@ -140,16 +118,12 @@ function nr_enrich_with_sitemap(array $entries, array $sitemapEntries): array
     return $entries;
 }
 
-/**
- * Sitemaps rarely carry titles (only Google News sitemaps do), so entries get a title
- * derived from the URL slug. If the requested page links the same URL, use its real title.
- * No extra request: the page is already loaded.
- */
+// INFO: sitemaps rarely carry titles – replace slug titles with the link titles of the already loaded page
 function nr_titles_from_page(array $entries, DOMDocument $dom, string $baseUrl): array
 {
     $titles = [];
     foreach ([nr_listing_path_links($dom, $baseUrl), nr_listing_articles($dom, $baseUrl), nr_listing_jsonld($dom, $baseUrl)] as $list) {
-        foreach ($list as $e) $titles[nr_normalize_url($e['url'])] = $e; // later lists (more reliable) win
+        foreach ($list as $e) $titles[nr_normalize_url($e['url'])] = $e;
     }
     if (!$titles) return $entries;
     foreach ($entries as &$e) {
@@ -170,16 +144,16 @@ function nr_success(string $inputUrl, string $finalUrl, string $type, string $st
             'source' => [
                 'inputUrl' => $inputUrl,
                 'url'      => $finalUrl,
-                'type'     => $type,       // rss | rdf | atom | html | sitemap
-                'strategy' => $strategy,   // rule | direct | discovered | guessed | sitemap | html-jsonld | html-article | html-links
-                'rule'     => $rule,       // id from src/feed-rules.php (strategy "rule" only)
+                'type'     => $type,
+                'strategy' => $strategy,
+                'rule'     => $rule,
                 'feedUrl'  => $feedUrl,
                 'title'    => $title,
             ],
             'entries' => $entries,
             'meta' => [
                 'count'     => count($entries),
-                'fetchedAt' => gmdate('Y-m-d\TH:i:s\Z'),
+                'fetchedAt' => nr_iso(time()),
             ],
         ],
     ];

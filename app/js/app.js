@@ -1,61 +1,50 @@
-// News – a calm, local-first feed reader (News Reader project).
-//
-// Item flow:   new ──► opened in a new tab ──► done   (undo via toast)
-//               ├────► later ──► opened ──► done   (offline: reader, done when scrolled to the end)
-//               └────► dismissed ("not interested")
-//               done ──► "read again" ──► reading
-//
-// Feeds and item states are records {kind, id, data, updatedAt} in IndexedDB,
-// synced end-to-end encrypted via <server>/api/sync (last write wins). Entries
-// themselves are never synced – every device fetches them from the Collector.
-//
-// UI strings: app/i18n/<lang>.json (English is the fallback per key), see js/i18n.js.
+// INFO: item flow   new ──► opened in a new tab ──► done (undo via toast)
+//                    ├──► later ──► opened ──► done (offline: reader, done when scrolled to the end)
+//                    └──► dismissed        done ──► "read again" ──► reading
+//       Feeds and item states are synced records; entries are fetched per device from the Collector.
 
 import * as db from './db.js';
 import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable } from './sync.js';
-import { DB_NAME } from './db.js';
+import { esc, httpUrl, hostOf as host } from './util.js';
 import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml } from './feeds.js';
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-export const VERSION = '0.5.0';
+const VERSION = '0.5.3';
 
 const PAGE = 150;
-const AUTO_REFRESH_MS = 30 * 60 * 1000;   // refetch feeds when older than 30 min (the Collector caches 24 h)
-const INITIAL_WINDOW_MS = 14 * 864e5;      // a new subscription shows entries of the last 14 days …
-const INITIAL_MIN_ENTRIES = 3;              // … but at least the newest 3, so quiet feeds don't start empty
-const KEEP_UNSEEN_MS = 30 * 864e5;         // unseen entries that left the feed are kept 30 days
+const AUTO_REFRESH_MS = 30 * 60 * 1000;
+// INFO: a new subscription shows the last 14 days, but at least the newest 3 entries
+const INITIAL_WINDOW_MS = 14 * 864e5;
+const INITIAL_MIN_ENTRIES = 3;
+const KEEP_UNSEEN_MS = 30 * 864e5;
 const SWIPE_DEFAULT = { right: 'later', left: 'dismissed' };
 const SWIPE_CHOICES = ['later', 'dismissed', 'done', 'reading', 'none'];
 
 const S = {
   view: 'inbox',
-  feeds: new Map(),   // id → record
-  items: new Map(),   // entry id → record
-  entries: new Map(), // entry id → entry
-  fetch: new Map(),   // feed id → { at, ok, error, strategy, count }
+  feeds: new Map(),
+  items: new Map(),
+  entries: new Map(),
+  fetch: new Map(),
   filter: '',
   shown: PAGE,
   refreshing: false,
-  kbId: '',          // keyboard selection: entry id …
-  kbPos: -1,         // … and its last position (to select the next card after an action)
+  kbId: '',
+  kbPos: -1,
   lastRefresh: 0,
-  share: '',          // URL received via share sheet / bookmarklet, prefilled in "Follow"
-  swipe: { ...SWIPE_DEFAULT }, // per device (IndexedDB kv), not synced
+  share: '',
+  swipe: { ...SWIPE_DEFAULT },
 };
 
-let t = (k) => k;     // replaced by loadI18n() at boot
+let t = (k) => k;
 const sync = new Sync();
-const offline = new OfflineStore(); // readable copies of "Later" items for offline reading
+const offline = new OfflineStore();
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const viewEl = $('#view');
 
 applyTheme();
-
-// ------------------------------------------------------------ helpers
-
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const ICON = {
   now: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
@@ -91,10 +80,7 @@ const clock = (ts) => new Date(ts).toLocaleTimeString(t.lang, { hour: '2-digit',
 const entryTime = (e) => Date.parse(e.publishedAt || '') || e.firstSeen || 0;
 const liveFeeds = () => [...S.feeds.values()].filter((f) => !f.data.d).sort((a, b) => (a.data.title || a.data.url).localeCompare(b.data.title || b.data.url));
 const stateOf = (id) => S.items.get(id)?.data?.s || 'new';
-const host = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
 const feedTitle = (id) => { const f = S.feeds.get(id); return f ? (f.data.title || host(f.data.url)) : ''; };
-
-// ------------------------------------------------------------ data
 
 async function loadAll() {
   S.feeds.clear(); S.items.clear(); S.entries.clear();
@@ -108,7 +94,6 @@ async function loadAll() {
   S.swipe = { ...SWIPE_DEFAULT, ...(await db.kvGet('swipe', {})) };
 }
 
-/** Local write → memory, IndexedDB + outbox, then sync. */
 async function commit(records) {
   for (const r of records) (r.kind === 'feed' ? S.feeds : S.items).set(r.id, r);
   await db.putLocal(records);
@@ -123,7 +108,7 @@ function itemRecord(id, s) {
   const e = S.entries.get(id);
   const prev = S.items.get(id)?.data || {};
   const data = { s };
-  // snapshot so "Later" & "Done" stay complete after the entry left the feed
+  // INFO: snapshot so "Later" and "Done" stay complete after the entry left the feed
   const title = e?.title ?? prev.t, u = e?.url ?? prev.u, f = e?.feedId ?? prev.f, p = e?.publishedAt ?? prev.p, i = e?.image || prev.i;
   if (title) data.t = title;
   if (u) data.u = u;
@@ -145,7 +130,6 @@ async function setState(ids, s, { toast = true, animate = true, label = '' } = {
   }
 }
 
-/** Undo: put the records back as they were before (entries without a record go back to the inbox). */
 async function restore(ids, before) {
   const now = Date.now();
   await commit(ids.map((id, i) => {
@@ -155,14 +139,9 @@ async function restore(ids, before) {
   render();
 }
 
-// ------------------------------------------------------------ opened in a new tab → done, shown when you come back
-//
-// The state is saved as "done" right away (nothing is lost if the tab or app is closed), but the card
-// stays – dimmed – in its list until News is visible again. Only then it slides out and the undo toast
-// appears, so you actually see what happened. Background tabs (middle click, Ctrl/Cmd-click) keep News
-// in front → the card leaves right away.
-
-const lingering = new Map(); // id → { view, before }
+// INFO: an opened entry is saved as "done" at once, but its card stays (dimmed) until News is visible again –
+//       then it slides out with the undo toast. Background tabs keep News in front → the card leaves right away.
+const lingering = new Map();
 let lingerTimer = null;
 
 async function markOpened(id, { background = false } = {}) {
@@ -171,7 +150,6 @@ async function markOpened(id, { background = false } = {}) {
   await commit([itemRecord(id, 'done')]);
   render();
   clearTimeout(lingerTimer);
-  // foreground tab: News gets hidden → flushed on return; still in front after the delay → flush now
   lingerTimer = setTimeout(() => {
     if (document.visibilityState === 'visible' && document.hasFocus()) flushOpened();
   }, background ? 350 : 1500);
@@ -200,14 +178,11 @@ async function leave(ids, s) {
 }
 
 function openUrl(url) {
-  if (url) window.open(url, '_blank', 'noopener');
+  const safe = httpUrl(url);
+  if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
 }
 
-/**
- * Online: the original in a new tab (never through the server).
- * Offline: the saved copy in the reader – scrolled to the end → "Done".
- * @returns {'tab'|'reader'|'none'}
- */
+// INFO: online the original opens in a new tab (never through the server), offline the saved copy in the reader
 function openArticle(id) {
   if (navigator.onLine) { openUrl(urlOf(id)); return 'tab'; }
   if (!offline.has(id)) { showToast(t('reader.unavailable')); return 'none'; }
@@ -226,14 +201,12 @@ function openArticle(id) {
 
 const urlOf = (id) => S.entries.get(id)?.url || S.items.get(id)?.data?.u;
 
-// ------------------------------------------------------------ feeds
-
 async function refreshFeed(feed, force = false) {
   const res = await fetchFeed(feed.data.url, { refresh: force, t });
   const now = Date.now();
   const existing = await db.entriesForFeed(feed.id);
   const known = new Map(existing.map((e) => [e.id, e]));
-  const fresh = res.entries.map((e) => toEntry(e, feed.id, known.get(e.id)?.firstSeen || now));
+  const fresh = toEntries(res.entries, feed.id, (id) => known.get(id)?.firstSeen || now);
   const freshIds = new Set(fresh.map((e) => e.id));
   const remove = existing
     .filter((e) => !freshIds.has(e.id) && !S.items.has(e.id) && now - entryTime(e) > KEEP_UNSEEN_MS)
@@ -268,11 +241,14 @@ async function refreshAll(force = false) {
   else if (failed) showToast(t('toast.refresh_failed', { n: failed }), () => go('feeds'), t('toast.details'));
 }
 
-/** Collector entry → stored entry. */
 function toEntry(e, feedId, firstSeen) {
-  const image = typeof e.image === 'string' && /^https?:\/\//i.test(e.image) ? e.image : '';
-  return { id: e.id, feedId, url: e.url, title: e.title || e.url, summary: e.summary || '', image, publishedAt: e.publishedAt || e.updatedAt || null, firstSeen };
+  const url = httpUrl(e.url);
+  return { id: e.id, feedId, url, title: e.title || url, summary: e.summary || '', image: httpUrl(e.image), publishedAt: e.publishedAt || e.updatedAt || null, firstSeen };
 }
+
+const toEntries = (list, feedId, firstSeenOf) => (Array.isArray(list) ? list : [])
+  .filter((e) => e && typeof e.id === 'string' && httpUrl(e.url))
+  .map((e) => toEntry(e, feedId, firstSeenOf(e.id)));
 
 async function addFeed(input, { quiet = false, title = '' } = {}) {
   const url = normalizeUrl(input);
@@ -281,8 +257,7 @@ async function addFeed(input, { quiet = false, title = '' } = {}) {
   if (S.feeds.get(id) && !S.feeds.get(id).data.d) throw new Error(t('err.already_following'));
   const res = await fetchFeed(url, { t });
   const now = Date.now();
-  const fresh = res.entries.map((e) => toEntry(e, id, now));
-  // show the last 14 days, but never fewer than the newest INITIAL_MIN_ENTRIES
+  const fresh = toEntries(res.entries, id, () => now);
   const times = fresh.map(entryTime).sort((a, b) => b - a);
   const since = Math.min(now - INITIAL_WINDOW_MS, times[Math.min(INITIAL_MIN_ENTRIES, times.length) - 1] ?? Infinity);
   const rec = {
@@ -290,7 +265,6 @@ async function addFeed(input, { quiet = false, title = '' } = {}) {
     data: { url, title: title || res.source?.title || host(url), since, added: now },
   };
   await commit([rec]);
-  // store the entries we already have
   await db.putEntries(fresh);
   fresh.forEach((e) => S.entries.set(e.id, e));
   S.fetch.set(id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length });
@@ -307,8 +281,6 @@ async function removeFeed(id) {
   for (const [eid, e] of S.entries) if (e.feedId === id) S.entries.delete(eid);
   render();
 }
-
-// ------------------------------------------------------------ lists
 
 function inboxEntries(filter = S.filter) {
   const since = new Map(liveFeeds().map((f) => [f.id, f.data.since || 0]));
@@ -342,7 +314,7 @@ function counts() {
   return c;
 }
 
-// [target state, label key, icon, css class, keyboard key]
+// INFO: [target state, label key, icon, css class, keyboard key]
 const ACTIONS = {
   inbox: [['reading', 'act.reading', ICON.now, 'main', 'o'], ['later', 'act.later', ICON.later, '', 'l'], ['dismissed', 'act.dismissed', ICON.x, 'x', 'x']],
   reading: [['done', 'act.done', ICON.done, 'main', 'd'], ['later', 'act.later', ICON.later, '', 'l'], ['dismissed', 'act.drop', ICON.x, 'x', 'x']],
@@ -350,7 +322,7 @@ const ACTIONS = {
   done: [['reading', 'act.again', ICON.back, '', 'o'], ['later', 'act.later', ICON.later, '', 'l']],
 };
 
-/** Configured swipe actions, limited to what the current view offers: [right, left]. */
+// INFO: configured swipe actions [right, left], limited to what the view offers
 function swipeFor(view) {
   const allowed = (ACTIONS[view] || []).map(([s]) => s);
   const ok = (s) => (s && s !== 'none' && allowed.includes(s) ? s : null);
@@ -365,16 +337,15 @@ function card(it, view) {
   const acts = ACTIONS[view].map(([s, label, icon, cls, key]) =>
     `<button type="button" class="act ${cls}" data-act="${s}">${icon}<span>${t(label)}</span><kbd>${key}</kbd></button>`).join('');
   const saved = offline.has(it.id) ? `<span class="offline" title="${esc(t('reader.saved'))}" aria-label="${esc(t('reader.saved'))}">${ICON.offline}</span>` : '';
-  const img = it.image ? `<img class="thumb" src="${esc(it.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="112" height="76">` : '';
+  const image = httpUrl(it.image);
+  const img = image ? `<img class="thumb" src="${esc(image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="112" height="76">` : '';
   return `<li class="card${img ? ' has-img' : ''}${lingering.has(it.id) ? ' opened' : ''}" data-id="${esc(it.id)}" tabindex="-1"${right ? ` data-right="${esc(t('act.' + right))} →" data-right-act="${right}"` : ''}${left ? ` data-left="← ${esc(t('act.' + left))}" data-left-act="${left}"` : ''}>
     <div class="meta"><span class="src" style="--v:${strategyVar(strat)}">${esc(feed ? feedTitle(it.feedId) : host(it.url))}</span>${when ? `<span aria-hidden="true">·</span><time datetime="${new Date(when).toISOString()}">${ago(when)}</time>` : ''}${saved}</div>
-    ${img}<h3><a href="${esc(it.url || '#')}" target="_blank" rel="noopener" data-open>${esc(it.title)}</a></h3>
+    ${img}<h3><a href="${esc(httpUrl(it.url) || '#')}" target="_blank" rel="noopener noreferrer" data-open>${esc(it.title)}</a></h3>
     ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
     <div class="acts">${acts}</div>
   </li>`;
 }
-
-// ------------------------------------------------------------ render
 
 const badge = (n) => (n ? (n > 999 ? '999+' : String(n)) : '');
 
@@ -397,13 +368,10 @@ function render() {
   applyKb();
 }
 
-// ------------------------------------------------------------ feed folders (sidebar, under the active view)
-
 const FOLDER_VIEWS = ['inbox', 'reading', 'later', 'done'];
 let feedNavOpen = true;
-try { feedNavOpen = localStorage.getItem('news.feedNav') !== '0'; } catch { /* private mode */ }
+try { feedNavOpen = localStorage.getItem('news.feedNav') !== '0'; } catch { /* INFO: storage blocked (private mode) */ }
 
-/** Entries/items of a view per feed id. */
 function perFeed(view) {
   const m = new Map();
   const ids = view === 'inbox' ? inboxEntries('').map((e) => e.feedId) : itemsIn(view).map((it) => it.feedId);
@@ -411,10 +379,7 @@ function perFeed(view) {
   return m;
 }
 
-/**
- * Folders of a view: followed feeds, plus – outside the inbox – unfollowed feeds that still
- * have saved items there (their items stay, only the updates stop).
- */
+// INFO: outside the inbox, unfollowed feeds with saved items keep their folder
 function folderFeeds(view, n = perFeed(view)) {
   const live = liveFeeds();
   if (view === 'inbox' || !FOLDER_VIEWS.includes(view)) return live;
@@ -448,7 +413,7 @@ function renderFeedNav() {
   }).join('');
 }
 
-/** Feed filter <select> for narrow screens (the sidebar folders are hidden there). */
+// INFO: feed filter for narrow screens, where the sidebar folders are hidden
 function filterSelect() {
   const opts = folderFeeds(S.view).map((f) => `<option value="${esc(f.id)}"${S.filter === f.id ? ' selected' : ''}>${esc(feedTitle(f.id))}</option>`).join('');
   return `<select id="filter" aria-label="${esc(t('inbox.filter'))}"><option value="">${t('inbox.all_feeds')}</option>${opts}</select>`;
@@ -493,7 +458,7 @@ function renderItems() {
 function renderFeeds() {
   const feeds = liveFeeds();
   const app = location.href.split(/[?#]/)[0];
-  const bookmarklet = `javascript:location.href='${app}?add='+encodeURIComponent(location.href)`;
+  const bookmarklet = `javascript:location.href=${JSON.stringify(app + '?add=')}+encodeURIComponent(location.href)`;
   const rows = feeds.map((f) => {
     const st = S.fetch.get(f.id) || {};
     const unread = [...S.entries.values()].filter((e) => e.feedId === f.id && stateOf(e.id) === 'new' && entryTime(e) >= (f.data.since || 0)).length;
@@ -540,6 +505,7 @@ async function renderSettings() {
   const pairLink = key ? pairingLink(key, custom) : '';
   const opt = (value, label, cur) => `<option value="${value}"${value === cur ? ' selected' : ''}>${label}</option>`;
   const swipeOpts = (cur) => SWIPE_CHOICES.map((s) => opt(s, t(s === 'none' ? 'act.none' : 'act.' + s), cur)).join('');
+  if (S.view !== 'settings') return; // INFO: the user navigated away while the settings were loading
   viewEl.innerHTML = `<div class="vh"><div><h1>${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p></div></div>
     <section class="panel">
       <h2>${t('settings.look_title')}</h2>
@@ -582,6 +548,12 @@ async function renderSettings() {
         <form class="row" id="joinForm"><input type="text" id="joinKey" placeholder="${esc(t('settings.join_placeholder'))}" autocomplete="off" aria-label="${esc(t('settings.join_placeholder'))}"><button class="btn btn-ghost" type="submit">${t('settings.join')}</button></form>`}
       <div class="result" id="syncResult" aria-live="polite"></div>
     </section>
+    ${key ? `<section class="panel" id="devicesPanel">
+      <h2>${t('devices.title')}</h2>
+      <p>${t('devices.text')}</p>
+      <div id="devices"></div>
+      <div class="row"><button class="btn btn-ghost" type="button" id="rotateKey">${t('devices.rotate')}</button></div>
+    </section>` : ''}
     <section class="panel">
       <h2>${t('settings.keyboard')}</h2>
       <ul class="keys">
@@ -600,7 +572,59 @@ async function renderSettings() {
       <p>${t('settings.local_text', { feeds: S.feeds.size, items: S.items.size, entries: S.entries.size })}</p>
       <div class="row"><button class="btn btn-danger" type="button" id="resetLocal">${t('settings.reset')}</button></div>
     </section>`;
-  if (key) drawQr(pairLink);
+  if (key) {
+    drawQr(pairLink);
+    renderDevices();
+  }
+}
+
+async function renderDevices() {
+  const box = $('#devices');
+  if (!box) return;
+  const [list, own] = await Promise.all([sync.devices(), db.kvGet('deviceId')]);
+  list.sort((a, b) => (b.id === own) - (a.id === own));
+  box.innerHTML = list.length ? list.map((d) => {
+    const self = d.id === own;
+    const name = esc(d.data.name);
+    const since = d.data.since ? new Date(d.data.since).toLocaleDateString(t.lang, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    return `<div class="feedrow device" data-device="${esc(d.id)}">
+      <div class="t">${name}${self ? ` <span class="pill" style="--v:var(--v-direct)">${t('devices.this')}</span>` : ''}</div>
+      ${d.data.platform !== d.data.name ? `<div class="u">${esc(d.data.platform)}</div>` : ''}
+      <div class="st"><span>${self ? t('devices.active_now') : t('devices.seen', { when: ago(d.data.seen) })}</span>${since ? `<span>· ${t('devices.since', { date: since })}</span>` : ''}</div>
+      <div class="ops">
+        <button class="icon-btn" type="button" data-device-act="rename" title="${esc(t('devices.rename'))}" aria-label="${esc(t('devices.rename'))}: ${name}">${ICON.edit}</button>
+        ${self ? '' : `<button class="icon-btn" type="button" data-device-act="remove" title="${esc(t('devices.remove'))}" aria-label="${esc(t('devices.remove'))}: ${name}">${ICON.trash}</button>`}
+      </div></div>`;
+  }).join('') : `<p class="hint">${t('devices.none')}</p>`;
+}
+
+async function deviceAction(act, id) {
+  const d = (await sync.devices()).find((x) => x.id === id);
+  if (!d) return;
+  if (act === 'rename') {
+    const name = prompt(t('devices.rename_prompt'), d.data.name || '');
+    if (name === null || !name.trim()) return;
+    await sync.renameDevice(id, name);
+    return renderDevices();
+  }
+  if (act !== 'remove') return;
+  const keyless = (await sync.devices()).filter((x) => x.id !== id && !x.data.pub).length;
+  const body = `<p>${t('devices.remove_body', { name: esc(d.data.name) })}</p>${keyless ? `<p>${t('devices.keyless', { n: keyless })}</p>` : ''}`;
+  if (!await dialog({ title: t('devices.remove_title'), body, ok: t('devices.remove_ok'), danger: true })) return;
+  await rekey(() => sync.revoke(id), 'devices.removed');
+}
+
+// INFO: after a key change the pairing link and QR code change, so the whole settings view is redrawn
+async function rekey(action, doneKey) {
+  const btn = $('#rotateKey');
+  if (btn) btn.disabled = true;
+  try {
+    await action();
+    showToast(t(doneKey));
+  } catch (e) {
+    showToast(e.code === 'offline' ? t('devices.offline') : t('devices.rotate_failed', { msg: e.message }));
+  }
+  if (S.view === 'settings') render();
 }
 
 function pairingLink(key, server) {
@@ -631,16 +655,12 @@ async function drawQr(text) {
   }
 }
 
-// ------------------------------------------------------------ language & theme
-
 async function useLanguage(lang) {
   t = await loadI18n('i18n/', lang);
   rtf = new Intl.RelativeTimeFormat(t.lang, { numeric: 'auto', style: 'short' });
   applyI18n(t);
   paintStatus(sync.status);
 }
-
-// ------------------------------------------------------------ sync status
 
 function statusText(st, long = false) {
   const p = st.pending ? t('sync.pending', { n: st.pending }) : '';
@@ -671,8 +691,6 @@ function paintStatus(st) {
   if (d) d.textContent = statusText(st, true);
 }
 
-// ------------------------------------------------------------ toast & dialog
-
 let toastTimer = null;
 let lastUndo = null;
 function showToast(msg, action, actionLabel) {
@@ -702,8 +720,6 @@ function dialog({ title, body, ok = t('dlg.ok'), cancel = t('dlg.cancel'), dange
   });
 }
 
-// ------------------------------------------------------------ navigation
-
 function go(view, filter = '') {
   if (S.view !== view || S.filter !== filter) { S.view = view; S.filter = filter; S.shown = PAGE; S.kbId = ''; S.kbPos = -1; S.share = ''; window.scrollTo(0, 0); }
   history.replaceState(null, '', view === 'inbox' ? location.pathname : `${location.pathname}#${view}`);
@@ -711,15 +727,13 @@ function go(view, filter = '') {
   viewEl.focus({ preventScroll: true });
 }
 
-// ------------------------------------------------------------ events
-
 document.addEventListener('click', async (ev) => {
   const el = ev.target;
   const filterBtn = el.closest('[data-filter]');
   if (filterBtn) return go(S.view, filterBtn.dataset.filter);
   if (el.closest('#feedNavToggle')) {
     feedNavOpen = !feedNavOpen;
-    try { localStorage.setItem('news.feedNav', feedNavOpen ? '1' : '0'); } catch { /* ignore */ }
+    try { localStorage.setItem('news.feedNav', feedNavOpen ? '1' : '0'); } catch { /* INFO: storage blocked */ }
     return render();
   }
   const viewBtn = el.closest('[data-view]');
@@ -733,15 +747,14 @@ document.addEventListener('click', async (ev) => {
     if (act) {
       const s = act.dataset.act;
       if (s === 'reading') {
-        if (openArticle(id) !== 'tab') return; // offline: the reader decides (done or not)
-        if (S.view === 'done') return setState(id, 'reading'); // "read again"
+        if (openArticle(id) !== 'tab') return;
+        if (S.view === 'done') return setState(id, 'reading');
         return markOpened(id);
       }
       return setState(id, s);
     }
     if (el.closest('[data-open]')) {
       if (!navigator.onLine) { ev.preventDefault(); openArticle(id); return; }
-      // opened in a new tab by the link itself = done; Ctrl/Cmd-click opens it in the background
       return markOpened(id, { background: ev.ctrlKey || ev.metaKey });
     }
   }
@@ -750,6 +763,8 @@ document.addEventListener('click', async (ev) => {
 
   const feedBtn = el.closest('[data-feed-act]');
   if (feedBtn) return feedAction(feedBtn.dataset.feedAct, feedBtn.closest('[data-feed]').dataset.feed);
+  const deviceBtn = el.closest('[data-device-act]');
+  if (deviceBtn) return deviceAction(deviceBtn.dataset.deviceAct, deviceBtn.closest('[data-device]').dataset.device);
 
   switch (el.closest('button')?.id) {
     case 'laterAllDone': {
@@ -773,6 +788,11 @@ document.addEventListener('click', async (ev) => {
       await loadAll();
       return render();
     case 'syncNow': return sync.run();
+    case 'rotateKey':
+      if (await dialog({ title: t('devices.rotate_title'), body: `<p>${t('devices.rotate_body')}</p>`, ok: t('devices.rotate_ok') })) {
+        await rekey(() => sync.rotateKey(), 'devices.rotated');
+      }
+      return;
     case 'copyLink': {
       const link = pairingLink(await db.kvGet('vaultKey'), await db.kvGet('server'));
       try { await navigator.clipboard.writeText(link); showToast(t('toast.link_copied')); }
@@ -791,7 +811,7 @@ document.addEventListener('click', async (ev) => {
       return;
     case 'resetLocal':
       if (await dialog({ title: t('dlg.reset_title'), body: t('dlg.reset_body'), ok: t('dlg.reset_ok'), danger: true })) {
-        indexedDB.deleteDatabase(DB_NAME);
+        indexedDB.deleteDatabase(db.DB_NAME);
         location.replace(location.pathname);
       }
       return;
@@ -829,7 +849,7 @@ document.addEventListener('submit', async (ev) => {
     try {
       const { rec, res } = await addFeed($('#addUrl').value, { quiet: true });
       S.share = '';
-      render(); // re-renders the feeds view → write the result into the fresh DOM
+      render();
       $('#addResult').innerHTML = `<span class="pill" style="--v:${strategyVar(res.source?.strategy)}">${esc(res.source?.strategy)}</span> ${t('feeds.following', { title: esc(rec.data.title), n: res.entries.length })}`;
     } catch (e) {
       out.innerHTML = `<span class="err">${esc(e.message)}</span>`;
@@ -919,8 +939,6 @@ function exportOpml() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-// ------------------------------------------------------------ pairing
-
 function parsePairing(raw) {
   if (isValidKey(raw)) return { key: raw };
   try {
@@ -928,7 +946,7 @@ function parsePairing(raw) {
     const p = new URLSearchParams(u.hash.slice(1));
     const key = p.get('pair');
     if (isValidKey(key)) return { key, server: p.get('server') || '' };
-  } catch { /* not a URL */ }
+  } catch { /* INFO: not a URL */ }
   return null;
 }
 
@@ -948,15 +966,13 @@ async function joinVault({ key, server }) {
   await sync.joinVault(key);
   await loadAll();
   go('inbox');
-  showToast(t(sync.status.state === 'ok' ? 'toast.paired_synced' : 'toast.paired_later'));
+  if (sync.status.state !== 'local') showToast(t(sync.status.state === 'ok' ? 'toast.paired_synced' : 'toast.paired_later'));
   refreshAll();
 }
 
-// ------------------------------------------------------------ keyboard
-
 function cardsInView() { return $$('.card', viewEl); }
 
-/** Highlight the selected card. If it left the list (action, filter, refresh) the card now at its position takes over. */
+// INFO: if the selected card left the list, the card now at its position takes over
 function applyKb() {
   const cards = cardsInView();
   let i = S.kbId ? cards.findIndex((c) => c.dataset.id === S.kbId) : -1;
@@ -980,7 +996,7 @@ document.addEventListener('keydown', (ev) => {
   if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing || readerOpen()) return;
   if (ev.target.closest('input, textarea, select, dialog, [contenteditable]') || $('#dlg')?.open) return;
   const k = ev.key;
-  if (k === 'Enter' && ev.target.closest('button, a')) return; // native activation of the focused control
+  if (k === 'Enter' && ev.target.closest('button, a')) return;
   const views = ['inbox', 'reading', 'later', 'done', 'feeds'];
   if (k >= '1' && k <= '5') { go(views[+k - 1]); return; }
   if (k === 'r') { refreshAll(true); return; }
@@ -996,13 +1012,11 @@ document.addEventListener('keydown', (ev) => {
   ev.preventDefault();
   const card = cards[cur >= 0 ? cur : 0];
   selectCard(card, false);
-  card.querySelector(`[data-act="${s}"]`)?.click(); // card leaves → applyKb() selects the next one at the same position
+  card.querySelector(`[data-act="${s}"]`)?.click();
 });
 
-// ------------------------------------------------------------ swipe (touch) – actions configurable in Settings
-
 let sw = null;
-// logos / portraits: show whole instead of cropping to 16:9
+// INFO: logos and portraits are shown whole instead of cropped to 16:9
 viewEl.addEventListener('load', (ev) => {
   const img = ev.target;
   if (img instanceof HTMLImageElement && img.classList.contains('thumb') && img.naturalHeight) {
@@ -1011,7 +1025,7 @@ viewEl.addEventListener('load', (ev) => {
   }
 }, true);
 
-// broken / blocked preview images disappear instead of leaving an empty box ('error' doesn't bubble → capture)
+// INFO: 'error' does not bubble – capture phase
 viewEl.addEventListener('error', (ev) => {
   const img = ev.target;
   if (img instanceof HTMLImageElement && img.classList.contains('thumb')) {
@@ -1033,7 +1047,7 @@ viewEl.addEventListener('pointermove', (ev) => {
     if (Math.abs(dy) > 12) { sw = null; return; }
     if (Math.abs(dx) < 12) return;
     sw.active = true;
-    try { sw.c.setPointerCapture(ev.pointerId); } catch { /* pointer already gone */ }
+    try { sw.c.setPointerCapture(ev.pointerId); } catch { /* INFO: pointer already gone */ }
   }
   const [right, left] = swipeFor(S.view);
   if ((dx > 0 && !right) || (dx < 0 && !left)) return;
@@ -1064,8 +1078,7 @@ const endSwipe = () => {
 viewEl.addEventListener('pointerup', endSwipe);
 viewEl.addEventListener('pointercancel', endSwipe);
 
-// ------------------------------------------------------------ incoming links (share target, bookmarklet, pairing)
-
+// INFO: incoming links – share target, bookmarklet, pairing
 async function handleIncoming() {
   const q = new URLSearchParams(location.search);
   const shared = q.get('add') || q.get('url') || extractUrl(q.get('text')) || extractUrl(q.get('title'));
@@ -1087,9 +1100,16 @@ async function handleIncoming() {
   if (['reading', 'later', 'done', 'feeds', 'settings'].includes(view)) S.view = view;
 }
 
-// ------------------------------------------------------------ boot
-
-sync.addEventListener('status', (e) => paintStatus(e.detail));
+sync.addEventListener('status', (e) => {
+  paintStatus(e.detail);
+  if (e.detail.state === 'ok' && S.view === 'settings') renderDevices();
+});
+// INFO: stale = a pairing link whose key was changed meanwhile, otherwise this device was removed
+sync.addEventListener('removed', (e) => {
+  render();
+  const k = e.detail?.stale ? 'devices.stale_link' : 'devices.removed_self';
+  dialog({ title: t(k + '_title'), body: `<p>${t(k + '_body')}</p>`, cancel: '' });
+});
 sync.addEventListener('remote', async (e) => {
   const newFeeds = e.detail.filter((r) => r.kind === 'feed' && !r.data.d && !S.feeds.has(r.id));
   const gone = e.detail.filter((r) => r.kind === 'feed' && r.data.d);
@@ -1106,7 +1126,6 @@ sync.addEventListener('remote', async (e) => {
 });
 
 window.addEventListener('focus', () => flushOpened());
-// middle click on a title opens a background tab – counts as opened, too
 document.addEventListener('auxclick', (ev) => {
   if (ev.button !== 1 || !navigator.onLine) return;
   const id = ev.target.closest('[data-open]') && ev.target.closest('.card')?.dataset.id;
@@ -1120,7 +1139,7 @@ document.addEventListener('visibilitychange', () => {
   flushOpened();
   sync.run();
   if (Date.now() - S.lastRefresh > AUTO_REFRESH_MS) refreshAll();
-  else render(); // relative times
+  else render();
 });
 setInterval(() => { if (document.visibilityState === 'visible') sync.run(); }, 5 * 60 * 1000);
 

@@ -1,29 +1,21 @@
-// News – offline copies of "Later" articles and the distraction-free reader.
-//
-// Online, articles always open in a new tab – straight from the source, never through the server.
-// Only when an item goes to "Later" does the app save a readable copy once:
-//   1. full text from the feed (content:encoded / Atom content, kept in the Collector cache)
-//   2. otherwise the article page, extracted by the server (GET <server>/api/article)
-// Offline, a click opens that copy in the reader. Scrolling to the end = read → "Done".
-//
-// Copies live only on this device (IndexedDB store "articles"); sync carries item states only.
+// INFO: an item moved to "Later" gets one readable copy (feed full text or server extraction via /api/article),
+//       stored only on this device. Offline, a click opens it in the reader; scrolled to the end = "Done".
 
 import * as db from './db.js';
 import { serverBase } from './sync.js';
 import { pool } from './feeds.js';
+import { esc, httpUrl, hostOf } from './util.js';
 
-const KEEP = new Set(['later', 'reading']);  // states whose articles are kept offline
-const GRACE_MS = 864e5;                        // done/dismissed copies stay 1 day (undo, "read again")
-const RETRY_TRANSIENT_MS = 5 * 60 * 1000;      // offline, timeout, rate limit
-const RETRY_PERMANENT_MS = 24 * 3600 * 1000;   // no content, HTTP error, forbidden host
+const KEEP = new Set(['later', 'reading']);
+const GRACE_MS = 864e5;                        // INFO: done/dismissed copies stay 1 day (undo, "read again")
+const RETRY_TRANSIENT_MS = 5 * 60 * 1000;
+const RETRY_PERMANENT_MS = 24 * 3600 * 1000;
 const TRANSIENT = new Set(['UNREACHABLE', 'TIMEOUT', 'RATE_LIMITED', 'HTTP_500', 'HTTP_502', 'HTTP_503', 'HTTP_504']);
-
-// ------------------------------------------------------------ store
 
 export class OfflineStore extends EventTarget {
   constructor() {
     super();
-    this.meta = new Map(); // id → { ok, partial, words, triedAt, code } (no content in memory)
+    this.meta = new Map(); // INFO: metadata only – the content stays in IndexedDB
     this.running = null;
     this.timer = null;
   }
@@ -42,17 +34,11 @@ export class OfflineStore extends EventTarget {
     if (a?.ok) await db.write(['articles'], (tx) => tx.objectStore('articles').put({ ...a, pos }));
   }
 
-  /** Debounced reconcile (after state changes). */
   schedule(items, feedUrlOf, delay = 800) {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.reconcile(items(), feedUrlOf), delay);
   }
 
-  /**
-   * Save missing copies for kept items, drop copies of items that left "Later"/"Read now".
-   * @param {Map<string, {id, data, updatedAt}>} items  item records
-   * @param {(feedId: string) => string} feedUrlOf
-   */
   async reconcile(items, feedUrlOf) {
     if (this.running) return this.running;
     this.running = (async () => {
@@ -82,7 +68,6 @@ export class OfflineStore extends EventTarget {
         const row = await fetchArticle({ id: r.id, url: r.data.u, feedUrl: r.data.f ? feedUrlOf(r.data.f) : '' })
           .then((a) => ({ id: r.id, ok: true, ...a, savedAt: Date.now(), pos: 0 }))
           .catch((e) => ({ id: r.id, ok: false, code: e.code || 'ERROR', error: e.message, triedAt: Date.now() }));
-        // the item may have been dismissed meanwhile
         if (!KEEP.has(items.get(r.id)?.data?.s)) return;
         await db.write(['articles'], (tx) => tx.objectStore('articles').put(row));
         this.meta.set(r.id, summary(row));
@@ -99,8 +84,7 @@ export class OfflineStore extends EventTarget {
 
 const summary = (a) => ({ ok: !!a.ok, partial: !!a.partial, words: a.words || 0, triedAt: a.triedAt || a.savedAt || 0, code: a.code || '' });
 
-/** GET <server>/api/article → { url, title, byline, siteName, publishedAt, image, content, words, source, partial } */
-export async function fetchArticle({ id, url, feedUrl }, timeout = 45000) {
+async function fetchArticle({ id, url, feedUrl }, timeout = 45000) {
   const api = new URL('api/article', await serverBase());
   api.searchParams.set('url', url);
   if (feedUrl) { api.searchParams.set('feed', feedUrl); api.searchParams.set('id', id); }
@@ -109,13 +93,13 @@ export async function fetchArticle({ id, url, feedUrl }, timeout = 45000) {
   try {
     const res = await fetch(api.href, { signal: ctrl.signal });
     let body = null;
-    try { body = await res.json(); } catch { /* ignore */ }
+    try { body = await res.json(); } catch { /* INFO: not JSON – handled below */ }
     if (!res.ok || !body?.article) {
       throw Object.assign(new Error(body?.error?.message || `HTTP ${res.status}`), { code: body?.error?.code || 'HTTP_' + res.status });
     }
     const a = body.article;
     return {
-      url: a.url || url, title: a.title || '', byline: a.byline || '', siteName: a.siteName || '',
+      url: httpUrl(a.url) || httpUrl(url), title: a.title || '', byline: a.byline || '', siteName: a.siteName || '',
       publishedAt: a.publishedAt || null, lang: a.lang || '', content: String(a.content || ''),
       words: a.words || 0, source: a.source || '', partial: !!a.partial,
     };
@@ -128,7 +112,7 @@ export async function fetchArticle({ id, url, feedUrl }, timeout = 45000) {
   }
 }
 
-// ------------------------------------------------------------ sanitizer (defence in depth – the server already cleans)
+// INFO: defence in depth – the server already sanitizes, the client never trusts it
 
 const TAGS = new Set(['P', 'BR', 'HR', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'DL', 'DT', 'DD', 'BLOCKQUOTE', 'PRE', 'CODE',
   'EM', 'STRONG', 'B', 'I', 'U', 'S', 'MARK', 'SMALL', 'SUB', 'SUP', 'Q', 'CITE', 'ABBR', 'A', 'IMG', 'FIGURE', 'FIGCAPTION',
@@ -147,11 +131,11 @@ function sanitize(html) {
       const el = document.createElement(tag);
       if (tag === 'A') {
         const href = n.getAttribute('href') || '';
-        if (!/^(https?:|mailto:)/i.test(href)) { walk(n, parent, depth + 1); continue; }
+        if (!httpUrl(href) && !/^mailto:/i.test(href)) { walk(n, parent, depth + 1); continue; }
         el.href = href; el.target = '_blank'; el.rel = 'noopener noreferrer';
       } else if (tag === 'IMG') {
-        const s = n.getAttribute('src') || '';
-        if (!/^https?:\/\//i.test(s)) continue;
+        const s = httpUrl(n.getAttribute('src'));
+        if (!s) continue;
         el.src = s; el.alt = n.getAttribute('alt') || '';
         el.loading = 'lazy'; el.decoding = 'async'; el.referrerPolicy = 'no-referrer';
       }
@@ -163,22 +147,16 @@ function sanitize(html) {
   return out;
 }
 
-// ------------------------------------------------------------ reader
-
 const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 let current = null;
 
 export const readerOpen = () => !!current;
 
-/**
- * Full-screen reader for a saved article.
- * onClose({ read, pos }) – read: the end of the article was reached; pos: scroll position 0…1
- */
+// INFO: onClose({ read, pos }) – read: the end was reached; pos: scroll position 0…1
 export function openReader(article, { t, lang, onClose }) {
   if (current) current.close();
 
-  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const host = (() => { try { return new URL(article.url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+  const host = hostOf(article.url);
   const date = article.publishedAt ? new Date(article.publishedAt).toLocaleDateString(lang, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const mins = Math.max(1, Math.round((article.words || 0) / 220));
   const meta = [article.siteName || host, date, t('reader.minutes', { n: mins })].filter(Boolean).map(esc).join(' · ');
@@ -207,7 +185,6 @@ export function openReader(article, { t, lang, onClose }) {
     </article>`;
   root.querySelector('.reader-body').append(sanitize(article.content || ''));
 
-  // images that cannot load offline disappear instead of leaving empty boxes
   root.addEventListener('error', (ev) => {
     if (ev.target instanceof HTMLImageElement) (ev.target.closest('figure') || ev.target).remove();
   }, true);
@@ -233,12 +210,12 @@ export function openReader(article, { t, lang, onClose }) {
   requestAnimationFrame(() => { io.observe(fin); progress(); });
   root.focus({ preventScroll: true });
 
-  // best case: real full screen (needs the click that opened the reader)
+  // INFO: full screen needs the user gesture that opened the reader
   if (document.fullscreenEnabled && !document.fullscreenElement) {
     document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
   }
 
-  // the back button / gesture closes the reader instead of leaving the app
+  // INFO: the back button / gesture closes the reader instead of leaving the app
   history.pushState({ reader: 1 }, '');
   let closed = false;
   const close = () => {
@@ -259,7 +236,7 @@ export function openReader(article, { t, lang, onClose }) {
   const onPop = () => close();
   const onKey = (ev) => {
     if (ev.key === 'Escape') { ev.preventDefault(); history.back(); }
-    ev.stopPropagation(); // the list shortcuts (j/k/o/l/x …) stay inactive while reading
+    ev.stopPropagation();
   };
   addEventListener('popstate', onPop);
   root.addEventListener('keydown', onKey);

@@ -1,8 +1,6 @@
-// News – Collector client, feed ids and OPML.
-
 import { serverBase } from './sync.js';
 
-/** Normalise user input the same way the Collector does (scheme optional). */
+// INFO: same normalisation as the Collector (scheme optional)
 export function normalizeUrl(input) {
   let url = String(input || '').trim();
   if (!url) return '';
@@ -18,13 +16,13 @@ export function normalizeUrl(input) {
   }
 }
 
-/** First http(s) URL inside a text (Android share sheets put the link into "text"). */
+// INFO: Android share sheets put the link into "text"
 export function extractUrl(text) {
   const m = String(text || '').match(/https?:\/\/[^\s<>"']+/i);
   return m ? m[0].replace(/[).,;!?]+$/, '') : '';
 }
 
-/** Stable, short feed id: cyrb53 hash of the normalised URL (no crypto.subtle needed on plain HTTP). */
+// INFO: cyrb53 of the normalised URL – works without crypto.subtle on plain HTTP
 export function feedId(url) {
   const str = normalizeUrl(url).replace(/\/$/, '');
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
@@ -38,10 +36,6 @@ export function feedId(url) {
   return 'f' + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
-/**
- * Resolve a URL through the Collector (GET <server>/api/collect?url=…).
- * @returns {Promise<{source:object, entries:object[], meta:object}>}
- */
 export async function fetchFeed(url, { refresh = false, timeout = 60000, t = (k) => k } = {}) {
   const api = new URL('api/collect', await serverBase());
   api.searchParams.set('url', url);
@@ -51,7 +45,7 @@ export async function fetchFeed(url, { refresh = false, timeout = 60000, t = (k)
   try {
     const res = await fetch(api.href, { signal: ctrl.signal });
     let body = null;
-    try { body = await res.json(); } catch { /* ignore */ }
+    try { body = await res.json(); } catch { /* INFO: not JSON – handled below */ }
     if (!res.ok || !body || body.error) {
       const e = body?.error;
       throw Object.assign(new Error(e?.message || t('err.http', { status: res.status })), { code: e?.code || 'HTTP_' + res.status });
@@ -66,7 +60,6 @@ export async function fetchFeed(url, { refresh = false, timeout = 60000, t = (k)
   }
 }
 
-/** Map with at most `limit` promises in flight. */
 export async function pool(items, limit, fn) {
   const out = new Array(items.length);
   let i = 0;
@@ -80,8 +73,6 @@ export async function pool(items, limit, fn) {
   await Promise.all(workers);
   return out;
 }
-
-// ------------------------------------------------------------ OPML
 
 export function parseOpml(text) {
   const doc = new DOMParser().parseFromString(text, 'text/xml');

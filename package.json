@@ -1,0 +1,20 @@
+{
+  "name": "news-reader",
+  "private": true,
+  "description": "Test tooling for News Reader – the app itself has no build step and no runtime dependencies.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "npm run test:php && npm run test:js && npm run test:api && npm run test:e2e",
+    "test:php": "php tests/php/run.php && php tests/feed-rules-test.php",
+    "test:js": "node --test \"tests/js/*.test.mjs\"",
+    "test:api": "node --test \"tests/api/*.test.mjs\"",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0"
+  }
+}

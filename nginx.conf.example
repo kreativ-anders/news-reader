@@ -44,6 +44,8 @@ server {
   add_header X-Content-Type-Options "nosniff" always;
   add_header X-Frame-Options "DENY" always;
   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+  add_header Cross-Origin-Opener-Policy "same-origin" always;
 
   # compression
   gzip on;
@@ -73,6 +75,7 @@ server {
     fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
     fastcgi_param DOCUMENT_ROOT   $realpath_root;
     fastcgi_read_timeout 120s;
+    fastcgi_param HTTP_PROXY "";  # httpoxy: a client "Proxy:" header must never become a proxy setting
   }
   location ~ \.php$ { return 404; }
 

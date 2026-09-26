@@ -1,15 +1,8 @@
-// News – tiny IndexedDB layer.
-//
-// Stores
-//   records  [kind, id] → { kind, id, data, updatedAt }   synced state (feeds, items)
-//   outbox   [kind, id] → { kind, id, updatedAt }         local changes not yet pushed
-//   entries  id         → { id, feedId, url, title, summary, publishedAt, firstSeen }
-//   kv       k          → { k, v }                         local settings (server, vault key, etag …)
-//   articles id         → { id, ok, url, title, content, words, partial, pos, savedAt } | { id, ok:false, code, triedAt }
-//                          offline copies of "Later" items (per device, never synced) – see js/offline.js
+// INFO: stores – records (synced feeds/items), outbox (unsynced changes), entries (per device),
+//       kv (local settings incl. vault key), articles (offline copies, per device)
 
 export const DB_NAME = 'news';
-const DB_VERSION = 2; // 2: + articles
+const DB_VERSION = 2;
 
 let dbPromise = null;
 
@@ -61,7 +54,6 @@ export async function count(store) {
   return done(db.transaction(store).objectStore(store).count());
 }
 
-/** Run fn(tx) inside one readwrite transaction over the given stores. */
 export async function write(stores, fn) {
   const db = await open();
   const tx = db.transaction(stores, 'readwrite');
@@ -83,7 +75,6 @@ export async function kvDel(k) {
   return write(['kv'], (tx) => tx.objectStore('kv').delete(k));
 }
 
-/** Store a local change: record + outbox marker in one transaction. */
 export async function putLocal(records) {
   return write(['records', 'outbox'], (tx) => {
     const rs = tx.objectStore('records');
@@ -95,17 +86,7 @@ export async function putLocal(records) {
   });
 }
 
-/** Read up to `limit` outbox markers together with their current records. */
-export async function outboxBatch(limit) {
-  const db = await open();
-  const tx = db.transaction(['outbox', 'records']);
-  const markers = await done(tx.objectStore('outbox').getAll(null, limit));
-  const rs = tx.objectStore('records');
-  const records = await Promise.all(markers.map((m) => done(rs.get([m.kind, m.id]))));
-  return markers.map((m, i) => ({ marker: m, record: records[i] }));
-}
-
-/** Remove outbox markers, but only if the record was not changed again meanwhile. */
+// INFO: a marker is only removed if the record was not changed again meanwhile
 export async function outboxAck(markers) {
   const db = await open();
   const tx = db.transaction(['outbox'], 'readwrite');
@@ -117,15 +98,11 @@ export async function outboxAck(markers) {
   return txDone(tx);
 }
 
-/** Forget all pending markers (after leaving a vault). */
 export async function outboxClear() {
   return write(['outbox'], (tx) => tx.objectStore('outbox').clear());
 }
 
-/**
- * Delete records matching `drop` (and their outbox markers) in one transaction.
- * Returns the remaining records – the snapshot that goes into the sync vault.
- */
+// INFO: returns the remaining records – the snapshot that goes into the sync vault
 export async function prune(drop) {
   const db = await open();
   const tx = db.transaction(['records', 'outbox'], 'readwrite');
@@ -143,7 +120,6 @@ export async function prune(drop) {
   return keep;
 }
 
-/** Queue every local record for upload (after joining a vault). */
 export async function outboxAll() {
   const all = await getAll('records');
   return write(['outbox'], (tx) => {
@@ -152,16 +128,14 @@ export async function outboxAll() {
   });
 }
 
-/**
- * Merge remote records with last-write-wins. Records that still have a newer
- * pending local change are skipped. Returns the records that were applied.
- */
+// INFO: last write wins; malformed records from the vault are ignored
 export async function applyRemote(records) {
   const db = await open();
   const tx = db.transaction(['records'], 'readwrite');
   const rs = tx.objectStore('records');
   const applied = [];
   for (const r of records) {
+    if (!isRecord(r)) continue;
     const cur = await done(rs.get([r.kind, r.id]));
     if (!cur || r.updatedAt > cur.updatedAt) {
       rs.put(r);
@@ -189,3 +163,6 @@ export async function deleteEntriesForFeed(feedId) {
   const ids = (await entriesForFeed(feedId)).map((e) => e.id);
   return putEntries([], ids);
 }
+
+const isRecord = (r) => r && (r.kind === 'feed' || r.kind === 'item' || r.kind === 'device') && typeof r.id === 'string'
+  && Number.isFinite(r.updatedAt) && r.data && typeof r.data === 'object';

@@ -1,19 +1,8 @@
 <?php
-/**
- * News Reader – build the static language versions of the landing page.
- *
- *   php tools/build-i18n.php [--site=https://newsreader.app/]
- *
- * Run on every deploy (and after changing index.html or i18n/*.json).
- *
- * Source:  index.html (English, with data-i18n / data-i18n-attr markers) + i18n/<lang>.json
- * Output:  <lang>/index.html for every language except English (fully translated, static HTML),
- *          hreflang alternates in every page (incl. index.html), sitemap.xml with alternates.
- *
- * Why static pages: search engines index one language per URL. Content switched in the
- * browser (JS, cookies, Accept-Language) on a single URL is only indexed in English.
- * English stays at "/" and is x-default. No automatic redirects.
- */
+// INFO: builds the static language versions of the landing page – run on every deploy:
+//       php tools/build-i18n.php [--site=https://newsreader.app/]
+//       i18n/en.json is the single text source; index.html markup + i18n/<lang>.json → <lang>/index.html,
+//       hreflang alternates, sitemap.xml. One static page per language because search engines index one language per URL.
 declare(strict_types=1);
 
 if (PHP_SAPI !== 'cli') {
@@ -21,7 +10,7 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 
-const LANGS   = ['en', 'de', 'fr', 'it', 'es'];          // first = default (x-default, served at "/")
+const LANGS   = ['en', 'de', 'fr', 'it', 'es'];          // INFO: first = x-default, served at "/"
 const LOCALES = ['en' => 'en_US', 'de' => 'de_DE', 'fr' => 'fr_FR', 'it' => 'it_IT', 'es' => 'es_ES'];
 
 $root = dirname(__DIR__);
@@ -36,22 +25,22 @@ $en = load_json("$root/i18n/en.json");
 $urls = [];
 foreach (LANGS as $i => $lang) $urls[$lang] = $site . ($i === 0 ? '' : "$lang/");
 
-// hreflang block, identical on every page
 $alternates = '';
 foreach (LANGS as $lang) {
     $alternates .= "  <link rel=\"alternate\" hreflang=\"$lang\" href=\"{$urls[$lang]}\">\n";
 }
 $alternates .= "  <link rel=\"alternate\" hreflang=\"x-default\" href=\"{$urls[LANGS[0]]}\">\n";
 
-// 1. default page: only refresh the alternates block (text stays the English source)
-$updated = set_alternates($source, $alternates);
+$tEn = fn(string $key): ?string => lookup($en, $key);
+$updated = translate_attributes(translate_elements($source, $tEn), $tEn);
+$updated = set_alternates($updated, $alternates);
 $updated = set_canonical($updated, $urls[LANGS[0]]);
+$updated = update_jsonld($updated, $en, $urls[LANGS[0]], LANGS[0], false);
 if ($updated !== $source) file_put_contents($sourceFile, $updated);
-echo "✓ index.html (en, alternates updated)\n";
+echo "✓ index.html (en" . ($updated !== $source ? ', updated' : ', unchanged') . ")\n";
 
-// 2. one static page per additional language
 foreach (array_slice(LANGS, 1) as $lang) {
-    $dict = array_replace_recursive($en, load_json("$root/i18n/$lang.json")); // English fills the gaps
+    $dict = array_replace_recursive($en, load_json("$root/i18n/$lang.json"));
     $t = fn(string $key): ?string => lookup($dict, $key);
 
     $html = $updated;
@@ -73,7 +62,6 @@ foreach (array_slice(LANGS, 1) as $lang) {
     echo "✓ $lang/index.html" . ($missing ? " ($missing keys fall back to English)" : '') . "\n";
 }
 
-// 3. sitemap with hreflang alternates
 $today = gmdate('Y-m-d');
 $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
      . "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n";
@@ -87,8 +75,6 @@ foreach (LANGS as $lang) {
 $xml .= "</urlset>\n";
 file_put_contents("$root/sitemap.xml", $xml);
 echo "✓ sitemap.xml (" . count(LANGS) . " URLs)\n";
-
-// ===================================================================== helpers
 
 function fail(string $msg): never
 {
@@ -124,7 +110,6 @@ function count_missing(array $en, array $other, string $prefix = ''): int
     return $n;
 }
 
-/** Replace the inner HTML of every element with data-i18n="key". */
 function translate_elements(string $html, callable $t): string
 {
     $out = '';
@@ -141,7 +126,7 @@ function translate_elements(string $html, callable $t): string
     return $out . substr($html, $pos);
 }
 
-/** Offset of the closing tag that matches an element opened right before $from. */
+// INFO: offset of the closing tag matching the element opened right before $from
 function find_close(string $html, string $tag, int $from): ?int
 {
     $depth = 1;
@@ -154,7 +139,6 @@ function find_close(string $html, string $tag, int $from): ?int
     return null;
 }
 
-/** data-i18n-attr="attr:key;attr:key" → translated, plain-text attribute values. */
 function translate_attributes(string $html, callable $t): string
 {
     return preg_replace_callback('/<[a-zA-Z][^>]*\sdata-i18n-attr="([^"]+)"[^>]*>/', function ($m) use ($t) {
@@ -170,7 +154,7 @@ function translate_attributes(string $html, callable $t): string
     }, $html);
 }
 
-/** Pages in /<lang>/ live one level deeper: prefix relative href/src. */
+// INFO: pages in /<lang>/ live one level deeper – relative href/src get a prefix
 function rewrite_relative_urls(string $html, string $prefix): string
 {
     return preg_replace('/(\s(?:href|src)=")(?![a-z][a-z0-9+.-]*:|#|\/|\.\.\/|\.\/")/i', '${1}' . $prefix, $html);
@@ -188,17 +172,16 @@ function set_canonical(string $html, string $url): string
     return preg_replace('/(<link rel="canonical" href=")[^"]*(")/', '${1}' . $url . '${2}', $html, 1);
 }
 
-/** Localize the structured data: description, FAQ (from the translated <details>), URL, language. */
-function update_jsonld(string $html, array $dict, string $url, string $lang): string
+function update_jsonld(string $html, array $dict, string $url, string $lang, bool $description = true): string
 {
-    return preg_replace_callback('/(<script type="application\/ld\+json">)(.*?)(<\/script>)/s', function ($m) use ($html, $dict, $url, $lang) {
+    return preg_replace_callback('/(<script type="application\/ld\+json">)(.*?)(<\/script>)/s', function ($m) use ($html, $dict, $url, $lang, $description) {
         $data = json_decode($m[2], true);
         if (!is_array($data)) return $m[0];
         preg_match_all('/<details><summary[^>]*>(.*?)<\/summary><p[^>]*>(.*?)<\/p><\/details>/s', $html, $faq, PREG_SET_ORDER);
         $plain = fn($s) => trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($s), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
         foreach ($data['@graph'] as &$node) {
             if ($node['@type'] === 'SoftwareApplication') {
-                $node['description'] = $plain(lookup($dict, 'meta.description') ?? $node['description']);
+                if ($description) $node['description'] = $plain(lookup($dict, 'meta.description') ?? $node['description']);
                 $node['url'] = $url;
                 $node['inLanguage'] = $lang;
             }

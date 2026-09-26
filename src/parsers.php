@@ -1,10 +1,6 @@
 <?php
 declare(strict_types=1);
 
-// =====================================================================
-//  Entry model
-// =====================================================================
-
 function nr_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = '', ?string $image = null, ?string $content = null): array
 {
     $entry = [
@@ -16,26 +12,24 @@ function nr_entry(string $url, string $title, ?string $publishedAt, ?string $upd
         'summary'     => $summary !== null && $summary !== '' ? nr_summary($summary) : null,
         'image'       => $image,
     ];
-    // Full text (only kept in the server cache; /api/collect strips it, /api/article serves it)
-    if ($content !== null && $content !== '' && function_exists('nr_fulltext')) {
-        $full = nr_fulltext($content, $url);
-        if ($full !== null) $entry['content'] = $full;
-    }
+    // INFO: raw feed HTML, turned into sanitized full text by nr_with_fulltext() after the entry list is final
+    if ($content !== null && $content !== '') $entry['content'] = $content;
     return $entry;
 }
 
-/** Deduplicate by URL (first wins). Optionally sort newest first. */
+// INFO: de-duplicates by URL (first wins) and drops non-http(s) links (javascript:, data: …);
+//       with $sortByDate: dated entries newest first, undated ones keep their order at the end
 function nr_finalize_entries(array $entries, bool $sortByDate): array
 {
     $unique = [];
     foreach ($entries as $e) {
+        if (!nr_is_http_url($e['url'])) continue;
         $key = nr_normalize_url($e['url']);
         if (!isset($unique[$key])) $unique[$key] = $e;
     }
     $entries = array_values($unique);
 
     if ($sortByDate) {
-        // stable sort: dated entries newest first, undated keep relative order at the end
         $indexed = [];
         foreach ($entries as $i => $e) $indexed[] = [$i, $e];
         usort($indexed, function ($a, $b) {
@@ -49,6 +43,18 @@ function nr_finalize_entries(array $entries, bool $sortByDate): array
     return array_slice($entries, 0, NR_MAX_ENTRIES);
 }
 
+// INFO: full text is only kept in the server cache – /api/collect strips it, /api/article serves it
+function nr_with_fulltext(array $entries): array
+{
+    foreach ($entries as &$e) {
+        if (!isset($e['content'])) continue;
+        $full = nr_fulltext($e['content'], $e['url']);
+        if ($full === null) unset($e['content']);
+        else $e['content'] = $full;
+    }
+    return $entries;
+}
+
 function nr_clean_text(string $s): string
 {
     $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -58,7 +64,7 @@ function nr_clean_text(string $s): string
 function nr_summary(string $html): string
 {
     $html = preg_replace('/<(script|style|figcaption)\b.*?<\/\1>/is', '', $html) ?? '';
-    // block boundaries become spaces, otherwise "…Uses</h3><p>From…" turns into "UsesFrom"
+    // INFO: block boundaries become spaces, otherwise "Uses</h3><p>From" turns into "UsesFrom"
     $html = preg_replace('/<(?:br|hr|img)\b[^>]*>|<\/(?:p|div|h[1-6]|li|ul|ol|blockquote|figure|pre|tr|td|th|section|article)>/i', ' ', $html) ?? $html;
     $text = nr_clean_text(strip_tags($html));
     if (mb_strlen($text) > NR_SUMMARY_LENGTH) {
@@ -67,10 +73,7 @@ function nr_summary(string $html): string
     return $text;
 }
 
-/**
- * Preview image of a feed item: media:thumbnail / media:content, image enclosure,
- * itunes:image, then the first real <img> of the item's HTML. Tracking pixels are skipped.
- */
+// INFO: media:thumbnail / media:content, image enclosure, itunes:image, then the first real <img> of the item HTML
 function nr_item_image(DOMXPath $xp, DOMElement $item, string $html, string $baseUrl): ?string
 {
     $queries = [
@@ -88,7 +91,6 @@ function nr_item_image(DOMXPath $xp, DOMElement $item, string $html, string $bas
     return nr_html_image($html, $baseUrl);
 }
 
-/** First <img> in an HTML fragment that is not a tracking pixel / emoji / avatar. */
 function nr_html_image(string $html, string $baseUrl): ?string
 {
     if ($html === '' || stripos($html, '<img') === false) return null;
@@ -108,18 +110,17 @@ function nr_html_image(string $html, string $baseUrl): ?string
     return null;
 }
 
-/** Absolute http(s) image URL, or null for junk, pixels and trackers. */
+// INFO: absolute http(s) image URL, or null for junk, pixels and trackers
 function nr_image_url(string $src, string $baseUrl): ?string
 {
     $src = trim(html_entity_decode($src, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     if ($src === '' || str_starts_with($src, 'data:')) return null;
     $url = nr_absolute_url($src, $baseUrl);
-    if (strlen($url) > 2048 || !preg_match('#^https?://[^/\s]+#i', $url)) return null;
+    if (!nr_is_http_url($url)) return null;
     if (preg_match('#/_/stat\?|/pixel|[/._-](?:beacon|tracker|tracking|spacer|blank)[/._?-]|feedburner\.com|feedblitz|doubleclick\.net|/wp-includes/images/smilies/|s\.w\.org/images/core/emoji|gravatar\.com/avatar|\.svg(?:$|\?)#i', $url)) return null;
     return $url;
 }
 
-/** Concatenated text of all direct children with one of the given local names. */
 function nr_children_text(DOMElement $el, array $names): string
 {
     $out = '';
@@ -134,7 +135,6 @@ function nr_parse_date(?string $value): ?string
     $value = trim((string)$value);
     if ($value === '') return null;
 
-    // German numeric format 18.09.2026
     if (preg_match('/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/', $value, $m)) {
         $value = sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
     }
@@ -143,7 +143,6 @@ function nr_parse_date(?string $value): ?string
     return gmdate('Y-m-d\TH:i:s\Z', $ts);
 }
 
-/** Finds a human-readable date inside arbitrary text. */
 function nr_find_date_in_text(string $text): ?string
 {
     $months = 'Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?';
@@ -168,30 +167,26 @@ function nr_normalize_date_token(string $s): string
     return trim(preg_replace('/\s+/', ' ', str_replace(['Sept', '.'], ['Sep', ' '], $s)) ?? $s);
 }
 
-// =====================================================================
-//  XML helpers
-// =====================================================================
-
+// WARNING: no LIBXML_PARSEHUGE and no LIBXML_NOENT – libxml's limits are the protection against entity expansion ("billion laughs")
 function nr_load_xml(string $body): ?DOMDocument
 {
     if (str_starts_with($body, "\x1f\x8b")) {
-        $decoded = @gzdecode($body);
-        if ($decoded === false) return null;
-        $body = $decoded;
+        $body = nr_gunzip($body);
+        if ($body === null) return null;
     }
     $body = ltrim(preg_replace('/^\xEF\xBB\xBF/', '', $body) ?? $body);
     if ($body === '' || $body[0] !== '<') return null;
 
     $prev = libxml_use_internal_errors(true);
     $dom = new DOMDocument();
-    $ok = $dom->loadXML($body, LIBXML_NONET | LIBXML_NOCDATA | LIBXML_COMPACT | LIBXML_PARSEHUGE);
+    $ok = $dom->loadXML($body, LIBXML_NONET | LIBXML_NOCDATA | LIBXML_COMPACT);
     libxml_clear_errors();
     libxml_use_internal_errors($prev);
 
     return $ok && $dom->documentElement ? $dom : null;
 }
 
-/** First direct child element (any namespace) whose local name is in $names; returns its text. */
+// INFO: text of the first non-empty direct child (any namespace) whose local name is in $names
 function nr_child_text(DOMElement $el, array $names): string
 {
     foreach ($names as $name) {
@@ -214,11 +209,7 @@ function nr_child_elements(DOMElement $el, string $name): array
     return $out;
 }
 
-// =====================================================================
-//  RSS 2.0 / RSS 1.0 (RDF) / Atom
-// =====================================================================
-
-/** @return array{type:string,title:?string,siteUrl:?string,entries:array}|null */
+// INFO: RSS 2.0, RSS 1.0 (RDF) and Atom
 function nr_parse_feed(string $body, string $baseUrl): ?array
 {
     $dom = nr_load_xml($body);
@@ -234,8 +225,8 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
         $title = $channel instanceof DOMElement ? nr_child_text($channel, ['title']) : '';
         $site  = $channel instanceof DOMElement ? nr_child_text($channel, ['link']) : '';
 
-        foreach ($xp->query('//*[local-name()="item"]') as $item) {
-            /** @var DOMElement $item */
+        foreach ($xp->query('//*[local-name()="item"]') as $i => $item) {
+            if ($i >= NR_MAX_PARSE_ITEMS) break;
             $guid = nr_child_text($item, ['guid']);
             $link = nr_child_text($item, ['link']);
             if ($link === '' && preg_match('#^https?://#i', $guid)) $link = $guid;
@@ -258,7 +249,7 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             'type'    => $rootName === 'rss' ? 'rss' : 'rdf',
             'title'   => $title !== '' ? nr_clean_text($title) : null,
             'siteUrl' => $site !== '' ? $site : null,
-            'entries' => nr_finalize_entries($entries, true),
+            'entries' => nr_with_fulltext(nr_finalize_entries($entries, true)),
         ];
     }
 
@@ -270,7 +261,7 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             if ($rel === 'alternate') { $site = $l->getAttribute('href'); break; }
         }
 
-        foreach (nr_child_elements($root, 'entry') as $item) {
+        foreach (array_slice(nr_child_elements($root, 'entry'), 0, NR_MAX_PARSE_ITEMS) as $item) {
             $link = '';
             foreach (nr_child_elements($item, 'link') as $l) {
                 $rel = $l->getAttribute('rel') ?: 'alternate';
@@ -303,22 +294,18 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             'type'    => 'atom',
             'title'   => $title !== '' ? nr_clean_text($title) : null,
             'siteUrl' => $site ? nr_absolute_url($site, $baseUrl) : null,
-            'entries' => nr_finalize_entries($entries, true),
+            'entries' => nr_with_fulltext(nr_finalize_entries($entries, true)),
         ];
     }
 
     return null;
 }
 
-// =====================================================================
-//  HTML helpers
-// =====================================================================
-
 function nr_load_html(string $html): DOMDocument
 {
     $prev = libxml_use_internal_errors(true);
     $dom = new DOMDocument();
-    // Force UTF-8 interpretation
+    // INFO: the XML prolog forces UTF-8 interpretation
     $dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NONET | LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_COMPACT | LIBXML_PARSEHUGE);
     libxml_clear_errors();
     libxml_use_internal_errors($prev);
@@ -341,26 +328,23 @@ function nr_page_title(DOMDocument $dom): ?string
     return $title !== '' ? $title : null;
 }
 
-/** Explicit <link rel="alternate" type="application/rss+xml"> plus visible feed links. */
+// INFO: <link rel="alternate"> feeds plus visible same-host links to feed-like paths
 function nr_discover_feed_links(DOMDocument $dom, string $baseUrl): array
 {
     $xp = new DOMXPath($dom);
     $found = [];
 
     foreach ($xp->query('//link[@href]') as $link) {
-        /** @var DOMElement $link */
         $rel  = ' ' . strtolower($link->getAttribute('rel')) . ' ';
         $type = strtolower(trim($link->getAttribute('type')));
-        if (str_contains($rel, ' alternate ') && in_array($type, ['application/rss+xml', 'application/atom+xml', 'application/rdf+xml', 'application/feed+json', 'application/xml', 'text/xml'], true)) {
-            if ($type === 'application/feed+json') continue; // JSON Feed not supported yet
+        if (str_contains($rel, ' alternate ') && in_array($type, ['application/rss+xml', 'application/atom+xml', 'application/rdf+xml', 'application/xml', 'text/xml'], true)) {
             $found[] = nr_absolute_url($link->getAttribute('href'), $baseUrl);
         }
     }
 
-    // <a href="...rss.xml"> / ".../feed" in page body (same host only)
     $host = parse_url($baseUrl, PHP_URL_HOST);
-    foreach ($xp->query('//a[@href]') as $a) {
-        /** @var DOMElement $a */
+    foreach ($xp->query('//a[@href]') as $i => $a) {
+        if ($i >= NR_MAX_PARSE_ITEMS) break;
         $href = nr_absolute_url($a->getAttribute('href'), $baseUrl);
         $path = strtolower((string)parse_url($href, PHP_URL_PATH));
         if (parse_url($href, PHP_URL_HOST) !== $host) continue;
@@ -372,7 +356,7 @@ function nr_discover_feed_links(DOMDocument $dom, string $baseUrl): array
     return array_values(array_unique($found));
 }
 
-/** Common feed locations to probe when nothing is declared. Path-specific first. */
+// INFO: common feed locations, path-specific first
 function nr_guess_feed_urls(string $url): array
 {
     $origin = nr_origin($url);
@@ -390,18 +374,7 @@ function nr_guess_feed_urls(string $url): array
     return array_values(array_unique($guesses));
 }
 
-// =====================================================================
-//  HTML article listings
-// =====================================================================
-
-/**
- * Extract articles from an HTML listing page. Strategies (first with >= 3 hits wins):
- *   1. JSON-LD (ItemList / Article / BlogPosting / NewsArticle)
- *   2. <article> elements
- *   3. Links below the listing path, e.g. /news -> /news/<slug>
- *
- * @return array{strategy:string, entries:array}|null
- */
+// INFO: first strategy with >= 3 hits wins: JSON-LD, <article> elements, links below the listing path
 function nr_parse_html_listing(DOMDocument $dom, string $baseUrl): ?array
 {
     $entries = nr_listing_jsonld($dom, $baseUrl);
@@ -426,7 +399,8 @@ function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
         if (!is_array($data)) continue;
 
         $stack = [$data];
-        while ($stack) {
+        $visited = 0;
+        while ($stack && ++$visited <= NR_MAX_PARSE_ITEMS * 10) {
             $node = array_pop($stack);
             if (!is_array($node)) continue;
 
@@ -467,7 +441,7 @@ function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
     return nr_finalize_entries($entries, false);
 }
 
-/** JSON-LD "image": string, ImageObject, or a list of either. */
+// INFO: JSON-LD "image" is a string, an ImageObject or a list of either
 function nr_jsonld_image(mixed $img, string $baseUrl): ?string
 {
     if (is_array($img) && array_is_list($img)) $img = $img[0] ?? null;
@@ -480,8 +454,8 @@ function nr_listing_articles(DOMDocument $dom, string $baseUrl): array
     $xp = new DOMXPath($dom);
     $entries = [];
 
-    foreach ($xp->query('//article[not(ancestor::nav) and not(ancestor::footer)]') as $article) {
-        /** @var DOMElement $article */
+    foreach ($xp->query('//article[not(ancestor::nav) and not(ancestor::footer)]') as $n => $article) {
+        if ($n >= NR_MAX_PARSE_ITEMS) break;
         $heading = $xp->query('.//*[self::h1 or self::h2 or self::h3 or self::h4]', $article)->item(0);
         $link = $heading ? $xp->query('.//a[@href] | ancestor::a[@href]', $heading)->item(0) : null;
         $link ??= $xp->query('.//a[@href]', $article)->item(0);
@@ -511,10 +485,7 @@ function nr_listing_articles(DOMDocument $dom, string $baseUrl): array
     return nr_finalize_entries($entries, false);
 }
 
-/**
- * Links whose path is *below* the listing path. For https://example.com/news
- * this collects /news/<slug>; for a root URL only typical article paths qualify.
- */
+// INFO: links below the listing path (/news → /news/<slug>); for a root URL only typical article paths qualify
 function nr_listing_path_links(DOMDocument $dom, string $baseUrl): array
 {
     $xp = new DOMXPath($dom);
@@ -524,8 +495,8 @@ function nr_listing_path_links(DOMDocument $dom, string $baseUrl): array
 
     $entries = [];
 
-    foreach ($xp->query('//a[@href][not(ancestor::nav) and not(ancestor::header) and not(ancestor::footer)]') as $a) {
-        /** @var DOMElement $a */
+    foreach ($xp->query('//a[@href][not(ancestor::nav) and not(ancestor::header) and not(ancestor::footer)]') as $n => $a) {
+        if ($n >= NR_MAX_PARSE_ITEMS) break;
         $url = nr_absolute_url($a->getAttribute('href'), $baseUrl);
         $u = parse_url($url);
         if (strtolower((string)($u['host'] ?? '')) !== $host) continue;
@@ -547,7 +518,6 @@ function nr_is_article_path(string $path, string $basePath): bool
 {
     if ($path === '' || $path === $basePath) return false;
 
-    // pagination, taxonomy, feeds, assets
     if (preg_match('#/(page|tag|tags|category|categories|author|authors|topic|topics|search|feed|rss)(/|$)#i', $path)) return false;
     if (preg_match('#\.(xml|json|jpg|jpeg|png|gif|svg|webp|pdf|zip|css|js)$#i', $path)) return false;
 
@@ -557,15 +527,13 @@ function nr_is_article_path(string $path, string $basePath): bool
         return $rest !== '' && preg_match('/[a-z0-9]/i', $rest) === 1;
     }
 
-    // Root listing: accept only typical article URL shapes
     return preg_match('#/(19|20)\d{2}/\d{1,2}/#', $path) === 1
         || preg_match('#^/(news|blog|posts?|articles?|stories|press|updates|insights|magazin|aktuelles|neuigkeiten)/[^/]+#i', $path) === 1;
 }
 
-/** @return array{0:string,1:?string} */
+// INFO: date from a <time> in the link or its card; title from a heading, a *title* class or the longest text segment
 function nr_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
 {
-    // Date: <time> inside the link or its card
     $date = null;
     $card = $a;
     for ($i = 0; $i < 2 && $card->parentNode instanceof DOMElement; $i++) {
@@ -578,7 +546,6 @@ function nr_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
         $date = nr_parse_date($time->getAttribute('datetime') ?: $time->textContent);
     }
 
-    // Title: heading inside link > [class*=title] > longest text segment
     $h = $xp->query('.//*[self::h1 or self::h2 or self::h3 or self::h4 or self::h5]', $a)->item(0);
     if ($h === null) {
         $h = $xp->query('.//*[contains(translate(@class,"TITLE","title"),"title") or contains(translate(@class,"HEADLINE","headline"),"headline")]', $a)->item(0);
@@ -605,11 +572,7 @@ function nr_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
     return [$title, $date];
 }
 
-// =====================================================================
-//  Sitemaps
-// =====================================================================
-
-/** Candidate sitemap URLs: robots.txt declarations first, then defaults. */
+// INFO: robots.txt declarations first, then the default locations
 function nr_sitemap_candidates(string $url): array
 {
     $origin = nr_origin($url);
@@ -629,10 +592,7 @@ function nr_sitemap_candidates(string $url): array
     return array_slice(array_values(array_unique($candidates)), 0, 4);
 }
 
-/**
- * Parse a sitemap (or sitemap index), keep URLs below the requested path.
- * Returns entries sorted by lastmod / news publication date.
- */
+// INFO: sitemap or sitemap index → entries below the requested path, newest first
 function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl, int $depth = 0): array
 {
     $dom = nr_load_xml($body);
@@ -654,13 +614,11 @@ function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
             ];
         }
 
-        // Prefer child sitemaps named like the section (news, blog, post) and newest lastmod
-        $wanted = $hint !== '' ? $hint : 'news|blog|post|article';
-        usort($children, function ($a, $b) use ($wanted) {
-            $ma = preg_match('/' . preg_quote($wanted, '/') . '|news|blog|post|article/i', $a['loc']) ? 1 : 0;
-            $mb = preg_match('/' . preg_quote($wanted, '/') . '|news|blog|post|article/i', $b['loc']) ? 1 : 0;
-            return [$mb, $b['lastmod']] <=> [$ma, $a['lastmod']];
-        });
+        // INFO: child sitemaps named like the section (or news/blog/post) first, then newest lastmod
+        $pattern = '/' . ($hint !== '' ? preg_quote($hint, '/') . '|' : '') . 'news|blog|post|article/i';
+        foreach ($children as &$child) $child['match'] = preg_match($pattern, $child['loc']);
+        unset($child);
+        usort($children, fn($a, $b) => [$b['match'], $b['lastmod']] <=> [$a['match'], $a['lastmod']]);
 
         $entries = [];
         foreach (array_slice($children, 0, NR_MAX_CHILD_SITEMAPS) as $child) {
@@ -682,7 +640,6 @@ function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
         $path = rtrim((string)parse_url($loc, PHP_URL_PATH), '/');
         if (!nr_is_article_path($path, $basePath)) continue;
 
-        // Google News sitemap extension
         $newsTitle = '';
         $newsDate = null;
         foreach (nr_child_elements($node, 'news') as $news) {
@@ -692,7 +649,7 @@ function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
 
         $lastmod = nr_parse_date(nr_child_text($node, ['lastmod']));
         $image = null;
-        foreach (nr_child_elements($node, 'image') as $img) {   // Google image sitemap extension
+        foreach (nr_child_elements($node, 'image') as $img) {
             $image = nr_image_url(nr_child_text($img, ['loc']), $loc);
             if ($image !== null) break;
         }

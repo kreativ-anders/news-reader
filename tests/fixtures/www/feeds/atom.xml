@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fixture Atom</title>
+  <link href="{{base}}/guess/" rel="alternate"/>
+  <link href="{{base}}/feeds/atom.xml" rel="self"/>
+  <id>urn:fixture:atom</id>
+  <updated>{{iso:1}}</updated>
+  <entry>
+    <title>Atom entry one</title>
+    <link href="{{base}}/article/atom-1.html" rel="alternate"/>
+    <id>urn:fixture:atom:1</id>
+    <published>{{iso:1}}</published>
+    <updated>{{iso:1}}</updated>
+    <summary>First Atom summary</summary>
+  </entry>
+  <entry>
+    <title type="html">Atom entry &lt;em&gt;two&lt;/em&gt;</title>
+    <link href="{{base}}/article/atom-2.html"/>
+    <id>urn:fixture:atom:2</id>
+    <updated>{{iso:2}}</updated>
+    <content type="html">&lt;p&gt;Second Atom content&lt;/p&gt;</content>
+  </entry>
+  <entry>
+    <title>Atom entry three</title>
+    <link href="{{base}}/article/atom-3.html" rel="alternate"/>
+    <id>urn:fixture:atom:3</id>
+    <published>{{iso:3}}</published>
+  </entry>
+</feed>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>{{base}}/news/company-opens-new-office</loc><lastmod>{{iso:1}}</lastmod></url>
+  <url><loc>{{base}}/news/quarterly-results</loc><lastmod>{{iso:2}}</lastmod></url>
+  <url><loc>{{base}}/news/product-launch-day</loc><lastmod>{{iso:3}}</lastmod></url>
+  <url><loc>{{base}}/news/team-update</loc><lastmod>{{iso:4}}</lastmod></url>
+  <url><loc>{{base}}/about</loc><lastmod>{{iso:30}}</lastmod></url>
+  <url><loc>{{base}}/links/first-undated-story</loc><lastmod>{{iso:6}}</lastmod></url>
+</urlset>

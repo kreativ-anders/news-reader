@@ -1,12 +1,8 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Platform rules engine (data: src/feed-rules.php, optional src/feed-rules.local.php).
- * Maps a page URL to the platform's native feed URL(s) without fetching the page.
- */
-
-/** All rules, local overrides first. Loaded once per request. */
+// INFO: maps a page URL to the platform's native feed URL(s) without fetching the page.
+//       Rules: src/feed-rules.php, local overrides (checked first) in src/feed-rules.local.php.
 function nr_rules(): array
 {
     static $rules = null;
@@ -17,12 +13,7 @@ function nr_rules(): array
     return $rules;
 }
 
-/**
- * First rule matching the URL, with expanded templates.
- * Returns null if no rule applies or the rule points back to the input URL (the input already is the feed).
- *
- * @return array{id:string, feeds:list<string>, lookup:?array{url:string,field:string}, none:?string}|null
- */
+// INFO: null if no rule applies or the rule points back to the input URL (the input already is the feed)
 function nr_rule_match(string $url, ?array $rules = null): ?array
 {
     $p = parse_url($url);
@@ -61,19 +52,19 @@ function nr_rule_match(string $url, ?array $rules = null): ?array
             ? ['url' => nr_rule_expand($rule['lookup']['url'], $v), 'field' => (string)$rule['lookup']['field']]
             : null;
 
-        if ($feeds === [] && $lookup === null) return null; // input URL is the feed itself
+        if ($feeds === [] && $lookup === null) return null;
         return ['id' => $rule['id'], 'feeds' => array_values(array_unique($feeds)), 'lookup' => $lookup, 'none' => null];
     }
     return null;
 }
 
-/** '' for an exact host match, the subdomain part for a wildcard match, null for no match. */
+// INFO: '' for an exact host match, the subdomain part for a wildcard match, null for no match
 function nr_rule_host_match(string $host, array $patterns): ?string
 {
     foreach ($patterns as $pattern) {
         $pattern = strtolower($pattern);
         if (str_starts_with($pattern, '*.')) {
-            $suffix = substr($pattern, 1); // ".medium.com"
+            $suffix = substr($pattern, 1);
             if (str_ends_with($host, $suffix) && strlen($host) > strlen($suffix)) {
                 return (string)preg_replace('/^www\./', '', substr($host, 0, -strlen($suffix)));
             }
@@ -89,7 +80,7 @@ function nr_rule_expand(string $template, array $vars): string
     return (string)preg_replace_callback('/\{(\w+)\}/', fn($m) => $vars[$m[1]] ?? '', $template);
 }
 
-/** Resolve a lookup rule (JSON endpoint that names the feed URL). */
+// INFO: lookup rule = JSON endpoint that names the feed URL
 function nr_rule_lookup(array $lookup): ?string
 {
     $res = nr_fetch($lookup['url']);
@@ -99,5 +90,5 @@ function nr_rule_lookup(array $lookup): ?string
         if (!is_array($node) || !array_key_exists(ctype_digit($key) ? (int)$key : $key, $node)) return null;
         $node = $node[ctype_digit($key) ? (int)$key : $key];
     }
-    return is_string($node) && preg_match('#^https?://#i', $node) ? $node : null;
+    return is_string($node) && nr_is_http_url($node) ? $node : null;
 }

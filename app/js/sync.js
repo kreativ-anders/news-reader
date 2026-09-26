@@ -1,25 +1,21 @@
-// News – end-to-end encrypted sync against <server>/api/sync.
-//
-// The server stores ONE opaque blob per vault – no database, no schema, no accounts.
-//
-//   vault key (random 32 bytes, shared via QR code / pairing link, never sent anywhere)
-//     ├─ HKDF "auth" → bearer token     (server stores the file under sha256(token))
-//     └─ HKDF "enc"  → AES-256-GCM key  (server never sees it → cannot read the vault)
-//
-// One sync round:
-//   1. GET  (If-None-Match: last ETag)  → 304 unchanged | 200 blob | 404 no vault yet
-//   2. decrypt + merge into IndexedDB, last write wins per record
-//   3. if this device knows something the vault doesn't: encrypt the full snapshot and
-//      PUT with If-Match: <ETag> (or If-None-Match: * to create). 412 → someone else
-//      was faster → start over at 1.
+// INFO: vault key (32 random bytes, never sent) ─ HKDF "auth" → bearer token, HKDF "enc" → AES-256-GCM key.
+//       One round: GET (If-None-Match) → decrypt + merge (last write wins) → PUT the full snapshot with
+//       If-Match / If-None-Match: * when this device knows more; 412 → start over.
+//       Removing a device rotates the vault key: the old location then holds a forward ("NRF1") with the
+//       new key wrapped for every remaining device (ECDH P-256 + HKDF + AES-GCM, see wrapKey()).
 
 import * as db from './db.js';
 
-const MAGIC = [0x4e, 0x52, 0x53, 0x31]; // "NRS1"
+const MAGIC = [0x4e, 0x52, 0x53, 0x31];         // "NRS1" vault snapshot
+const MAGIC_FORWARD = [0x4e, 0x52, 0x46, 0x31]; // "NRF1" forward to a new vault key
 const FLAG_GZIP = 1;
 const AAD = new TextEncoder().encode('newsreader-sync-v1');
+const AAD_FORWARD = new TextEncoder().encode('newsreader-sync-v1 forward');
+const ECDH = { name: 'ECDH', namedCurve: 'P-256' };
 const MAX_ROUNDS = 5;
-const PRUNE_AFTER_MS = 180 * 864e5; // finished / dismissed items and unfollowed feeds are forgotten after 180 days
+const PRUNE_AFTER_MS = 180 * 864e5;
+const DEVICE_TOUCH_MS = 3600e3;
+const DEVICE_NAME_MAX = 60;
 
 export class Sync extends EventTarget {
   constructor() {
@@ -28,7 +24,8 @@ export class Sync extends EventTarget {
     this.running = null;
     this.again = false;
     this.debounce = null;
-    this.keys = null; // { forKey, token, aes }
+    this.keys = null;
+    this.leaving = false;
   }
 
   async init() {
@@ -48,14 +45,13 @@ export class Sync extends EventTarget {
     this.dispatchEvent(new CustomEvent('status', { detail: { ...this.status } }));
   }
 
-  /** Call after every local change: sync shortly after the user stops clicking. */
   schedule(delay = 1500) {
     clearTimeout(this.debounce);
     this.refreshPending().then(() => this.emitStatus(this.status.state));
     this.debounce = setTimeout(() => this.run(), delay);
   }
 
-  /** Run one sync; concurrent calls are coalesced into one follow-up run. */
+  // INFO: concurrent calls are coalesced into one follow-up run
   run() {
     if (this.running) {
       this.again = true;
@@ -80,14 +76,21 @@ export class Sync extends EventTarget {
 
     this.emitStatus('syncing');
     try {
-      const keys = await this.deriveKeys(key);
       const endpoint = await syncEndpoint();
       const changed = [];
       let done = false;
       for (let round = 0; round < MAX_ROUNDS && !done; round++) {
-        done = await this.round(endpoint, keys, changed);
+        done = await this.round(endpoint, await this.deriveKeys(await db.kvGet('vaultKey')), changed);
+        if (done === 'removed') break;
+        if (done === 'forwarded') done = false;
       }
       if (!done) throw Object.assign(new Error('Too many concurrent changes – will retry.'), { code: 'conflict' });
+      if (done === 'removed' || (!this.leaving && await this.ownDeviceRemoved())) {
+        const stale = !(await db.kvGet('deviceId'));
+        await this.leaveVault({ announce: false });
+        this.dispatchEvent(new CustomEvent('removed', { detail: { stale } }));
+        return;
+      }
       this.status.lastSync = Date.now();
       await db.kvSet('lastSync', this.status.lastSync);
       await this.refreshPending();
@@ -96,7 +99,6 @@ export class Sync extends EventTarget {
     } catch (err) {
       await this.refreshPending();
       if (err instanceof TypeError || err.name === 'AbortError') {
-        // network failure: offline, server down, TLS/CORS problem …
         this.emitStatus(navigator.onLine ? 'unreachable' : 'offline', err.message);
       } else {
         this.emitStatus('error', err.message, err.code || '');
@@ -104,29 +106,37 @@ export class Sync extends EventTarget {
     }
   }
 
-  /** One GET → merge → (PUT). Returns false on a write conflict (412). */
+  // INFO: true when in sync, false on a write conflict (412), 'forwarded' after a key switch,
+  //       'removed' when a forward holds no key for this device
   async round(endpoint, keys, changed) {
     const etag = await db.kvGet('etag');
     const now = Date.now();
-    const sent = await db.getAll('outbox'); // markers covered by this round
     const res = await request(endpoint, keys.token, { method: 'GET', headers: etag ? { 'If-None-Match': etag } : {} });
 
-    let dirty;
     let remoteEtag = null;
+    let remote = [];
     if (res.status === 304) {
       remoteEtag = etag;
-      dirty = (await db.count('outbox')) > 0;
-    } else if (res.status === 404) {
-      dirty = (await db.getAll('records')).some((r) => !prunable(r, now));
     } else if (res.ok) {
       remoteEtag = res.headers.get('ETag');
-      const remote = await decrypt(keys.aes, new Uint8Array(await res.arrayBuffer()));
-      changed.push(...await db.applyRemote(remote.records || []));
-      // does this device know something the vault doesn't?
-      const inVault = new Map((remote.records || []).map((r) => [`${r.kind}\u0000${r.id}`, r.updatedAt]));
-      dirty = (await db.getAll('records')).some((r) => !prunable(r, now) && !(inVault.get(`${r.kind}\u0000${r.id}`) >= r.updatedAt));
-    } else {
+      const blob = await decrypt(keys.aes, new Uint8Array(await res.arrayBuffer()));
+      if (blob.forward) return this.follow(blob.data);
+      remote = blob.data.records || [];
+      changed.push(...await db.applyRemote(remote));
+    } else if (res.status !== 404) {
       throw await httpError(res);
+    }
+
+    // INFO: after the merge, so a name set on another device is kept
+    await this.touchDevice(now);
+    const sent = await db.getAll('outbox');
+
+    let dirty;
+    if (res.status === 304) {
+      dirty = sent.length > 0;
+    } else {
+      const inVault = new Map(remote.map((r) => [`${r.kind}\u0000${r.id}`, r.updatedAt]));
+      dirty = (await db.getAll('records')).some((r) => !prunable(r, now) && !(inVault.get(`${r.kind}\u0000${r.id}`) >= r.updatedAt));
     }
 
     if (!dirty) {
@@ -135,16 +145,15 @@ export class Sync extends EventTarget {
       return true;
     }
 
-    // Snapshot everything this device has (it now includes the vault's content).
     const records = await db.prune((r) => prunable(r, now));
-    const blob = await encrypt(keys.aes, { v: 1, at: now, records });
+    const blob = await encrypt(keys.aes, { v: 1, at: now, records }, MAGIC, AAD);
     const put = await request(endpoint, keys.token, {
       method: 'PUT',
       body: blob,
       headers: { 'Content-Type': 'application/octet-stream', ...(remoteEtag ? { 'If-Match': remoteEtag } : { 'If-None-Match': '*' }) },
     });
     if (put.status === 412) {
-      await db.kvDel('etag'); // force a full download
+      await db.kvDel('etag');
       return false;
     }
     if (!put.ok) throw await httpError(put);
@@ -154,16 +163,87 @@ export class Sync extends EventTarget {
   }
 
   async deriveKeys(key) {
-    if (this.keys?.forKey === key) return this.keys;
-    const base = await crypto.subtle.importKey('raw', b64uDecode(key), 'HKDF', false, ['deriveBits', 'deriveKey']);
-    const hkdf = (info) => ({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode(`newsreader-sync-v1 ${info}`) });
-    const token = b64uEncode(new Uint8Array(await crypto.subtle.deriveBits(hkdf('auth'), base, 256)));
-    const aes = await crypto.subtle.deriveKey(hkdf('enc'), base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-    this.keys = { forKey: key, token, aes };
+    if (this.keys?.forKey !== key) this.keys = await deriveVaultKeys(key);
     return this.keys;
   }
 
-  // ------------------------------------------------------------ vault handling
+  async follow(forward) {
+    const id = await db.kvGet('deviceId');
+    const own = (forward.envelopes || []).find((e) => e.id === id);
+    const pair = await db.kvGet('deviceKey');
+    const key = own && pair ? await unwrapKey(own, pair.priv) : null;
+    if (!key) return 'removed';
+    await db.kvSet('vaultKey', key);
+    await db.kvDel('etag');
+    await db.outboxAll();
+    return 'forwarded';
+  }
+
+  // INFO: new vault key → full snapshot to the new location → forward at the old location (If-Match, so no
+  //       change of another device is lost) → switch locally. A failed attempt leaves an orphan that expires.
+  async rotateKey() {
+    if (!navigator.onLine) throw Object.assign(new Error('offline'), { code: 'offline' });
+    while (this.running) await this.running.catch(() => {});
+    this.running = this.rotateOnce().finally(() => {
+      this.running = null;
+      if (this.again) {
+        this.again = false;
+        this.run();
+      }
+    });
+    try {
+      await this.running;
+      this.emitStatus('ok');
+    } catch (err) {
+      this.emitStatus('error', err.message, err.code || '');
+      throw err;
+    }
+  }
+
+  async rotateOnce() {
+    this.emitStatus('syncing');
+    const endpoint = await syncEndpoint();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const oldKey = await db.kvGet('vaultKey');
+      if (!oldKey) throw new Error('Not paired.');
+      const old = await this.deriveKeys(oldKey);
+      let done = false;
+      for (let round = 0; round < MAX_ROUNDS && !done; round++) {
+        done = await this.round(endpoint, old, []);
+        if (done === 'forwarded' || done === 'removed') throw Object.assign(new Error('The vault changed meanwhile – try again.'), { code: 'conflict' });
+      }
+      if (!done) continue;
+
+      const now = Date.now();
+      const newKey = randomKey();
+      const next = await deriveVaultKeys(newKey);
+      const holders = (await this.devices()).filter((d) => typeof d.data.pub === 'string');
+      const envelopes = await Promise.all(holders.map((d) => wrapKey(newKey, d.id, d.data.pub)));
+
+      const records = await db.prune((r) => prunable(r, now));
+      const created = await request(endpoint, next.token, {
+        method: 'PUT',
+        body: await encrypt(next.aes, { v: 1, at: now, records }, MAGIC, AAD),
+        headers: { 'Content-Type': 'application/octet-stream', 'If-None-Match': '*' },
+      });
+      if (!created.ok) throw await httpError(created);
+      const newEtag = created.headers.get('ETag') || (await created.json()).etag;
+
+      const moved = await request(endpoint, old.token, {
+        method: 'PUT',
+        body: await encrypt(old.aes, { v: 1, at: now, envelopes }, MAGIC_FORWARD, AAD_FORWARD),
+        headers: { 'Content-Type': 'application/octet-stream', 'If-Match': await db.kvGet('etag') },
+      });
+      if (moved.status === 412) continue;
+      if (!moved.ok) throw await httpError(moved);
+
+      await db.kvSet('vaultKey', newKey);
+      await db.kvSet('etag', newEtag);
+      this.keys = next;
+      return;
+    }
+    throw Object.assign(new Error('Too many concurrent changes – try again.'), { code: 'conflict' });
+  }
 
   async createVault() {
     await this.joinVault(randomKey());
@@ -173,17 +253,90 @@ export class Sync extends EventTarget {
     if (!isValidKey(key)) throw new Error('Invalid vault key.');
     await db.kvSet('vaultKey', key);
     await db.kvDel('etag');
-    await db.outboxAll(); // merge: everything local goes up, last write wins
+    await db.kvDel('deviceId');
+    await db.kvDel('deviceKey');
+    await db.outboxAll();
     return this.run();
   }
 
-  async leaveVault() {
+  // INFO: announce = remove this device from the list of the other devices first (best effort)
+  async leaveVault({ announce = true } = {}) {
+    const id = await db.kvGet('deviceId');
+    if (announce && id && navigator.onLine && await db.kvGet('vaultKey')) {
+      this.leaving = true;
+      try {
+        await this.removeDevice(id, { sync: false });
+        await this.run();
+      } finally {
+        this.leaving = false;
+      }
+    }
     await db.kvDel('vaultKey');
     await db.kvDel('etag');
+    await db.kvDel('deviceId');
+    await db.kvDel('deviceKey');
     await db.outboxClear();
     this.keys = null;
     await this.refreshPending();
     this.emitStatus('local');
+  }
+
+  // INFO: device list – records {kind:'device', id, data:{name, platform, since, seen, pub, r?}} inside the encrypted vault.
+  //       removeDevice() marks the record; revoke() also rotates the key so the removed device is locked out.
+  async devices() {
+    return (await db.getAll('records'))
+      .filter((r) => r.kind === 'device' && !r.data.r)
+      .sort((a, b) => (b.data.seen || 0) - (a.data.seen || 0));
+  }
+
+  async renameDevice(id, name) {
+    const cur = await db.get('records', ['device', id]);
+    const clean = String(name ?? '').trim().slice(0, DEVICE_NAME_MAX);
+    if (!cur || !clean) return;
+    await db.putLocal([{ ...cur, data: { ...cur.data, name: clean }, updatedAt: Date.now() }]);
+    this.schedule();
+  }
+
+  async removeDevice(id, { sync = true } = {}) {
+    const cur = await db.get('records', ['device', id]);
+    if (!cur) return;
+    await db.putLocal([{ ...cur, data: { ...cur.data, r: 1 }, updatedAt: Date.now() }]);
+    if (sync) this.schedule(0);
+  }
+
+  // WARNING: the removed device keeps whatever it already downloaded – only future changes are protected
+  async revoke(id) {
+    if (!navigator.onLine) throw Object.assign(new Error('offline'), { code: 'offline' });
+    await this.removeDevice(id, { sync: false });
+    await this.rotateKey();
+  }
+
+  async ownDeviceRemoved() {
+    const id = await db.kvGet('deviceId');
+    return !!id && !!(await db.get('records', ['device', id]))?.data?.r;
+  }
+
+  // INFO: creates this device's record (with its public key) on the first sync, refreshes "seen" at most hourly
+  async touchDevice(now) {
+    let id = await db.kvGet('deviceId');
+    if (!id) {
+      id = b64uEncode(crypto.getRandomValues(new Uint8Array(16)));
+      await db.kvSet('deviceId', id);
+    }
+    let pair = await db.kvGet('deviceKey');
+    if (!pair) {
+      // INFO: the private key is non-extractable – it can be used on this device, never exported
+      const kp = await crypto.subtle.generateKey(ECDH, false, ['deriveBits']);
+      pair = { priv: kp.privateKey, pub: b64uEncode(new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey))) };
+      await db.kvSet('deviceKey', pair);
+    }
+    const cur = await db.get('records', ['device', id]);
+    if (cur?.data?.r || (cur && cur.data.pub === pair.pub && now - (cur.data.seen || 0) < DEVICE_TOUCH_MS)) return;
+    const platform = describeDevice();
+    await db.putLocal([{
+      kind: 'device', id, updatedAt: now,
+      data: { name: cur?.data?.name || platform, platform, since: cur?.data?.since || now, seen: now, pub: pair.pub },
+    }]);
   }
 
   async wipeServer() {
@@ -195,23 +348,80 @@ export class Sync extends EventTarget {
   }
 }
 
-// ------------------------------------------------------------ records
-
-/** Deterministic on every device, so pruned records cannot be resurrected by an old device. */
+// INFO: deterministic on every device, so pruned records cannot be resurrected by an old device
 function prunable(r, now) {
   if (now - r.updatedAt < PRUNE_AFTER_MS) return false;
   if (r.kind === 'item') return r.data?.s === 'done' || r.data?.s === 'dismissed' || r.data?.s === 'new';
   if (r.kind === 'feed') return !!r.data?.d;
-  return false;
+  return r.kind === 'device';
 }
 
-// ------------------------------------------------------------ crypto
+function describeDevice() {
+  const ua = navigator.userAgent;
+  const os = /Android/.test(ua) ? 'Android'
+    : /iPhone/.test(ua) ? 'iPhone'
+    : /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'iPad'
+    : /Windows/.test(ua) ? 'Windows'
+    : /Macintosh|Mac OS X/.test(ua) ? 'macOS'
+    : /CrOS/.test(ua) ? 'ChromeOS'
+    : /Linux/.test(ua) ? 'Linux' : '';
+  const browser = /Edg\//.test(ua) ? 'Edge'
+    : /SamsungBrowser/.test(ua) ? 'Samsung Internet'
+    : /Firefox|FxiOS/.test(ua) ? 'Firefox'
+    : /OPR\//.test(ua) ? 'Opera'
+    : /Chrome|CriOS/.test(ua) ? 'Chrome'
+    : /Safari/.test(ua) ? 'Safari' : '';
+  return [os, browser].filter(Boolean).join(' · ') || 'Browser';
+}
 
 export function cryptoAvailable() {
   return !!(window.isSecureContext && crypto?.subtle);
 }
 
-async function encrypt(aes, obj) {
+async function deriveVaultKeys(key) {
+  const base = await crypto.subtle.importKey('raw', b64uDecode(key), 'HKDF', false, ['deriveBits', 'deriveKey']);
+  const hkdf = (info) => ({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode(`newsreader-sync-v1 ${info}`) });
+  const token = b64uEncode(new Uint8Array(await crypto.subtle.deriveBits(hkdf('auth'), base, 256)));
+  const aes = await crypto.subtle.deriveKey(hkdf('enc'), base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  return { forKey: key, token, aes };
+}
+
+// INFO: ephemeral-static ECDH per device; the device id is bound into HKDF info and AAD
+async function wrapSecret(shared, id) {
+  const base = await crypto.subtle.importKey('raw', shared, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode(`newsreader-sync-v1 wrap ${id}`) },
+    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'],
+  );
+}
+
+async function wrapKey(vaultKey, id, pub) {
+  const peer = await crypto.subtle.importKey('raw', b64uDecode(pub), ECDH, false, []);
+  const eph = await crypto.subtle.generateKey(ECDH, true, ['deriveBits']);
+  const aes = await wrapSecret(await crypto.subtle.deriveBits({ name: 'ECDH', public: peer }, eph.privateKey, 256), id);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(id) }, aes, b64uDecode(vaultKey));
+  return {
+    id,
+    epk: b64uEncode(new Uint8Array(await crypto.subtle.exportKey('raw', eph.publicKey))),
+    iv: b64uEncode(iv),
+    ct: b64uEncode(new Uint8Array(ct)),
+  };
+}
+
+async function unwrapKey(env, priv) {
+  try {
+    const epk = await crypto.subtle.importKey('raw', b64uDecode(env.epk), ECDH, false, []);
+    const aes = await wrapSecret(await crypto.subtle.deriveBits({ name: 'ECDH', public: epk }, priv, 256), env.id);
+    const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64uDecode(env.iv), additionalData: new TextEncoder().encode(env.id) }, aes, b64uDecode(env.ct));
+    const key = b64uEncode(new Uint8Array(raw));
+    return isValidKey(key) ? key : null;
+  } catch {
+    return null;
+  }
+}
+
+async function encrypt(aes, obj, magic, aad) {
   let plain = new TextEncoder().encode(JSON.stringify(obj));
   let flags = 0;
   if ('CompressionStream' in window) {
@@ -219,31 +429,32 @@ async function encrypt(aes, obj) {
     flags |= FLAG_GZIP;
   }
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: AAD }, aes, plain));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, aes, plain));
   const out = new Uint8Array(4 + 1 + 12 + ct.length);
-  out.set(MAGIC, 0);
+  out.set(magic, 0);
   out[4] = flags;
   out.set(iv, 5);
   out.set(ct, 17);
   return out;
 }
 
+// INFO: { forward: bool, data }
 async function decrypt(aes, buf) {
-  if (buf.length < 33 || MAGIC.some((b, i) => buf[i] !== b)) throw Object.assign(new Error('Unknown vault format on the server.'), { code: 'format' });
+  const is = (magic) => magic.every((b, i) => buf[i] === b);
+  const forward = is(MAGIC_FORWARD);
+  if (buf.length < 33 || (!forward && !is(MAGIC))) throw Object.assign(new Error('Unknown vault format on the server.'), { code: 'format' });
   const flags = buf[4];
   let plain;
   try {
-    plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(5, 17), additionalData: AAD }, aes, buf.slice(17)));
+    plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(5, 17), additionalData: forward ? AAD_FORWARD : AAD }, aes, buf.slice(17)));
   } catch {
     throw Object.assign(new Error('Vault could not be decrypted – wrong key or damaged data.'), { code: 'decrypt' });
   }
   if (flags & FLAG_GZIP) {
     plain = new Uint8Array(await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
   }
-  return JSON.parse(new TextDecoder().decode(plain));
+  return { forward, data: JSON.parse(new TextDecoder().decode(plain)) };
 }
-
-// ------------------------------------------------------------ helpers
 
 export async function serverBase() {
   const s = await db.kvGet('server');
@@ -251,7 +462,7 @@ export async function serverBase() {
 }
 
 export function defaultServer() {
-  // News is served from <server>/app/ → the server is one level up.
+  // INFO: News is served from <server>/app/
   return new URL('../', location.href).href;
 }
 
@@ -276,7 +487,7 @@ async function request(url, token, init) {
 
 async function httpError(res) {
   let body = null;
-  try { body = await res.json(); } catch { /* not JSON */ }
+  try { body = await res.json(); } catch { /* INFO: not JSON */ }
   const msg = body?.error?.message || `Sync server answered HTTP ${res.status}`;
   return Object.assign(new Error(msg), { status: res.status, code: body?.error?.code });
 }
@@ -290,7 +501,7 @@ function b64uDecode(str) {
   return Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), (c) => c.charCodeAt(0));
 }
 
-export function randomKey() {
+function randomKey() {
   return b64uEncode(crypto.getRandomValues(new Uint8Array(32)));
 }
 

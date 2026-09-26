@@ -1,14 +1,9 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Readable article content – for offline copies of "Later" items.
- *
- *   nr_fulltext()          feed content (content:encoded / Atom content) → clean HTML, if it is full text
- *   nr_extract_article()   article page → readable main content (Readability-style scoring)
- *   nr_sanitize_node()     whitelist sanitizer used by both: only structural tags, no attributes
- *                          except a[href] and img[src|alt], absolute http(s) URLs only
- */
+// INFO: readable article content for offline copies of "Later" items.
+//       Output HTML is rebuilt from scratch: whitelisted tags only, no attributes except
+//       a[href] (http/https/mailto) and img[src|alt] (absolute http/https).
 
 const NR_KEEP_TAGS = [
     'p' => 1, 'br' => 1, 'hr' => 1, 'h2' => 1, 'h3' => 1, 'h4' => 1, 'h5' => 1, 'h6' => 1,
@@ -19,26 +14,24 @@ const NR_KEEP_TAGS = [
     'table' => 1, 'thead' => 1, 'tbody' => 1, 'tfoot' => 1, 'tr' => 1, 'th' => 1, 'td' => 1, 'caption' => 1,
 ];
 
-/** Removed together with their content. Everything not listed here or in NR_KEEP_TAGS is unwrapped. */
+// INFO: removed with their content; tags in neither list are unwrapped (content kept)
 const NR_DROP_TAGS = [
     'script' => 1, 'style' => 1, 'noscript' => 1, 'template' => 1, 'iframe' => 1, 'frame' => 1, 'frameset' => 1,
     'object' => 1, 'embed' => 1, 'applet' => 1, 'form' => 1, 'input' => 1, 'button' => 1, 'select' => 1,
     'textarea' => 1, 'option' => 1, 'label' => 1, 'svg' => 1, 'math' => 1, 'canvas' => 1, 'video' => 1,
-    'audio' => 1, 'source' => 1, 'track' => 1, 'picture' => 0, 'map' => 1, 'link' => 1, 'meta' => 1,
+    'audio' => 1, 'source' => 1, 'track' => 1, 'map' => 1, 'link' => 1, 'meta' => 1,
     'base' => 1, 'head' => 1, 'title' => 1, 'nav' => 1, 'aside' => 1, 'dialog' => 1,
 ];
 
-/** Visible text length of an HTML string / node. */
 function nr_text_length(string $html): int
 {
     return mb_strlen(nr_clean_text(strip_tags(preg_replace('/<(script|style)\b.*?<\/\1>/is', '', $html) ?? '')));
 }
 
-/** Feed item HTML → sanitized full text, or null if it is only a teaser. */
+// INFO: feed item HTML → sanitized full text, or null if it is only a teaser
 function nr_fulltext(string $html, string $baseUrl): ?string
 {
     if (strlen($html) < NR_FULLTEXT_MIN_CHARS) return null;
-    // plain text feeds: keep paragraphs
     if (!preg_match('/<[a-z][^>]*>/i', $html)) {
         $html = '<p>' . implode('</p><p>', array_map('htmlspecialchars', preg_split('/\n\s*\n/', trim($html)) ?: [])) . '</p>';
     }
@@ -53,7 +46,7 @@ function nr_sanitize_html(string $html, string $baseUrl): string
     return $root ? nr_sanitize_node($root, $baseUrl) : '';
 }
 
-/** Sanitized inner HTML of $root (the root element itself is not included). */
+// INFO: sanitized inner HTML of $root (without the root element itself)
 function nr_sanitize_node(DOMNode $root, string $baseUrl): string
 {
     $out = new DOMDocument('1.0', 'UTF-8');
@@ -68,10 +61,9 @@ function nr_sanitize_node(DOMNode $root, string $baseUrl): string
     $html = trim(preg_replace('/(?:\s*<br>\s*){3,}/', '<br><br>', $html) ?? $html);
 
     if (strlen($html) > NR_ARTICLE_MAX_BYTES) {
-        // cut at a block boundary, never inside a tag
         $cut = strrpos(substr($html, 0, NR_ARTICLE_MAX_BYTES), '</p>');
         $html = $cut !== false ? substr($html, 0, $cut + 4) : '';
-        $html = nr_sanitize_html($html, $baseUrl); // re-balance tags
+        $html = nr_sanitize_html($html, $baseUrl);
     }
     return $html;
 }
@@ -113,8 +105,7 @@ function nr_clean_into(DOMNode $node, DOMNode $parent, DOMDocument $out, string 
     } elseif (isset(NR_KEEP_TAGS[$tag])) {
         $el = $out->createElement($tag);
     } else {
-        // unknown / layout element (div, span, section, …): keep the content, drop the element;
-        // block-level wrappers become a paragraph break so text does not run together
+        // INFO: layout wrappers are unwrapped; block-level ones leave a <br> so text does not run together
         $block = in_array($tag, ['div', 'section', 'article', 'main', 'header', 'footer', 'center'], true);
         foreach (iterator_to_array($node->childNodes) as $c) nr_clean_into($c, $parent, $out, $base, $depth + 1);
         if ($block && $parent->lastChild instanceof DOMText && trim($parent->lastChild->nodeValue ?? '') !== '') {
@@ -127,7 +118,7 @@ function nr_clean_into(DOMNode $node, DOMNode $parent, DOMDocument $out, string 
     foreach (iterator_to_array($node->childNodes) as $c) nr_clean_into($c, $el, $out, $base, $depth + 1);
 }
 
-/** Best image URL of an <img> (lazy-loading attributes, srcset); null for pixels/trackers. */
+// INFO: best URL of an <img> incl. lazy-loading attributes and srcset; null for pixels and trackers
 function nr_img_source(DOMElement $img, string $base): ?string
 {
     foreach (['width', 'height'] as $dim) {
@@ -142,7 +133,6 @@ function nr_img_source(DOMElement $img, string $base): ?string
     foreach (['data-srcset', 'srcset'] as $a) {
         $set = trim($img->getAttribute($a));
         if ($set !== '') {
-            // largest candidate of "url 400w, url 800w"
             $best = '';
             $bestW = -1;
             foreach (preg_split('/,\s+/', $set) ?: [] as $part) {
@@ -160,7 +150,6 @@ function nr_img_source(DOMElement $img, string $base): ?string
     return null;
 }
 
-/** Remove elements without text and without images (empty <p>, leftover wrappers). */
 function nr_prune_empty(DOMNode $node): void
 {
     foreach (iterator_to_array($node->childNodes) as $c) {
@@ -172,21 +161,12 @@ function nr_prune_empty(DOMNode $node): void
             $node->removeChild($c);
         }
     }
-    // no leading / trailing <br>
     while ($node->firstChild instanceof DOMElement && $node->firstChild->localName === 'br') $node->removeChild($node->firstChild);
     while ($node->lastChild instanceof DOMElement && $node->lastChild->localName === 'br') $node->removeChild($node->lastChild);
 }
 
-// =====================================================================
-//  Article page → readable content
-// =====================================================================
-
 const NR_NOISE = '/(?:^|[\s_-])(?:comment|comments|disqus|share|sharing|social|related|recommend|promo|newsletter|advert|ads?|sponsor|cookie|consent|subscribe|paywall-?prompt|sidebar|breadcrumbs?|popup|modal|overlay|footer|masthead|menu|navigation|navbar|toolbar|tags?|author-?bio|signup|outbrain|taboola)(?:$|[\s_-])/i';
 
-/**
- * @return array{title:?string, byline:?string, siteName:?string, lang:?string, publishedAt:?string,
- *               image:?string, excerpt:?string, content:string, partial:bool}
- */
 function nr_extract_article(string $html, string $url): array
 {
     $dom = nr_load_html($html);
@@ -199,7 +179,6 @@ function nr_extract_article(string $html, string $url): array
         return null;
     };
 
-    // ---- metadata (meta tags, JSON-LD)
     $ld = nr_article_jsonld($xp);
     $h1 = $xp->query('//h1')->item(0);
     $docTitle = $dom->getElementsByTagName('title')->item(0);
@@ -214,16 +193,13 @@ function nr_extract_article(string $html, string $url): array
     $htmlEl = $dom->getElementsByTagName('html')->item(0);
     $lang = $htmlEl instanceof DOMElement && preg_match('/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/', $htmlEl->getAttribute('lang')) ? $htmlEl->getAttribute('lang') : null;
 
-    // ---- remove noise before scoring
     foreach (iterator_to_array($xp->query('//script|//style|//noscript|//template|//iframe|//form|//nav|//aside|//footer|//svg|//button|//dialog|//*[@role="navigation" or @role="banner" or @role="contentinfo" or @role="complementary" or @role="dialog" or @aria-hidden="true" or @hidden]')) as $n) {
         $n->parentNode?->removeChild($n);
     }
-    // class/id noise ("related-posts", "share-bar", "comments" …) – but never a wrapper that holds
-    // most of the page text (e.g. "site-content has-sidebar")
+    // INFO: class/id noise is removed, but never a wrapper that holds most of the page text ("site-content has-sidebar")
     $bodyEl = $dom->getElementsByTagName('body')->item(0);
     $bodyLen = max(1, $bodyEl ? mb_strlen(trim($bodyEl->textContent)) : 1);
     foreach (iterator_to_array($xp->query('//*[@class or @id]')) as $n) {
-        /** @var DOMElement $n */
         if (!$n->parentNode || in_array($n->localName, ['html', 'body', 'article', 'main'], true)) continue;
         $sig = $n->getAttribute('class') . ' ' . $n->getAttribute('id');
         if (preg_match(NR_NOISE, $sig) && mb_strlen(trim($n->textContent)) < 0.5 * $bodyLen) {
@@ -231,7 +207,6 @@ function nr_extract_article(string $html, string $url): array
         }
     }
 
-    // ---- pick the main content node
     $best = null;
     foreach (['//*[@itemprop="articleBody"]', '//article[.//p]', '//main[.//p]', '//*[@role="main"][.//p]'] as $q) {
         foreach ($xp->query($q) as $n) {
@@ -240,19 +215,18 @@ function nr_extract_article(string $html, string $url): array
         if ($best !== null) break;
     }
     $scored = nr_best_scored_node($xp);
-    // an <article>/<main> that is much larger than the densest text block usually contains teasers
+    // INFO: an <article>/<main> much larger than the densest text block usually contains teasers
     if ($scored !== null && ($best === null || !nr_contains($best, $scored) || mb_strlen($best->textContent) > 3 * mb_strlen($scored->textContent))) {
         if ($best === null || mb_strlen(trim($scored->textContent)) > 300) $best = $scored;
     }
 
     $content = '';
     if ($best !== null) {
-        // the headline is shown separately
         foreach (iterator_to_array($xp->query('.//h1', $best)) as $n) $n->parentNode?->removeChild($n);
         $content = nr_sanitize_node($best, $url);
     }
 
-    // JSON-LD articleBody helps on script-rendered pages (text only, but complete)
+    // INFO: JSON-LD articleBody rescues script-rendered pages (text only, but complete)
     $partial = false;
     $len = nr_text_length($content);
     if (!empty($ld['articleBody']) && mb_strlen($ld['articleBody']) > max(400, (int)($len * 1.5))) {
@@ -261,7 +235,6 @@ function nr_extract_article(string $html, string $url): array
         $len = nr_text_length($content);
     }
     if ($len < 400) {
-        // paywall, script-only page or teaser: whatever there is, plus the description
         $partial = true;
         if ($len < 80) $content = $excerpt !== null ? '<p>' . htmlspecialchars($excerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</p>' : '';
     }
@@ -279,7 +252,8 @@ function nr_extract_article(string $html, string $url): array
     ];
 }
 
-/** Readability-style scoring: paragraphs vote for their parent (full) and grandparent (half). */
+// INFO: Readability-style scoring – paragraphs vote for their parent (full) and grandparent (half);
+//       link-heavy blocks (teaser lists, tag clouds) lose
 function nr_best_scored_node(DOMXPath $xp): ?DOMElement
 {
     $scores = new SplObjectStorage();
@@ -298,7 +272,6 @@ function nr_best_scored_node(DOMXPath $xp): ?DOMElement
     $best = null;
     $bestScore = 0.0;
     foreach ($scores as $node) {
-        // link-heavy blocks (teaser lists, tag clouds) lose
         $text = mb_strlen($node->textContent) ?: 1;
         $links = 0;
         foreach ($node->getElementsByTagName('a') as $a) $links += mb_strlen($a->textContent);
@@ -314,14 +287,14 @@ function nr_contains(DOMNode $outer, DOMNode $inner): bool
     return false;
 }
 
-/** headline, author, datePublished, image, articleBody of the first Article-like JSON-LD object. */
 function nr_article_jsonld(DOMXPath $xp): array
 {
     foreach ($xp->query('//script[@type="application/ld+json"]') as $s) {
         $data = json_decode(trim($s->textContent), true);
         if (!is_array($data)) continue;
         $stack = [$data];
-        while ($stack) {
+        $visited = 0;
+        while ($stack && ++$visited <= 10_000) {
             $o = array_pop($stack);
             if (!is_array($o)) continue;
             if (isset($o['@graph']) && is_array($o['@graph'])) array_push($stack, ...$o['@graph']);
@@ -344,91 +317,51 @@ function nr_article_jsonld(DOMXPath $xp): array
     return [];
 }
 
-// =====================================================================
-//  GET /api/article?url=<article url>[&feed=<feed url>&id=<entry id>]
-// =====================================================================
-
-/**
- * 1. feed + id given and the cached feed carries the full text → served from there
- *    (no upstream request at all, no rate limit)
- * 2. otherwise the article page is fetched once (SSRF-checked, rate limited),
- *    reduced to its readable content and cached for NR_ARTICLE_TTL
- */
+// INFO: GET /api/article?url=<article>[&feed=<feed>&id=<entry id>]
+//       1. full text from the cached feed – no upstream request, no rate limit
+//       2. otherwise the page is fetched once (SSRF-checked, rate limited), extracted and cached
 function nr_article_handle(): never
 {
-    header('Content-Type: application/json; charset=utf-8');
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type');
-    header('X-Content-Type-Options: nosniff');
-    header('X-Robots-Tag: noindex');
+    nr_api_headers('GET');
 
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     if ($method === 'OPTIONS') { http_response_code(204); exit; }
-    if ($method !== 'GET') nr_respond(['error' => ['code' => 'METHOD_NOT_ALLOWED', 'message' => 'Use GET.']], 405);
+    if ($method !== 'GET') nr_error('METHOD_NOT_ALLOWED', 'Use GET.', 405);
 
     $url = trim((string)($_GET['url'] ?? ''));
     if ($url === '') {
-        nr_respond(['service' => 'article', 'version' => NR_VERSION,
+        nr_json(['service' => 'article', 'version' => NR_VERSION,
             'usage' => 'GET /api/article?url=<article url>[&feed=<feed url>&id=<entry id>]'], 400);
     }
-    if (strlen($url) > 2048 || !filter_var($url, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $url)) {
-        nr_respond(['error' => ['code' => 'INVALID_URL', 'message' => 'Provide a valid HTTP(S) URL in the "url" parameter.']], 400);
+    if (!nr_is_http_url($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+        nr_error('INVALID_URL', 'Provide a valid HTTP(S) URL in the "url" parameter.', 400);
     }
 
-    // ---- 1. full text from the cached feed
     $feed = trim((string)($_GET['feed'] ?? ''));
-    $id = strtolower(trim((string)($_GET['id'] ?? '')));
-    if ($feed !== '' && strlen($feed) <= 2048 && filter_var($feed, FILTER_VALIDATE_URL)) {
-        $cachedFeed = nr_cache_read($feed);
-        $norm = nr_normalize_url($url);
-        foreach ($cachedFeed['data']['entries'] ?? [] as $e) {
-            if (empty($e['content'])) continue;
-            if (($id !== '' && hash_equals((string)$e['id'], $id)) || nr_normalize_url((string)$e['url']) === $norm) {
-                header('X-Article-Source: feed');
-                header('Cache-Control: public, max-age=3600');
-                nr_respond(['article' => [
-                    'url' => $e['url'], 'title' => $e['title'] ?: null, 'byline' => null, 'siteName' => $cachedFeed['data']['source']['title'] ?? null,
-                    'lang' => null, 'publishedAt' => $e['publishedAt'] ?? null, 'image' => $e['image'] ?? null,
-                    'content' => $e['content'], 'words' => nr_word_count($e['content']), 'source' => 'feed', 'partial' => false,
-                ], 'meta' => ['cached' => true, 'version' => NR_VERSION]]);
-            }
-        }
+    if ($feed !== '' && nr_is_http_url($feed)) {
+        nr_article_from_feed($url, $feed, strtolower(trim((string)($_GET['id'] ?? ''))));
     }
 
-    // ---- 2. extracted article page
     if (($invalid = nr_validate_target($url)) !== null) {
-        nr_respond(['error' => ['code' => $invalid['code'], 'message' => $invalid['message']]], 400);
+        nr_error($invalid['code'], $invalid['message'], 400);
     }
-
-    $serve = function (array $cached, string $state): never {
-        $data = $cached['data'];
-        header('X-Article-Source: page');
-        header('X-Collector-Cache: ' . $state);
-        if (isset($data['error'])) {
-            nr_respond(['error' => $data['error'], 'meta' => ['cached' => true]], 422);
-        }
-        header('Cache-Control: public, max-age=' . max(0, NR_ARTICLE_TTL - $cached['age']));
-        nr_respond(['article' => $data['article'], 'meta' => [
-            'cached' => $state !== 'MISS', 'cachedAt' => gmdate('Y-m-d\TH:i:s\Z', (int)$data['cachedAt']), 'version' => NR_VERSION,
-        ]]);
-    };
 
     $cached = nr_cache_read($url, 'article');
     if ($cached !== null && $cached['age'] < (isset($cached['data']['error']) ? NR_ARTICLE_ERROR_TTL : NR_ARTICLE_TTL)) {
-        $serve($cached, 'HIT');
+        nr_article_serve($cached, 'HIT');
     }
+    $usable = $cached !== null && !isset($cached['data']['error']);
 
     if ($wait = nr_rate_hit('article', NR_RATE_ARTICLE_MISS)) {
-        if ($cached !== null && !isset($cached['data']['error'])) $serve($cached, 'STALE');
+        if ($usable) nr_article_serve($cached, 'STALE');
         nr_rate_reject($wait);
     }
 
-    $lock = nr_lock($url, true, 'article'); // one fetch per URL; others wait and read the cache
+    $lock = nr_lock($url, true, 'article');
     $fresh = nr_cache_read($url, 'article');
     if ($fresh !== null && $fresh['age'] < 60) {
         nr_unlock($lock);
-        $serve($fresh, 'HIT');
+        nr_article_serve($fresh, 'HIT');
     }
 
     $page = nr_fetch($url, NR_ACCEPT_HTML);
@@ -436,23 +369,17 @@ function nr_article_handle(): never
         $page = nr_err('NOT_AN_ARTICLE', 'The URL does not point to an HTML page.');
     }
     if (!$page['ok']) {
-        $error = ['code' => $page['code'], 'message' => $page['message']];
-        if (isset($page['status'])) $error['upstreamStatus'] = $page['status'];
-        if ($cached !== null && !isset($cached['data']['error'])) {
+        if ($usable) {
             nr_unlock($lock);
-            $serve($cached, 'STALE');
+            nr_article_serve($cached, 'STALE');
         }
-        nr_cache_write($url, ['error' => $error], 'article');
-        nr_unlock($lock);
-        nr_respond(['error' => $error, 'meta' => ['cached' => false]], 422);
+        nr_article_fail($url, $lock, ['code' => $page['code'], 'message' => $page['message']]
+            + (isset($page['status']) ? ['upstreamStatus' => $page['status']] : []));
     }
 
     $a = nr_extract_article($page['body'], $page['finalUrl']);
     if ($a['content'] === '') {
-        $error = ['code' => 'NO_CONTENT', 'message' => 'No readable content found on the page.'];
-        nr_cache_write($url, ['error' => $error], 'article');
-        nr_unlock($lock);
-        nr_respond(['error' => $error, 'meta' => ['cached' => false]], 422);
+        nr_article_fail($url, $lock, ['code' => 'NO_CONTENT', 'message' => 'No readable content found on the page.']);
     }
 
     $article = [
@@ -462,7 +389,47 @@ function nr_article_handle(): never
     ];
     nr_cache_write($url, ['article' => $article], 'article');
     nr_unlock($lock);
-    $serve(nr_cache_read($url, 'article') ?? ['data' => ['article' => $article, 'cachedAt' => time()], 'age' => 0], 'MISS');
+    nr_article_serve(['data' => ['article' => $article, 'cachedAt' => time()], 'age' => 0], 'MISS');
+}
+
+function nr_article_from_feed(string $url, string $feed, string $id): void
+{
+    $cachedFeed = nr_cache_read($feed);
+    $norm = nr_normalize_url($url);
+    foreach ($cachedFeed['data']['entries'] ?? [] as $e) {
+        if (empty($e['content'])) continue;
+        if (($id !== '' && hash_equals((string)$e['id'], $id)) || nr_normalize_url((string)$e['url']) === $norm) {
+            header('X-Article-Source: feed');
+            header('Cache-Control: public, max-age=3600');
+            nr_json(['article' => [
+                'url' => $e['url'], 'title' => $e['title'] ?: null, 'byline' => null, 'siteName' => $cachedFeed['data']['source']['title'] ?? null,
+                'lang' => null, 'publishedAt' => $e['publishedAt'] ?? null, 'image' => $e['image'] ?? null,
+                'content' => $e['content'], 'words' => nr_word_count($e['content']), 'source' => 'feed', 'partial' => false,
+            ], 'meta' => ['cached' => true, 'version' => NR_VERSION]]);
+        }
+    }
+}
+
+function nr_article_serve(array $cached, string $state): never
+{
+    $data = $cached['data'];
+    header('X-Article-Source: page');
+    header('X-Collector-Cache: ' . $state);
+    if (isset($data['error'])) {
+        nr_json(['error' => $data['error'], 'meta' => ['cached' => true]], 422);
+    }
+    header('Cache-Control: public, max-age=' . max(0, NR_ARTICLE_TTL - $cached['age']));
+    nr_json(['article' => $data['article'], 'meta' => [
+        'cached' => $state !== 'MISS', 'cachedAt' => nr_iso((int)$data['cachedAt']), 'version' => NR_VERSION,
+    ]]);
+}
+
+// INFO: failures are cached briefly to protect the source from repeated fetches
+function nr_article_fail(string $url, $lock, array $error): never
+{
+    nr_cache_write($url, ['error' => $error], 'article');
+    nr_unlock($lock);
+    nr_json(['error' => $error, 'meta' => ['cached' => false]], 422);
 }
 
 function nr_word_count(string $html): int

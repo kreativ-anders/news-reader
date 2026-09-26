@@ -1,11 +1,6 @@
-// News Reader – language & theme preferences, shared by the site (/) and the app (/app/).
-//
-// Translations: one JSON file per language with nested keys, English is the source.
-//   <base>/en.json   complete – every key exists here
-//   <base>/de.json   partial is fine – missing keys fall back to English per key
-// Placeholders: "{n} new" → t('inbox.count', { n: 3 }).
-// Plurals: keys "x_one" / "x_other" are picked via Intl.PluralRules when vars.n is given.
-// Preferences live in localStorage (same origin → site and app share them).
+// INFO: shared by the site (/) and the app (/app/). en.json is complete, other languages fall back per key.
+//       Placeholders "{n}"; plurals via "x_one" / "x_other" when vars.n is a number.
+// WARNING: t() does not escape placeholder values – escape untrusted values before passing them in.
 
 export const LANGS = { en: 'English', de: 'Deutsch', fr: 'Français', it: 'Italiano', es: 'Español' };
 export const THEMES = ['auto', 'light', 'dark'];
@@ -15,12 +10,9 @@ const LS_THEME = 'nr.theme';
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* private mode */ } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* INFO: storage blocked */ } },
 };
 
-// ------------------------------------------------------------ language
-
-/** Saved choice → browser languages → English. */
 export function getLang() {
   const saved = store.get(LS_LANG);
   if (saved && LANGS[saved]) return saved;
@@ -51,10 +43,6 @@ function merge(base, over) {
   return out;
 }
 
-/**
- * Load English + the requested language (merged, English fills the gaps).
- * @returns {Promise<(key:string, vars?:object) => string>}  t() with .lang
- */
 export async function loadI18n(baseUrl, lang = getLang()) {
   const base = String(baseUrl).replace(/\/?$/, '/');
   const en = await loadJson(base + 'en.json');
@@ -72,11 +60,7 @@ export async function loadI18n(baseUrl, lang = getLang()) {
   return t;
 }
 
-/**
- * Translate static markup:
- *   data-i18n="key"             → innerHTML (translations are our own, trusted files)
- *   data-i18n-attr="attr:key;…" → attributes (aria-label, title, placeholder, content …)
- */
+// WARNING: data-i18n sets innerHTML – translation files must stay trusted, first-party content
 export function applyI18n(t, root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => {
     const v = t(el.dataset.i18n);
@@ -91,8 +75,6 @@ export function applyI18n(t, root = document) {
   });
   if (root === document) document.documentElement.lang = t.lang;
 }
-
-// ------------------------------------------------------------ theme
 
 export function getTheme() {
   const t = store.get(LS_THEME);

@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Fixture JSON-LD</title>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"BlogPosting","headline":"JSON-LD post one","url":"/jsonld/post-one","datePublished":"{{iso:1}}","description":"One","image":{"@type":"ImageObject","url":"https://images.example.org/one.jpg"}},
+ {"@type":"NewsArticle","headline":"JSON-LD post two","url":"/jsonld/post-two","datePublished":"{{iso:2}}"},
+ {"@type":"Article","headline":"JSON-LD post three","mainEntityOfPage":{"@id":"/jsonld/post-three"},"datePublished":"{{iso:3}}","author":{"@type":"Article","headline":"author is skipped","url":"/x"}}
+]}
+</script></head>
+<body><h1>JSON-LD listing</h1></body></html>

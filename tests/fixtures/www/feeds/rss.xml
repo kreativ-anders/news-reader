@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Fixture Blog</title>
+    <link>{{base}}/blog/</link>
+    <description>RSS 2.0 fixture</description>
+    <item>
+      <title>Second post</title>
+      <link>{{base}}/article/second.html</link>
+      <guid isPermaLink="false">fixture-rss-2</guid>
+      <pubDate>{{date:2}}</pubDate>
+      <description>&lt;p&gt;Teaser of the &lt;b&gt;second&lt;/b&gt; post.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Newest post with full text</title>
+      <link>{{base}}/article/full.html</link>
+      <guid isPermaLink="false">fixture-rss-1</guid>
+      <pubDate>{{date:0.5}}</pubDate>
+      <description>Short teaser.</description>
+      <content:encoded><![CDATA[<h2>Full text</h2><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><p>This is the full text of the long article. It is delivered inside content:encoded, so the Collector keeps it in its cache and the article endpoint can serve it without contacting the source again, which protects the source and works offline, too.</p><script>alert('xss')</script><img src="{{base}}/img.svg" onerror="alert(1)">]]></content:encoded>
+      <media:content url="https://images.example.org/newest.jpg" medium="image"/>
+    </item>
+    <item>
+      <title>Relative link post</title>
+      <link>/article/relative.html</link>
+      <guid isPermaLink="false">fixture-rss-3</guid>
+      <pubDate>{{date:3}}</pubDate>
+    </item>
+    <item>
+      <title>Duplicate of second post</title>
+      <link>{{base}}/article/second.html</link>
+      <pubDate>{{date:4}}</pubDate>
+    </item>
+    <item>
+      <title>Oldest post</title>
+      <link>{{base}}/article/oldest.html</link>
+      <pubDate>{{date:5}}</pubDate>
+    </item>
+    <item>
+      <title>Item without link is skipped</title>
+      <pubDate>{{date:1}}</pubDate>
+    </item>
+  </channel>
+</rss>

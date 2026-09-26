@@ -3,3 +3,7 @@
 /var/sync/
 /var/rate/
 /src/feed-rules.local.php
+# test tooling
+/node_modules/
+/test-results/
+/playwright-report/
