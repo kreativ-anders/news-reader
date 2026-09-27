@@ -1,5 +1,8 @@
 // News boots, every view renders, languages and themes work – without a single JS error.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test, expect, API } from './fixtures.mjs';
+import { startApi } from '../support/servers.mjs';
 
 test.describe('boot', () => {
   test('empty app: every view and the settings render @mobile', async ({ app, page }) => {
@@ -46,6 +49,30 @@ test.describe('boot', () => {
     await expect(page.locator('#view')).not.toBeEmpty();
     await expect(page.locator('.nav [data-view="inbox"]')).toBeVisible();
     await context.setOffline(false);
+  });
+
+  // INFO: own server – changing sw.js on the shared one would hand every other test an update
+  test('a new version found on return offers a reload (toast and settings)', async ({ page }) => {
+    const own = await startApi('lab');
+    try {
+      await page.goto(own.url + '/app/#settings');
+      await page.evaluate(() => navigator.serviceWorker.ready);
+      await page.reload();
+      await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+      await expect(page.locator('[data-reload]')).toHaveCount(0);
+      // INFO: lets the browser's own check after the reload finish first, so only the app's check can find the change
+      await page.waitForTimeout(2000);
+      const sw = join(own.dir, 'app/sw.js');
+      writeFileSync(sw, readFileSync(sw, 'utf8').replace(/const VERSION = '[^']+'/, "const VERSION = 'news-next'"));
+      await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await expect(page.locator('#toast')).toContainText('A new version of News is ready');
+      await expect(page.locator('[data-reload]')).toBeVisible();
+      await page.locator('#toast button').click();
+      await expect(page.locator('#view h1')).toBeVisible();
+      await expect(page.locator('[data-reload]')).toHaveCount(0);
+    } finally {
+      await own.stop();
+    }
   });
 });
 

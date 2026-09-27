@@ -165,7 +165,7 @@
     "how_install": "How do I install News?",
     "how_install_text": "Right from your browser – no app store, no account. In Chrome, Edge or Samsung Internet, use the “Install News” button on this page. On iPhone and iPad, open News in Safari, tap Share and choose Add to Home Screen. On a Mac, open News in Safari and choose File › Add to Dock. Installed, News gets its own icon and window and works offline.",
     "how_update": "How do I update News?",
-    "how_update_text": "You don’t have to – News is a web app and updates itself. Whenever you open it, it quietly checks for a new version and uses it from the next start. Want it right away? Close News completely and open it again. Under Settings, right below the heading, you can see which version you have.",
+    "how_update_text": "You don’t have to – News is a web app and updates itself. Whenever you open it or switch back to it, it quietly checks for a new version. When one is ready, News tells you: tap Reload and you are up to date. Under Settings, right below the heading, you can see which version you have.",
     "how_is_it_different": "How is it different from other feed readers?",
     "no_account_no_ads": "No account, no ads, no tracking and no algorithm deciding what you see. Your reading progress lives on your devices, sync is end-to-end encrypted, and you can run the whole thing on your own server.",
     "does_news_use_ai": "Does News use AI?",

@@ -51,6 +51,8 @@
     "refresh_failed_other": "{n} flux n’ont pas pu être actualisés",
     "retry_later_one": "{n} flux sera vérifié à nouveau dans quelques minutes",
     "retry_later_other": "{n} flux seront vérifiés à nouveau dans quelques minutes",
+    "update_ready": "Une nouvelle version de News est prête",
+    "reload": "Recharger",
     "link_copied": "Lien d’association copié",
     "server_deleted": "Copie serveur supprimée",
     "server_saved": "Serveur enregistré",
@@ -193,6 +195,7 @@
   "settings": {
     "title": "Réglages",
     "subtitle": "News {version} · vos données restent sur vos appareils – le serveur ne voit jamais que des données chiffrées.",
+    "update_reload": "Nouvelle version prête – recharger",
     "privacy": "Confidentialité",
     "imprint": "Mentions légales",
     "look_title": "Langue et apparence",

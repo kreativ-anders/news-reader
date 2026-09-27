@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.5';
+const VERSION = '0.7.6';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -862,7 +862,7 @@ async function renderSettings() {
   const local = t('settings.local_text', {
     feeds: t('settings.local_feeds', { n: liveFeeds().length }), items: t('settings.local_items', { n: S.items.size }), entries: t('settings.local_entries', { n: S.entries.size }),
   });
-  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p><p class="legal"><a href="${site}privacy.html">${t('settings.privacy')}</a> · <a href="${site}imprint.html">${t('settings.imprint')}</a></p></div></div>
+  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p>${S.updateReady ? `<div class="row"><button class="btn btn-ghost" type="button" data-reload>${t('settings.update_reload')}</button></div>` : ''}<p class="legal"><a href="${site}privacy.html">${t('settings.privacy')}</a> · <a href="${site}imprint.html">${t('settings.imprint')}</a></p></div></div>
     <section class="panel">
       <h2>${t('settings.look_title')}</h2>
       <div class="grid2">
@@ -1199,6 +1199,7 @@ document.addEventListener('click', async (ev) => {
     return cardsInView()[first]?.focus({ preventScroll: true });
   }
   if (el.closest('[data-refresh]')) return refreshAll(true);
+  if (el.closest('[data-reload]')) return location.reload();
 
   const feedBtn = el.closest('[data-feed-act]');
   if (feedBtn) return feedAction(feedBtn.dataset.feedAct, feedBtn.closest('[data-feed]').dataset.feed);
@@ -1754,13 +1755,26 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   flushOpened();
   sync.run();
+  checkUpdate();
   if (Date.now() - S.lastRefresh > AUTO_REFRESH_MS) refreshAll();
   else renderSoft();
 });
 setInterval(() => { if (document.visibilityState === 'visible') sync.run(); }, 5 * 60 * 1000);
 
+// INFO: iOS resumes an installed app without reloading it, so the browser would only look for a new version on a
+//       cold start – the app asks on every return. The new worker takes over at once (skipWaiting + claim) with the
+//       new shell cached; the running page keeps the old code until the user reloads.
+let swReg = null;
+const checkUpdate = () => swReg?.update().catch(() => {});
 if ('serviceWorker' in navigator && window.isSecureContext) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || S.updateReady) return;
+    S.updateReady = true;
+    showToast(t('toast.update_ready'), () => location.reload(), t('toast.reload'));
+    if (S.view === 'settings') renderSoft();
+  });
+  navigator.serviceWorker.register('sw.js').then((r) => { swReg = r; }, () => {});
 }
 
 // INFO: one hint per device on touch screens – swiping is otherwise invisible

@@ -51,6 +51,8 @@
     "refresh_failed_other": "No se pudieron actualizar {n} feeds",
     "retry_later_one": "{n} feed se volverá a comprobar en unos minutos",
     "retry_later_other": "{n} feeds se volverán a comprobar en unos minutos",
+    "update_ready": "Hay una nueva versión de News lista",
+    "reload": "Recargar",
     "link_copied": "Enlace de vinculación copiado",
     "server_deleted": "Copia del servidor eliminada",
     "server_saved": "Servidor guardado",
@@ -193,6 +195,7 @@
   "settings": {
     "title": "Ajustes",
     "subtitle": "News {version} · tus datos se quedan en tus dispositivos – el servidor solo ve datos cifrados.",
+    "update_reload": "Nueva versión lista – recargar",
     "privacy": "Privacidad",
     "imprint": "Aviso legal",
     "look_title": "Idioma y apariencia",

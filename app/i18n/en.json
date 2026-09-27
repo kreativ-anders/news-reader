@@ -51,6 +51,8 @@
     "refresh_failed_other": "{n} feeds couldn’t be refreshed",
     "retry_later_one": "{n} feed will be checked again in a few minutes",
     "retry_later_other": "{n} feeds will be checked again in a few minutes",
+    "update_ready": "A new version of News is ready",
+    "reload": "Reload",
     "link_copied": "Pairing link copied",
     "server_deleted": "Server copy deleted",
     "server_saved": "Server saved",
@@ -193,6 +195,7 @@
   "settings": {
     "title": "Settings",
     "subtitle": "News {version} · your data stays on your devices – the server only ever sees encrypted data.",
+    "update_reload": "New version ready – reload",
     "privacy": "Privacy",
     "imprint": "Imprint",
     "look_title": "Language &amp; appearance",

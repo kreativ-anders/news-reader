@@ -67,7 +67,7 @@ php tools/build-i18n.php --site=https://news-reader.app/
 It writes the English text from `i18n/en.json` into the site pages, generates `<lang>/<page>`, refreshes `hreflang`, canonical, FAQ structured data and `sitemap.xml` (index/privacy/imprint per language + `app/` + `docs/api/`; `thanks.html` is `noindex`). Links starting with `./` stay in the page's language, other relative links point to the root. CLI only. Never edit `de/ fr/ it/ es/` by hand.
 
 - After changing an inline `<script>` of a site page: recompute the CSP hashes in `nginx.conf.example` / `wharf.conf.example` (command in the config comment). After changing the inline script of `app/index.html`: update the hash in its `<meta>` CSP.
-- After changing app files: bump `VERSION` in `app/js/app.js` **and** `app/sw.js` (the service worker caches the shell).
+- After changing app files: bump `VERSION` in `app/js/app.js` **and** `app/sw.js` (the service worker caches the shell). Installed apps look for a new `sw.js` on every start and every return to the app (iOS only resumes a paused app); the new worker takes over at once and the app offers *Reload* (toast and Settings).
 - After changing the cache entry format: bump `NR_CACHE_SCHEMA`.
 
 ## App (`app/`)

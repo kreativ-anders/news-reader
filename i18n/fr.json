@@ -165,7 +165,7 @@
     "how_install": "Comment installer News ?",
     "how_install_text": "Directement depuis votre navigateur – pas d’App Store, pas de compte. Dans Chrome, Edge ou Samsung Internet, utilisez le bouton « Installer News » sur cette page. Sur iPhone et iPad, ouvrez News dans Safari, touchez Partager et choisissez Sur l’écran d’accueil. Sur Mac, ouvrez News dans Safari et choisissez Fichier › Ajouter au Dock. Une fois installée, News a sa propre icône et sa propre fenêtre et fonctionne hors ligne.",
     "how_update": "Comment mettre à jour News ?",
-    "how_update_text": "Vous n’avez rien à faire : News est une application web qui se met à jour toute seule. À chaque ouverture, elle vérifie discrètement s’il existe une nouvelle version et l’utilise dès le démarrage suivant. Vous la voulez tout de suite ? Fermez complètement News puis rouvrez-la. Dans les Réglages, juste sous le titre, vous voyez quelle version vous utilisez.",
+    "how_update_text": "Vous n’avez rien à faire : News est une application web qui se met à jour toute seule. Chaque fois que vous l’ouvrez ou y revenez, elle vérifie discrètement s’il existe une nouvelle version. Quand elle est prête, News vous prévient : touchez Recharger et vous êtes à jour. Dans les Réglages, juste sous le titre, vous voyez quelle version vous utilisez.",
     "how_is_it_different": "Quelle différence avec les autres lecteurs de flux ?",
     "no_account_no_ads": "Pas de compte, pas de pub, pas de pistage et pas d’algorithme qui décide de ce que vous voyez. Votre progression de lecture reste sur vos appareils, la synchro est chiffrée de bout en bout, et vous pouvez tout héberger sur votre propre serveur.",
     "does_news_use_ai": "News utilise-t-il l’IA ?",
