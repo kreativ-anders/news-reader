@@ -75,7 +75,7 @@
     "unfollow_title": "Unfollow this feed?",
     "unfollow_body": "<strong>{title}</strong> disappears from all your devices. Posts you saved for later stay in your list.",
     "io_title": "Import &amp; export",
-    "io_text": "Coming from Feedly or another reader? Import its OPML file. Once News is installed, you can also add sites from your phone’s share menu. On desktop, drag this button to your bookmarks bar:",
+    "io_text": "Coming from another reader? Import its OPML file. Once News is installed, you can also add sites from your phone’s share menu. On desktop, drag this button to your bookmarks bar:",
     "import": "Import OPML", "export": "Export OPML",
     "import_invalid": "That’s not an OPML file.",
     "import_nothing_one": "Nothing new – you already follow that feed.",

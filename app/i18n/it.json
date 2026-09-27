@@ -65,7 +65,7 @@
     "unfollow_title": "Smettere di seguire questo feed?",
     "unfollow_body": "<strong>{title}</strong> scompare da tutti i tuoi dispositivi. Gli articoli salvati per più tardi restano nella tua lista.",
     "io_title": "Importa ed esporta",
-    "io_text": "Arrivi da Feedly o da un altro lettore? Importa il suo file OPML. Dopo aver installato News puoi aggiungere siti anche dal menu di condivisione dello smartphone. Sul desktop trascina questo pulsante nella barra dei preferiti:",
+    "io_text": "Arrivi da un altro lettore? Importa il suo file OPML. Dopo aver installato News puoi aggiungere siti anche dal menu di condivisione dello smartphone. Sul desktop trascina questo pulsante nella barra dei preferiti:",
     "import": "Importa OPML", "export": "Esporta OPML",
     "import_invalid": "Questo non è un file OPML.",
     "import_nothing_one": "Niente di nuovo – segui già questo feed.",

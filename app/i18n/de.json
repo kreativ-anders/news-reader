@@ -65,7 +65,7 @@
     "unfollow_title": "Diesem Feed nicht mehr folgen?",
     "unfollow_body": "<strong>{title}</strong> verschwindet von all deinen Geräten. Beiträge, die du für später gemerkt hast, bleiben in deiner Liste.",
     "io_title": "Import &amp; Export",
-    "io_text": "Du kommst von Feedly oder einem anderen Reader? Importiere dessen OPML-Datei. Sobald News installiert ist, kannst du Seiten auch über das Teilen-Menü deines Smartphones hinzufügen. Am Desktop ziehst du diesen Knopf in deine Lesezeichenleiste:",
+    "io_text": "Du kommst von einem anderen Reader? Importiere dessen OPML-Datei. Sobald News installiert ist, kannst du Seiten auch über das Teilen-Menü deines Smartphones hinzufügen. Am Desktop ziehst du diesen Knopf in deine Lesezeichenleiste:",
     "import": "OPML importieren", "export": "OPML exportieren",
     "import_invalid": "Das ist keine OPML-Datei.",
     "import_nothing_one": "Nichts Neues – diesem Feed folgst du schon.",

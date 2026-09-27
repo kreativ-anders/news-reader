@@ -65,7 +65,7 @@
     "unfollow_title": "Ne plus suivre ce flux ?",
     "unfollow_body": "<strong>{title}</strong> disparaît de tous vos appareils. Les articles gardés pour plus tard restent dans votre liste.",
     "io_title": "Import et export",
-    "io_text": "Vous venez de Feedly ou d’un autre lecteur ? Importez son fichier OPML. Une fois News installé, vous pouvez aussi ajouter des sites depuis le menu de partage de votre mobile. Sur ordinateur, glissez ce bouton dans votre barre de favoris :",
+    "io_text": "Vous venez d’un autre lecteur ? Importez son fichier OPML. Une fois News installé, vous pouvez aussi ajouter des sites depuis le menu de partage de votre mobile. Sur ordinateur, glissez ce bouton dans votre barre de favoris :",
     "import": "Importer OPML", "export": "Exporter OPML",
     "import_invalid": "Ce n’est pas un fichier OPML.",
     "import_nothing_one": "Rien de nouveau – vous suivez déjà ce flux.",
