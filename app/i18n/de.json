@@ -128,7 +128,10 @@
     "density_compact": "Kompakt – nur Überschriften",
     "key_search": "suchen und springen",
     "key_v": "Layout wechseln",
-    "key_help": "alle Tastenkürzel zeigen"
+    "key_help": "alle Tastenkürzel zeigen",
+    "acts": "Aktionen an Beiträgen",
+    "acts_hover": "Bei Hover und Fokus",
+    "acts_always": "Immer sichtbar"
   },
   "dlg": {
     "clear_done_title": "Erledigt-Liste leeren?", "clear_done_ok": "Leeren", "clear_done_body_one": "<p>{n} erledigter Beitrag wird entfernt. Er kommt nicht zurück in den Eingang.</p>", "clear_done_body_other": "<p>{n} erledigte Beiträge werden entfernt. Sie kommen nicht zurück in den Eingang.</p>",
@@ -208,6 +211,8 @@
     "results": "Ergebnisse",
     "hint": "<kbd>↑</kbd><kbd>↓</kbd> auswählen · <kbd>Enter</kbd> öffnen · <kbd>Esc</kbd> schließen",
     "folder": "Ordner",
-    "empty": "Nichts gefunden."
+    "empty": "Nichts gefunden.",
+    "count_one": "{n} Treffer",
+    "count_other": "{n} Treffer"
   }
 }

@@ -61,6 +61,15 @@ function setDensity(d) {
 }
 document.documentElement.dataset.density = getDensity();
 
+// INFO: card actions appear on hover/focus by default; "always" keeps them visible (magnifiers, motor or cognitive needs)
+const ACT_MODES = ['hover', 'always'];
+const getActs = () => (ACT_MODES.includes(store.get('news.acts')) ? store.get('news.acts') : 'hover');
+function setActs(m) {
+  store.set('news.acts', m);
+  document.documentElement.dataset.acts = m;
+}
+document.documentElement.dataset.acts = getActs();
+
 const ICON = {
   now: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
   later: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
@@ -387,16 +396,19 @@ function card(it, view) {
   const [right, left] = swipeFor(view);
   const when = view === 'inbox' ? it.time : it.changed;
   const acts = ACTIONS[view].map(([s, label, icon, cls, key]) =>
-    `<button type="button" class="act ${cls}" data-act="${s}" title="${esc(t(label))} (${key})" aria-label="${esc(t(label))}" aria-keyshortcuts="${key}">${icon}${cls === 'main' ? `<span>${t(label)}</span>` : ''}</button>`).join('');
+    `<button type="button" class="act ${cls}" data-act="${s}" title="${esc(t(label))} (${key})" aria-label="${esc(t(label))}" aria-describedby="t-${esc(it.id)}" aria-keyshortcuts="${key}">${icon}${cls === 'main' ? `<span>${t(label)}</span>` : ''}</button>`).join('');
   const words = offline.words(it.id);
   const saved = offline.has(it.id) ? `<span class="offline" title="${esc(t('reader.saved'))}">${ICON.offline}<span class="sr">${t('reader.saved')}</span>${words ? `<span>${t('reader.minutes', { n: Math.max(1, Math.round(words / 220)) })}</span>` : ''}</span>` : '';
   const image = S.dupImg.has(it.image) ? '' : httpUrl(it.image);
   const img = image ? `<img class="thumb" src="${esc(image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="120" height="80">` : '';
   const dot = '<span class="sep" aria-hidden="true">·</span>';
-  return `<li class="card${img ? ' has-img' : ''}${lingering.has(it.id) ? ' opened' : ''}" data-id="${esc(it.id)}" tabindex="-1"${right ? ` data-right="${esc(t('act.' + right))} →" data-right-act="${right}"` : ''}${left ? ` data-left="← ${esc(t('act.' + left))}" data-left-act="${left}"` : ''}>
-    <div class="meta"><span class="src">${feedIcon(it.feedId, it.url)}<span>${esc(feed ? feedTitle(it.feedId) : host(it.url))}</span></span>${it.author ? `${dot}<span class="by">${esc(it.author)}</span>` : ''}${when ? `${dot}<time datetime="${new Date(when).toISOString()}">${ago(when)}</time>` : ''}${saved}<div class="acts">${acts}</div></div>
-    ${img}<h3><a href="${esc(httpUrl(it.url) || '#')}" target="_blank" rel="noopener noreferrer" data-open>${esc(it.title)}</a></h3>
-    ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
+  // INFO: DOM order title → meta → teaser → actions (reading and tab order); the grid puts meta and actions on top.
+  //       The card is named by its title and described by its meta line, so j/k focus announces the post.
+  return `<li class="card${img ? ' has-img' : ''}${lingering.has(it.id) ? ' opened' : ''}" data-id="${esc(it.id)}" tabindex="-1" aria-labelledby="t-${esc(it.id)}" aria-describedby="m-${esc(it.id)}"${right ? ` data-right="${esc(t('act.' + right))} →" data-right-act="${right}"` : ''}${left ? ` data-left="← ${esc(t('act.' + left))}" data-left-act="${left}"` : ''}>
+    <h3><a id="t-${esc(it.id)}" href="${esc(httpUrl(it.url) || '#')}" target="_blank" rel="noopener noreferrer" data-open>${esc(it.title)}</a></h3>
+    <div class="meta" id="m-${esc(it.id)}"><span class="src">${feedIcon(it.feedId, it.url)}<span>${esc(feed ? feedTitle(it.feedId) : host(it.url))}</span></span>${it.author ? `${dot}<span class="by">${esc(it.author)}</span>` : ''}${when ? `${dot}<time datetime="${new Date(when).toISOString()}">${ago(when)}</time>` : ''}${saved}</div>
+    ${img}${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
+    <div class="acts">${acts}</div>
   </li>`;
 }
 
@@ -454,9 +466,12 @@ function render() {
 
   const views = { inbox: renderInbox, reading: renderItems, later: renderItems, done: renderItems, feeds: renderFeeds, settings: renderSettings };
   const scroll = window.scrollY;
+  const refocus = !!document.activeElement?.closest?.('#view .card');
   views[S.view]();
   window.scrollTo(0, scroll);
-  applyKb();
+  const i = applyKb();
+  // INFO: the focused card (or its button) was replaced – without this, focus would fall back to <body>
+  if (refocus) (cardsInView()[i] || viewEl).focus({ preventScroll: true });
 }
 
 const FOLDER_VIEWS = ['inbox', 'reading', 'later', 'done'];
@@ -695,6 +710,7 @@ async function renderSettings() {
         <label class="field"><span>${t('settings.language')}</span><select id="langSel">${Object.entries(LANGS).map(([k, v]) => opt(k, v, t.lang)).join('')}</select></label>
         <label class="field"><span>${t('settings.theme')}</span><select id="themeSel">${['auto', 'light', 'dark'].map((m) => opt(m, t('settings.theme_' + m), getTheme())).join('')}</select></label>
         <label class="field"><span>${t('settings.density')}</span><select id="densitySel">${DENSITIES.map((d) => opt(d, t('settings.density_' + d), getDensity())).join('')}</select></label>
+        <label class="field"><span>${t('settings.acts')}</span><select id="actsSel">${ACT_MODES.map((m) => opt(m, t('settings.acts_' + m), getActs())).join('')}</select></label>
       </div>
     </section>
     <section class="panel">
@@ -1026,6 +1042,7 @@ document.addEventListener('change', async (ev) => {
   if (id === 'langSel') { setLang(ev.target.value); await useLanguage(ev.target.value); render(); }
   if (id === 'themeSel') setTheme(ev.target.value);
   if (id === 'densitySel') setDensity(ev.target.value);
+  if (id === 'actsSel') setActs(ev.target.value);
   if (id === 'swipeRight' || id === 'swipeLeft') {
     S.swipe = { right: $('#swipeRight').value, left: $('#swipeLeft').value };
     await db.kvSet('swipe', S.swipe);
@@ -1200,10 +1217,12 @@ function applyKb() {
   return i;
 }
 
-function selectCard(card, scroll = true) {
+// INFO: keyboard selection moves the real focus, so screen readers announce the post and its actions show up
+function selectCard(card, scroll = true, focus = scroll) {
   if (!card) return;
   S.kbId = card.dataset.id;
   applyKb();
+  if (focus) card.focus({ preventScroll: true });
   if (scroll) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
@@ -1283,7 +1302,8 @@ function paintPalette() {
     ? pal.results.map((r, i) => `<li role="option" id="pal-${i}" data-i="${i}" class="k-${r.kind}" aria-selected="${i === 0}">${r.icon}<span class="pl">${esc(r.label)}</span>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</li>`).join('')
     : `<li class="none" role="presentation">${t('pal.empty')}</li>`;
   if (pal.results.length) $('#palIn').setAttribute('aria-activedescendant', 'pal-0');
-  else $('#palIn').removeAttribute('aria-activedescendant');
+  else $('#palIn').removeAttribute('aria-activedescendant');  // INFO: announced politely after typing – the listbox itself is not a live region
+  $('#palStatus').textContent = q.trim() ? (pal.results.length ? t('pal.count', { n: pal.results.length }) : t('pal.empty')) : '';
 }
 
 function movePalette(d) {

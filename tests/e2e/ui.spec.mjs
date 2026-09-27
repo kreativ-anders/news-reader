@@ -83,3 +83,56 @@ test('? lists the shortcuts, v switches to the compact layout', async ({ app, pa
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
 });
+
+test.describe('card actions stay accessible although they appear on hover', () => {
+  test('screen readers: card named by its title, actions described by it', async ({ app }) => {
+    await app.go('inbox');
+    const c = app.card('Second post');
+    await expect(c).toHaveAccessibleName('Second post');
+    await expect(c).toHaveAccessibleDescription(/Fixture Blog.*Jane Doe/);
+    const later = c.locator('[data-act="later"]');
+    await expect(later).toHaveAccessibleName('Later');
+    await expect(later).toHaveAccessibleDescription('Second post');
+    await expect(later).toHaveAttribute('aria-keyshortcuts', 'l');
+  });
+
+  test('keyboard: j/k move the focus, focus stays on the list after an action', async ({ app, page }) => {
+    await app.go('inbox');
+    await page.locator('#view').focus();
+    await page.keyboard.press('j');
+    const first = app.cards().first();
+    await expect(first).toBeFocused();
+    await expect(first.locator('.acts')).toHaveCSS('opacity', '1');
+    await page.keyboard.press('j');
+    await expect(app.cards().nth(1)).toBeFocused();
+    const next = await app.cards().nth(2).getAttribute('data-id');
+    await page.keyboard.press('l');
+    await expect(page.locator(`#view .card[data-id="${next}"]`)).toBeFocused();
+    // Tab reaches the hidden buttons, and they show up while focused
+    await app.cards().first().locator('h3 a').focus();
+    await page.keyboard.press('Tab');
+    await expect(app.cards().first().locator('[data-act="reading"]')).toBeFocused();
+    await expect(app.cards().first().locator('.acts')).toHaveCSS('opacity', '1');
+  });
+
+  test('hidden without hover; visible in forced colours and with "always"', async ({ app, page }) => {
+    await app.go('inbox');
+    await page.mouse.move(0, 0);
+    const acts = app.card('Second post').locator('.acts');
+    await expect(acts).toHaveCSS('opacity', '0');
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect(acts).toHaveCSS('opacity', '1');
+    await page.emulateMedia({ forcedColors: 'none' });
+    await app.go('settings');
+    await page.locator('#actsSel').selectOption('always');
+    await app.go('inbox');
+    await page.mouse.move(0, 0);
+    await expect(app.card('Second post').locator('.acts')).toHaveCSS('opacity', '1');
+  });
+
+  test('palette announces the number of results', async ({ page }) => {
+    await page.keyboard.press('/');
+    await page.locator('#palIn').fill('post');
+    await expect(page.locator('#palStatus')).toHaveText('4 results');
+  });
+});

@@ -76,7 +76,8 @@ footer a{text-decoration:none}footer a:hover{color:var(--brand-ink)}
 .doc .note{border:1px solid var(--line);border-left:3px solid var(--brand);background:var(--card);padding:16px 20px;margin:26px 0}
 .doc .note p{color:var(--fg)}
 .doc .toc{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
-.doc .toc a{display:inline-block;padding:5px 12px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:.9rem;font-weight:600}
+.doc .toc li{margin:0}
+.doc .toc a{display:block;padding:5px 12px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:.9rem;font-weight:600}
 .doc .toc a:hover{border-color:var(--brand)}
 .doc address{font-style:normal;color:var(--fg);line-height:1.7}
 .doc .stand{margin-top:48px;font-size:.9rem}

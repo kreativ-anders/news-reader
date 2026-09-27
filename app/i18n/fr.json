@@ -128,7 +128,10 @@
     "density_compact": "Compacte – titres seulement",
     "key_search": "rechercher et aller à",
     "key_v": "changer de mise en page",
-    "key_help": "afficher tous les raccourcis"
+    "key_help": "afficher tous les raccourcis",
+    "acts": "Actions des articles",
+    "acts_hover": "Au survol et au focus",
+    "acts_always": "Toujours visibles"
   },
   "dlg": {
     "clear_done_title": "Vider la liste « Terminé » ?", "clear_done_ok": "Vider", "clear_done_body_one": "<p>{n} article terminé sera retiré. Il ne reviendra pas dans votre réception.</p>", "clear_done_body_other": "<p>{n} articles terminés seront retirés. Ils ne reviendront pas dans votre réception.</p>",
@@ -208,6 +211,8 @@
     "results": "Résultats",
     "hint": "<kbd>↑</kbd><kbd>↓</kbd> choisir · <kbd>Entrée</kbd> ouvrir · <kbd>Échap</kbd> fermer",
     "folder": "Dossier",
-    "empty": "Aucun résultat."
+    "empty": "Aucun résultat.",
+    "count_one": "{n} résultat",
+    "count_other": "{n} résultats"
   }
 }

@@ -140,7 +140,10 @@
     "density_compact": "Compact – headlines only",
     "key_search": "search and go to",
     "key_v": "switch layout",
-    "key_help": "show all shortcuts"
+    "key_help": "show all shortcuts",
+    "acts": "Card actions",
+    "acts_hover": "On hover and focus",
+    "acts_always": "Always visible"
   },
   "dlg": {
     "clear_done_title": "Clear the Done list?", "clear_done_ok": "Clear", "clear_done_body_one": "<p>{n} finished post will be removed. It won’t come back to your inbox.</p>", "clear_done_body_other": "<p>{n} finished posts will be removed. They won’t come back to your inbox.</p>",
@@ -220,6 +223,8 @@
     "results": "Results",
     "hint": "<kbd>↑</kbd><kbd>↓</kbd> choose · <kbd>Enter</kbd> open · <kbd>Esc</kbd> close",
     "folder": "Folder",
-    "empty": "Nothing found."
+    "empty": "Nothing found.",
+    "count_one": "{n} result",
+    "count_other": "{n} results"
   }
 }

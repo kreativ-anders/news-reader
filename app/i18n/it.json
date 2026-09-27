@@ -128,7 +128,10 @@
     "density_compact": "Compatto – solo titoli",
     "key_search": "cerca e vai a",
     "key_v": "cambia layout",
-    "key_help": "mostra tutte le scorciatoie"
+    "key_help": "mostra tutte le scorciatoie",
+    "acts": "Azioni sugli articoli",
+    "acts_hover": "Al passaggio e al focus",
+    "acts_always": "Sempre visibili"
   },
   "dlg": {
     "clear_done_title": "Svuotare l’elenco «Fatto»?", "clear_done_ok": "Svuota", "clear_done_body_one": "<p>{n} articolo concluso verrà rimosso. Non tornerà in arrivo.</p>", "clear_done_body_other": "<p>{n} articoli conclusi verranno rimossi. Non torneranno in arrivo.</p>",
@@ -208,6 +211,8 @@
     "results": "Risultati",
     "hint": "<kbd>↑</kbd><kbd>↓</kbd> scegli · <kbd>Invio</kbd> apri · <kbd>Esc</kbd> chiudi",
     "folder": "Cartella",
-    "empty": "Nessun risultato."
+    "empty": "Nessun risultato.",
+    "count_one": "{n} risultato",
+    "count_other": "{n} risultati"
   }
 }

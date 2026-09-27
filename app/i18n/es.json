@@ -128,7 +128,10 @@
     "density_compact": "Compacto – solo titulares",
     "key_search": "buscar e ir a",
     "key_v": "cambiar diseño",
-    "key_help": "mostrar todos los atajos"
+    "key_help": "mostrar todos los atajos",
+    "acts": "Acciones de las entradas",
+    "acts_hover": "Al pasar el ratón y con foco",
+    "acts_always": "Siempre visibles"
   },
   "dlg": {
     "clear_done_title": "¿Vaciar la lista «Hecho»?", "clear_done_ok": "Vaciar", "clear_done_body_one": "<p>Se quitará {n} entrada terminada. No volverá a tu bandeja.</p>", "clear_done_body_other": "<p>Se quitarán {n} entradas terminadas. No volverán a tu bandeja.</p>",
@@ -208,6 +211,8 @@
     "results": "Resultados",
     "hint": "<kbd>↑</kbd><kbd>↓</kbd> elegir · <kbd>Intro</kbd> abrir · <kbd>Esc</kbd> cerrar",
     "folder": "Carpeta",
-    "empty": "No se ha encontrado nada."
+    "empty": "No se ha encontrado nada.",
+    "count_one": "{n} resultado",
+    "count_other": "{n} resultados"
   }
 }
