@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "News Reader – RSS-Reader zum Selbsthosten mit verschlüsseltem Sync",
-    "description": "Ruhiger RSS-Reader für Smartphone und Desktop: jetzt lesen, später oder weg damit. Verschlüsselter Sync ohne Konto und Tracking. Open Source – auf eigenen Servern betreibbar.",
+    "title": "News Reader – RSS-Reader selbst hosten, verschlüsselter Sync",
+    "description": "Ruhiger RSS-Reader für Smartphone und Desktop: jetzt lesen, später oder weg damit. Verschlüsselter Sync, kein Konto, kein Tracking. Open Source.",
     "og_title": "News – lies, was zählt, überspring den Rest",
     "og_description": "Ein ruhiger RSS-Reader mit Ende-zu-Ende-verschlüsseltem Sync. Kein Konto, kein Tracking, kein Algorithmus. Open Source – auch auf deinem eigenen Server."
   },
@@ -29,7 +29,7 @@
   "hero": {
     "news_reader": "Open-Source-RSS-Reader",
     "read_what_matters_skip": "Lies, was zählt. <em class=\"accent\">Überspring den Rest.</em>",
-    "news_is_a_calm": "News ist ein ruhiger RSS-Reader für Smartphone und Desktop. Kein endloses Scrollen, kein Algorithmus – nur deine Quellen. Jeder neue Beitrag bekommt eine schnelle Entscheidung: jetzt lesen, später oder nicht interessiert. Deine Geräte bleiben synchron, Ende-zu-Ende-verschlüsselt, ganz ohne Konto.",
+    "news_is_a_calm": "News ist ein ruhiger RSS-Reader für Smartphone und Desktop. Kein endloses Scrollen, kein Algorithmus – nur deine Quellen und das, was für dich zählt. Jeder neue Beitrag bekommt eine schnelle Entscheidung: jetzt lesen, später oder nicht interessiert. Deine Geräte bleiben synchron, Ende-zu-Ende-verschlüsselt, ganz ohne Konto.",
     "open_news": "News öffnen",
     "host_your_own": "Selbst hosten",
     "free_amp_open_source": "Kostenlos &amp; Open Source · installierbar wie eine App · funktioniert offline",
@@ -226,7 +226,7 @@
   },
   "privacy": {
     "meta_title": "Datenschutzerklärung – News Reader",
-    "meta_description": "Welche Daten news-reader.app und die News-App verarbeiten: cookiefreie Besucherstatistik (Pirsch), Server-Logs, freiwillige Zahlungen über Stripe, Collector, Offline-Kopien und Ende-zu-Ende-verschlüsselter Sync.",
+    "meta_description": "Was news-reader.app und die News-App verarbeiten: cookiefreie Statistik (Pirsch), Server-Logs, Zahlungen über Stripe, Collector, Offline-Kopien und Sync.",
     "title": "Datenschutzerklärung",
     "lead": "Was mit deinen Daten passiert, wenn du news-reader.app besuchst und die dort gehostete News-App nutzt – in klaren Worten.",
     "summary": "<b>Kurz gesagt:</b> keine Cookies, keine Benutzerkonten, keine Werbung, keine Profile. Die Besucherstatistik ist cookiefrei und anonym (Pirsch, Server in Deutschland). Deine Feeds und deine Leseliste bleiben auf deinen Geräten, der Sync ist Ende-zu-Ende-verschlüsselt – wir können ihn nicht lesen.",

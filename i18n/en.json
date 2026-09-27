@@ -29,7 +29,7 @@
   "hero": {
     "news_reader": "Open-source RSS reader",
     "read_what_matters_skip": "Read what matters. <em class=\"accent\">Skip the rest.</em>",
-    "news_is_a_calm": "News is a calm RSS reader for your phone and your desktop. No endless scrolling, no algorithm – just your sources. Every new post gets one quick decision: read now, later or not interested. Your devices stay in sync, end-to-end encrypted, no account needed.",
+    "news_is_a_calm": "News is a calm RSS reader for your phone and your desktop. No endless scrolling, no algorithm – just your sources and what matters to you. Every new post gets one quick decision: read now, later or not interested. Your devices stay in sync, end-to-end encrypted, no account needed.",
     "open_news": "Open News",
     "host_your_own": "Host your own",
     "free_amp_open_source": "Free &amp; open source · installs like an app · works offline",
@@ -226,7 +226,7 @@
   },
   "privacy": {
     "meta_title": "Privacy policy – News Reader",
-    "meta_description": "Which data news-reader.app and the News app process: cookie-free visitor statistics (Pirsch), server logs, voluntary payments via Stripe, Collector, offline copies and end-to-end encrypted sync.",
+    "meta_description": "What news-reader.app and the News app process: cookie-free stats (Pirsch), server logs, Stripe payments, Collector, offline copies and encrypted sync.",
     "title": "Privacy policy",
     "lead": "What happens to your data when you visit news-reader.app and use the News app hosted there – in plain words.",
     "summary": "<b>In short:</b> no cookies, no user accounts, no advertising, no profiles. Visitor statistics are cookie-free and anonymous (Pirsch, servers in Germany). Your feeds and reading list stay on your devices, and sync is end-to-end encrypted – we cannot read it.",

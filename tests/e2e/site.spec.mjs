@@ -11,9 +11,13 @@ for (const [path, lang] of PAGES) {
     expect(res.status()).toBe(200);
     await expect(page.locator('html')).toHaveAttribute('lang', lang);
     await expect(page.locator('h1')).toBeVisible();
+    if (!path.endsWith('.html')) await expect(page.locator('h1')).toContainText('RSS');
     await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(6);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', new RegExp(`${path.replace(/\./g, '\\.')}$`));
     await expect(page.locator('#langSel')).toHaveValue(lang);
+    // INFO: search results cut titles after ~60 and descriptions after ~155 characters
+    expect((await page.title()).length).toBeLessThanOrEqual(60);
+    expect((await page.locator('meta[name="description"]').getAttribute('content')).length).toBeLessThanOrEqual(155);
     // no untranslated markers
     for (const el of await page.locator('[data-i18n]').all()) {
       await expect(el).not.toHaveText(await el.getAttribute('data-i18n'));
@@ -67,7 +71,9 @@ test('"Open News" leads to the app', async ({ page }) => {
 test('API docs page loads and links resolve', async ({ page, request }) => {
   const res = await page.goto(API() + '/docs/api/');
   expect(res.status()).toBe(200);
-  await expect(page.locator('h1')).toHaveText('API');
+  await expect(page.locator('h1')).toHaveText('News Reader API');
+  expect((await page.title()).length).toBeLessThanOrEqual(60);
+  expect((await page.locator('meta[name="description"]').getAttribute('content')).length).toBeLessThanOrEqual(155);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/docs\/api\/$/);
   const urls = await page.evaluate(() => [...new Set(
     [...document.querySelectorAll('a[href], link[href]')].map((el) => el.href).filter((u) => u.startsWith(location.origin)),

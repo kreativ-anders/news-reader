@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "News Reader – lettore RSS self-hosted con sync cifrata",
-    "description": "Un lettore RSS tranquillo per smartphone e desktop: leggi ora, più tardi o salta. Sincronizzazione cifrata, senza account né tracciamento. Open source – da ospitare sui tuoi server.",
+    "title": "News Reader – lettore RSS self-hosting con sync cifrata",
+    "description": "Lettore RSS tranquillo per smartphone e desktop: leggi ora, più tardi o salta. Sync cifrata, senza account né tracciamento. Open source.",
     "og_title": "News – leggi ciò che conta, salta il resto",
     "og_description": "Un lettore RSS tranquillo con sync cifrata end-to-end. Niente account, niente tracciamento, niente algoritmo. Open source – ospitalo tu."
   },
@@ -29,7 +29,7 @@
   "hero": {
     "news_reader": "Lettore RSS open source",
     "read_what_matters_skip": "Leggi ciò che conta. <em class=\"accent\">Salta il resto.</em>",
-    "news_is_a_calm": "News è un lettore RSS tranquillo per smartphone e desktop. Niente scroll infinito, niente algoritmo – solo le tue fonti. Ogni nuovo articolo riceve una decisione veloce: leggi ora, più tardi o non mi interessa. I tuoi dispositivi restano sincronizzati, cifrati end-to-end, senza account.",
+    "news_is_a_calm": "News è un lettore RSS tranquillo per smartphone e desktop. Niente scroll infinito, niente algoritmo – solo le tue fonti: quello che conta resta, il resto si salta. Ogni nuovo articolo riceve una decisione veloce: leggi ora, più tardi o non mi interessa. I tuoi dispositivi restano sincronizzati, cifrati end-to-end, senza account.",
     "open_news": "Apri News",
     "host_your_own": "Ospitalo tu",
     "free_amp_open_source": "Gratis &amp; open source · si installa come un’app · funziona offline",
@@ -226,7 +226,7 @@
   },
   "privacy": {
     "meta_title": "Informativa sulla privacy – News Reader",
-    "meta_description": "Quali dati trattano news-reader.app e l’app News: statistiche di visita senza cookie (Pirsch), log del server, pagamenti volontari tramite Stripe, Collector, copie offline e sincronizzazione cifrata end-to-end.",
+    "meta_description": "Dati trattati da news-reader.app e dall’app News: statistiche senza cookie (Pirsch), log del server, Stripe, Collector, copie offline e sync cifrata.",
     "title": "Informativa sulla privacy",
     "lead": "Cosa succede ai tuoi dati quando visiti news-reader.app e usi l’app News ospitata lì – in parole semplici.",
     "summary": "<b>In breve:</b> niente cookie, niente account utente, niente pubblicità, niente profili. Le statistiche di visita sono anonime e senza cookie (Pirsch, server in Germania). I tuoi feed e la tua lista di lettura restano sui tuoi dispositivi e la sincronizzazione è cifrata end-to-end – non possiamo leggerla.",
