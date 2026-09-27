@@ -127,11 +127,16 @@ test('legal links stay in the page language, the switcher keeps the page', async
   await expect(page).toHaveURL(/\/es\/imprint\.html$/);
 });
 
-test('every page loads Pirsch analytics and links to the pay-what-you-want page', async ({ page }) => {
-  for (const path of ['/', '/de/privacy.html', '/it/imprint.html', '/es/thanks.html', '/docs/api/', '/app/']) {
+test('every site page loads Pirsch analytics, the app none; site links to the pay-what-you-want page', async ({ page }) => {
+  for (const path of ['/', '/de/privacy.html', '/it/imprint.html', '/es/thanks.html', '/docs/api/']) {
     await page.goto(API() + path);
     await expect(page.locator('script#pianjs[src="https://api.pirsch.io/pa.js"]'), path).toHaveCount(1);
+    await expect(page.locator('script[src$="track.js"]'), path).toHaveCount(1);
   }
+  await page.goto(API() + '/app/');
+  await expect(page.locator('#view')).not.toBeEmpty();
+  await expect(page.locator('script#pianjs')).toHaveCount(0);
+  expect(await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')).not.toContain('pirsch');
   await page.goto(API() + '/');
   await expect(page.locator('a[href^="https://buy.stripe.com/"]')).toHaveCount(2);
 });
@@ -142,4 +147,20 @@ test('theme toggle is named by its action and says the current mode', async ({ p
   await expect(btn).toHaveAccessibleName('Design wechseln – aktuell automatisch');
   await btn.click();
   await expect(btn).toHaveAccessibleName('Design wechseln – aktuell hell');
+});
+
+test('site events carry fixed values only', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__events = [];
+    window.pirsch = (name, opts) => { window.__events.push([name, opts.meta]); return Promise.resolve(); };
+  });
+  await page.goto(API() + '/de/');
+  await page.evaluate(() => document.addEventListener('click', (e) => { if (e.target.closest('a')) e.preventDefault(); }));
+  await page.locator('header a[href$="app/"]').click();
+  await page.locator('#faq summary').first().click();
+  await page.locator('#themeBtn').click();
+  const events = () => page.evaluate(() => window.__events);
+  await expect.poll(events).toContainEqual(['Open app', { lang: 'de', position: 'header' }]);
+  await expect.poll(events).toContainEqual(['FAQ', { lang: 'de', question: 'what_is_news' }]);
+  expect((await events()).find(([n]) => n === 'Theme')[1].mode).toMatch(/^(auto|light|dark)$/);
 });

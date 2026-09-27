@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -1664,7 +1664,7 @@ viewEl.addEventListener('pointerup', endSwipe);
 viewEl.addEventListener('pointercancel', endSwipe);
 
 // INFO: incoming links – share target, bookmarklet, pairing
-// WARNING: the inline script in index.html already moved ?… and #pair=… into window.nrIncoming (keeps them away from analytics)
+// WARNING: the inline script in index.html already moved ?… and #pair=… into window.nrIncoming (keeps keys out of history and screenshots)
 async function handleIncoming() {
   const inc = window.nrIncoming || { search: location.search, hash: location.hash };
   delete window.nrIncoming;
