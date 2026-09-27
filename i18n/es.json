@@ -3,7 +3,8 @@
     "title": "News Reader – lector RSS con sincronización cifrada",
     "description": "Lector RSS tranquilo para móvil y escritorio: leer ahora, más tarde o descartar. Sincronización cifrada, sin cuenta ni rastreo. Código abierto.",
     "og_title": "News – lee lo que importa, sáltate el resto",
-    "og_description": "Un lector RSS tranquilo con sincronización cifrada de extremo a extremo. Sin cuenta, sin rastreo, sin algoritmo. Código abierto – alójalo tú."
+    "og_description": "Un lector RSS tranquilo con sincronización cifrada de extremo a extremo. Sin cuenta, sin rastreo, sin algoritmo. Código abierto – alójalo tú.",
+    "og_image_tagline": "Lector RSS tranquilo · sincronización cifrada · código abierto"
   },
   "ui": {
     "language": "Idioma",

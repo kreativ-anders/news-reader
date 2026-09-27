@@ -39,6 +39,18 @@ for (const [file, base] of [['app/manifest.webmanifest', 'app/'], ['site.webmani
   });
 }
 
+test('app icon: one design for iOS and Android, opaque where iOS or a mask fills the corners', () => {
+  const png = (p) => { const b = readFileSync(join(ROOT, p)); return { w: b.readUInt32BE(16), h: b.readUInt32BE(20), alpha: b[25] === 4 || b[25] === 6, b }; };
+  for (const [p, size, opaque] of [['apple-touch-icon.png', 180, true], ['app/icons/maskable-512.png', 512, true], ['icon-192.png', 192, false], ['icon-512.png', 512, false]]) {
+    const i = png(p);
+    assert.equal(i.w, size, p);
+    assert.equal(i.h, size, p);
+    if (opaque) assert.ok(!i.alpha, `${p}: no alpha – iOS fills transparency with black`);
+  }
+  for (const f of ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png']) assert.ok(png(f).b.equals(png(`app/icons/${f}`).b), `${f}: site and app/icons differ`);
+  assert.ok(!existsSync(join(ROOT, 'brand/news-icon-dark.svg')), 'no separate dark app icon – iOS and manifests cannot switch it');
+});
+
 test('app/index.html references existing local files', () => {
   const html = read('app/index.html');
   for (const m of html.matchAll(/(?:href|src)="([^"#:]+)"/g)) {

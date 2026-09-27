@@ -90,4 +90,9 @@ export function applyTheme(theme = getTheme()) {
   const el = document.documentElement;
   if (theme === 'light' || theme === 'dark') el.dataset.theme = theme;
   else delete el.dataset.theme;
+  // INFO: <meta media> follows only the OS – a chosen theme also sets the colour of the browser and status bar
+  const metas = [...document.querySelectorAll('meta[name="theme-color"][media]')];
+  for (const m of metas) m.dataset.color ??= m.content;
+  const forced = metas.find((m) => m.media.includes(theme));
+  for (const m of metas) m.content = forced ? forced.dataset.color : m.dataset.color;
 }

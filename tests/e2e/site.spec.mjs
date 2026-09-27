@@ -61,6 +61,20 @@ test('theme toggle cycles and is shared with the app', async ({ page }) => {
   await expect(page.locator('#view')).not.toBeEmpty();
 });
 
+test('chosen theme also sets the browser bar colour, not only the OS', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto(API() + '/');
+  const colors = () => page.locator('meta[name="theme-color"]').evaluateAll((ms) => ms.map((m) => m.content));
+  expect(await colors()).toEqual(['#292929', '#FFFFFF']);
+  const btn = page.locator('#themeBtn');
+  while ((await btn.getAttribute('data-mode')) !== 'light') await btn.click();
+  expect(await colors()).toEqual(['#FFFFFF', '#FFFFFF']);
+  await page.reload();
+  expect(await colors()).toEqual(['#FFFFFF', '#FFFFFF']);
+  while ((await btn.getAttribute('data-mode')) !== 'auto') await btn.click();
+  expect(await colors()).toEqual(['#292929', '#FFFFFF']);
+});
+
 test('"Open News" leads to the app', async ({ page }) => {
   await page.goto(API() + '/');
   await page.locator('a[href="app/"]').first().click();

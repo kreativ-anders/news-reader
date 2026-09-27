@@ -2,7 +2,7 @@
 // INFO: builds the static language versions of the site pages – run on every deploy:
 //       php tools/build-i18n.php [--site=https://news-reader.app/]
 //       i18n/en.json is the single text source; <page> markup + i18n/<lang>.json → <lang>/<page>,
-//       hreflang alternates, sitemap.xml. One static page per language because search engines index one language per URL.
+//       hreflang alternates, sitemap.xml, og:image per language (og-image-<lang>.png from tools/build-og-images.mjs). One static page per language because search engines index one language per URL.
 //       EXTRA_PAGES (single-language) only get their canonical updated and a sitemap entry.
 declare(strict_types=1);
 
@@ -45,6 +45,7 @@ foreach (PAGES as $page => $listed) {
     $updated = set_alternates($updated, $alternates, $page);
     $updated = set_canonical($updated, $urls[LANGS[0]]);
     $updated = preg_replace('/(<meta property="og:url" content=")[^"]*(")/', '${1}' . $urls[LANGS[0]] . '${2}', $updated, 1);
+    $updated = preg_replace('/(<meta (?:property="og:image"|name="twitter:image") content=")[^"]*(")/', '${1}' . $site . 'og-image.png${2}', $updated);
     $updated = update_jsonld($updated, $en, $urls[LANGS[0]], LANGS[0], false);
     if ($updated !== $source) file_put_contents($sourceFile, $updated);
     echo "✓ $page (en" . ($updated !== $source ? ', updated' : ', unchanged') . ")\n";
@@ -60,6 +61,9 @@ foreach (PAGES as $page => $listed) {
         $html = set_canonical($html, $urls[$lang]);
         $html = preg_replace('/(<meta property="og:url" content=")[^"]*(")/', '${1}' . $urls[$lang] . '${2}', $html, 1);
         $html = preg_replace('/(<meta property="og:locale" content=")[^"]*(")/', '${1}' . LOCALES[$lang] . '${2}', $html, 1);
+        if (is_file("$root/og-image-$lang.png")) {
+            $html = preg_replace('/(<meta (?:property="og:image"|name="twitter:image") content=")[^"]*(")/', '${1}' . $site . "og-image-$lang.png" . '${2}', $html);
+        }
         $html = rewrite_relative_urls($html, '../');
         $html = str_replace(["from './app/js/i18n.js'", "<option value=\"$lang\">"], ["from '../app/js/i18n.js'", "<option value=\"$lang\" selected>"], $html);
         $html = update_jsonld($html, $dict, $urls[$lang], $lang);

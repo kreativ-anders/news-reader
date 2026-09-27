@@ -3,7 +3,8 @@
     "title": "News Reader – lecteur RSS auto-hébergé avec synchro chiffrée",
     "description": "Lecteur RSS serein pour mobile et ordinateur : lire maintenant, plus tard ou passer. Synchro chiffrée, sans compte ni pistage. Open source.",
     "og_title": "News – lisez l’essentiel, passez le reste",
-    "og_description": "Un lecteur RSS serein avec synchro chiffrée de bout en bout. Sans compte, sans pistage, sans algorithme. Open source – hébergez le vôtre."
+    "og_description": "Un lecteur RSS serein avec synchro chiffrée de bout en bout. Sans compte, sans pistage, sans algorithme. Open source – hébergez le vôtre.",
+    "og_image_tagline": "Lecteur RSS serein · synchro chiffrée · open source"
   },
   "ui": {
     "language": "Langue",

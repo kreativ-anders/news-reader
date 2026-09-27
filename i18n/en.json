@@ -3,7 +3,8 @@
     "title": "News Reader – Self-hosted RSS Reader with Encrypted Sync",
     "description": "A calm RSS reader for phone and desktop: read now, later or skip. Encrypted sync, no account, no tracking. Open source – run it on your own servers.",
     "og_title": "News – read what matters, skip the rest",
-    "og_description": "A calm RSS reader with end-to-end encrypted sync. No account, no tracking, no algorithm. Open source – host your own."
+    "og_description": "A calm RSS reader with end-to-end encrypted sync. No account, no tracking, no algorithm. Open source – host your own.",
+    "og_image_tagline": "Calm RSS reader · encrypted sync · open source"
   },
   "ui": {
     "language": "Language",

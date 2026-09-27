@@ -3,7 +3,8 @@
     "title": "News Reader – lettore RSS self-hosting con sync cifrata",
     "description": "Lettore RSS tranquillo per smartphone e desktop: leggi ora, più tardi o salta. Sync cifrata, senza account né tracciamento. Open source.",
     "og_title": "News – leggi ciò che conta, salta il resto",
-    "og_description": "Un lettore RSS tranquillo con sync cifrata end-to-end. Niente account, niente tracciamento, niente algoritmo. Open source – ospitalo tu."
+    "og_description": "Un lettore RSS tranquillo con sync cifrata end-to-end. Niente account, niente tracciamento, niente algoritmo. Open source – ospitalo tu.",
+    "og_image_tagline": "Lettore RSS tranquillo · sync cifrata · open source"
   },
   "ui": {
     "language": "Lingua",

@@ -3,7 +3,8 @@
     "title": "News Reader – RSS-Reader selbst hosten, verschlüsselter Sync",
     "description": "Ruhiger RSS-Reader für Smartphone und Desktop: jetzt lesen, später oder weg damit. Verschlüsselter Sync, kein Konto, kein Tracking. Open Source.",
     "og_title": "News – lies, was zählt, überspring den Rest",
-    "og_description": "Ein ruhiger RSS-Reader mit Ende-zu-Ende-verschlüsseltem Sync. Kein Konto, kein Tracking, kein Algorithmus. Open Source – auch auf deinem eigenen Server."
+    "og_description": "Ein ruhiger RSS-Reader mit Ende-zu-Ende-verschlüsseltem Sync. Kein Konto, kein Tracking, kein Algorithmus. Open Source – auch auf deinem eigenen Server.",
+    "og_image_tagline": "Ruhiger RSS-Reader · verschlüsselter Sync · Open Source"
   },
   "ui": {
     "language": "Sprache",

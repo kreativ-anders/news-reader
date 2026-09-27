@@ -68,6 +68,12 @@ php tools/build-i18n.php --site=https://news-reader.app/
 
 It writes the English text from `i18n/en.json` into the site pages, generates `<lang>/<page>`, refreshes `hreflang`, canonical, FAQ structured data and `sitemap.xml` (index/privacy/imprint per language + `app/` + `docs/api/`; `thanks.html` is `noindex`). Links starting with `./` stay in the page's language, other relative links point to the root. CLI only. Never edit `de/ fr/ it/ es/` by hand.
 
+The share images (1200×630) are committed too: `og-image.png` (English) and `og-image-<lang>.png`, one per language, with the hero headline and `meta.og_image_tagline`. The build points each page's `og:image` / `twitter:image` at its image. Re-render them after changing the headline, the tagline, the domain or `brand/news-icon.svg`, then run the build (uses the Playwright Chromium from the test tooling – `npm ci` and `npx playwright install chromium` first):
+
+```
+node tools/build-og-images.mjs --site=https://news-reader.app/
+```
+
 - After changing an inline `<script>` of a site page: recompute the CSP hashes in `nginx.conf.example` / `wharf.conf.example` (command in the config comment). After changing the inline script of `app/index.html`: update the hash in its `<meta>` CSP.
 - After changing app files: bump `VERSION` in `app/js/app.js` **and** `app/sw.js` (the service worker caches the shell). Installed apps look for a new `sw.js` on every start and every return to the app (iOS only resumes a paused app); the new worker takes over at once and the app offers *Reload* (toast and Settings).
 - After changing the cache entry format: bump `NR_CACHE_SCHEMA`.
@@ -250,8 +256,9 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 ## White-label
 
 - Colours, fonts, `--radius` (default `0`): `app/theme.css` (site + app). Palette 3b.1: `#FFA500` · `#000000` · `#FFFFFF` · `#292929`.
-- Theme: follows the OS; override via site toggle / *Settings → Appearance* (`html[data-theme]`, `localStorage` `nr.theme`).
-- Name and icons: `app/manifest.webmanifest`, `app/index.html`, `app/icons/`, `brand/` (`news-mark[-dark].svg`, `news-icon[-dark].svg`; inline `.nr-mark` follows the theme).
+- Theme: follows the OS; override via site toggle / *Settings → Appearance* (`html[data-theme]`, `localStorage` `nr.theme`; `applyTheme()` also sets `<meta name="theme-color">`).
+- Name and icons: `app/manifest.webmanifest`, `app/index.html`, `app/icons/`, `brand/` (`news-mark[-dark].svg` for logo and favicon, inline `.nr-mark` follows the theme).
+- App icon: one for iOS and Android – `brand/news-icon.svg` (rounded, `icon-192/512.png`) and `brand/news-icon-full.svg` (full bleed, `apple-touch-icon.png` 180 px, `maskable-512.png`; mark inside the 80 % safe circle). Neither iOS nor the manifest supports a separate dark icon for web apps (as of iOS 27); iOS darkens it itself and tints the mark with the background colour. So keep it two-tone – one solid background colour, one single-colour mark, no transparency – or iOS falls back to a grey mark.
 - Favicons: `favicon.svg` follows the OS colour scheme; PNG fallbacks `favicon-32.png` (light) / `favicon-32-dark.png` (dark) via `media` (root and `app/icons/`).
 - Fonts (self-hosted, `app/fonts/`): Newsreader (titles), Source Sans 3 (text).
 - Operator-specific parts of news-reader.app – remove or replace them on your own instance:
