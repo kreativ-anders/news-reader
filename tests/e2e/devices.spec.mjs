@@ -53,8 +53,9 @@ test('devices are listed and renamed; removing one locks it out with a new key',
   const cId = await c.app.kv('deviceId');
   const row = (id) => page.locator(`#devices [data-device="${id}"]`);
 
-  page.once('dialog', (d) => d.accept('Phone'));
   await row(bId).locator('[data-device-act="rename"]').click();
+  await page.locator('#askIn').fill('Phone');
+  await page.locator('#dlgOk').click();
   await expect(row(bId).locator('.t')).toHaveText('Phone');
   await expect.poll(() => app.pending(), { timeout: 15_000 }).toBe(0);
 
@@ -93,6 +94,7 @@ test('devices are listed and renamed; removing one locks it out with a new key',
 test('changing the key keeps devices in sync and invalidates old pairing links', async ({ app, page, browser }) => {
   const oldKey = await createVault(app, page);
   await app.follow(`${FX()}/feeds/atom.xml`);
+  await syncNow(page);
   await expect.poll(() => app.pending(), { timeout: 15_000 }).toBe(0);
   const b = await paired(browser, oldKey);
 
@@ -113,6 +115,7 @@ test('changing the key keeps devices in sync and invalidates old pairing links',
     await b.app.card('Atom entry one').locator('[data-act="later"]').click({ timeout: 2_000 });
     await expect(b.app.badge('later')).toHaveText('1', { timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
+  await syncNow(b.page);
   await expect.poll(() => b.app.pending(), { timeout: 15_000 }).toBe(0);
 
   await syncNow(page);

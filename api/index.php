@@ -100,7 +100,7 @@ if ($cached !== null) {
 }
 
 // INFO: only upstream fetches count against the rate limit
-if ($wait = nr_rate_hit('collect', NR_RATE_COLLECT_MISS)) {
+if ($wait = nr_rate_hit_wide('collect', NR_RATE_COLLECT_MISS, NR_RATE_COLLECT_MISS_48)) {
     if ($usable) nr_serve_cached($cached, 'STALE', $limit);
     nr_rate_reject($wait);
 }
@@ -118,9 +118,37 @@ if ($lock === false) {
     }
 }
 
+if (!nr_upstream_slot()) {
+    nr_unlock($lock);
+    if ($usable) nr_serve_cached($cached, 'STALE', $limit);
+    nr_busy('Too many upstream fetches are running – try again shortly.');
+}
+
+// INFO: conditional refresh of a known feed – 304 keeps the entries, anything else goes through nr_resolve()
+//       (a 200 response is handed over, so the feed is not fetched twice)
+$feedUrl = $cached['data']['source']['feedUrl'] ?? null;
+if ($usable && !empty($cached['data']['upstream']) && is_string($feedUrl)) {
+    $res = nr_fetch($feedUrl, NR_ACCEPT, $cached['data']['upstream']);
+    if ($res['ok'] && $res['status'] === 304) {
+        $data = $cached['data'];
+        $data['meta']['fetchedAt'] = nr_iso(time());
+        $data['upstream'] = nr_fetch_validators($res['finalUrl']) ?: $data['upstream'];
+        unset($data['meta']['lastError']);
+        nr_cache_write($url, $data);
+        nr_unlock($lock);
+        nr_serve_cached(['data' => ['cachedAt' => time()] + $data, 'age' => 0], 'REVALIDATED', $limit);
+    }
+    if ($res['ok']) nr_fetch_prime($feedUrl, $res);
+}
+
 $result = nr_resolve($url);
 
 if ($result['ok']) {
+    $source = $result['payload']['source'];
+    if (in_array($source['type'], ['rss', 'rdf', 'atom'], true) && $source['feedUrl'] !== null) {
+        $validators = nr_fetch_validators($source['feedUrl']);
+        if ($validators) $result['payload']['upstream'] = $validators;
+    }
     nr_cache_write($url, $result['payload']);
     nr_unlock($lock);
     nr_serve_cached(['data' => $result['payload'] + ['cachedAt' => time()], 'age' => 0], 'MISS', $limit);
@@ -151,7 +179,7 @@ function nr_serve_cached(array $cached, string $state, int $limit): never
 {
     $data = $cached['data'];
     $cachedAt = (int)$data['cachedAt'];
-    unset($data['cachedAt'], $data['schema']);
+    unset($data['cachedAt'], $data['schema'], $data['upstream']);
 
     header('X-Collector-Cache: ' . $state);
 
@@ -177,5 +205,6 @@ function nr_serve_cached(array $cached, string $state, int $limit): never
     $data['meta']['version']          = NR_VERSION;
 
     header('Cache-Control: public, max-age=' . max(0, NR_CACHE_TTL - (time() - $cachedAt)));
+    nr_etag_check(implode('|', [$data['source']['inputUrl'] ?? '', $limit, $cachedAt, $state, $data['meta']['lastError']['code'] ?? '']));
     nr_json($data);
 }

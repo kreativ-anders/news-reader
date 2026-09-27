@@ -196,28 +196,32 @@ function nr_extract_article(string $html, string $url): array
     foreach (iterator_to_array($xp->query('//script|//style|//noscript|//template|//iframe|//form|//nav|//aside|//footer|//svg|//button|//dialog|//*[@role="navigation" or @role="banner" or @role="contentinfo" or @role="complementary" or @role="dialog" or @aria-hidden="true" or @hidden]')) as $n) {
         $n->parentNode?->removeChild($n);
     }
-    // INFO: class/id noise is removed, but never a wrapper that holds most of the page text ("site-content has-sidebar")
+    // INFO: class/id noise is removed, but never a wrapper that holds most of the page text ("site-content has-sidebar").
+    //       Text lengths come from one pass over the tree – textContent per nested node would be quadratic.
+    $lens = nr_text_lengths($xp);
     $bodyEl = $dom->getElementsByTagName('body')->item(0);
-    $bodyLen = max(1, $bodyEl ? mb_strlen(trim($bodyEl->textContent)) : 1);
+    $bodyLen = max(1, $bodyEl && isset($lens[$bodyEl]) ? $lens[$bodyEl] : 1);
     foreach (iterator_to_array($xp->query('//*[@class or @id]')) as $n) {
-        if (!$n->parentNode || in_array($n->localName, ['html', 'body', 'article', 'main'], true)) continue;
+        if (!$n->isConnected || in_array($n->localName, ['html', 'body', 'article', 'main'], true)) continue;
         $sig = $n->getAttribute('class') . ' ' . $n->getAttribute('id');
-        if (preg_match(NR_NOISE, $sig) && mb_strlen(trim($n->textContent)) < 0.5 * $bodyLen) {
+        if (preg_match(NR_NOISE, $sig) && ($lens[$n] ?? 0) < 0.5 * $bodyLen) {
             $n->parentNode->removeChild($n);
         }
     }
+    $lens = nr_text_lengths($xp);
+    $len = fn(DOMNode $n): int => $lens[$n] ?? 0;
 
     $best = null;
     foreach (['//*[@itemprop="articleBody"]', '//article[.//p]', '//main[.//p]', '//*[@role="main"][.//p]'] as $q) {
         foreach ($xp->query($q) as $n) {
-            if (mb_strlen(trim($n->textContent)) > 500 && ($best === null || mb_strlen($n->textContent) > mb_strlen($best->textContent) * 1.3)) $best = $n;
+            if ($len($n) > 500 && ($best === null || $len($n) > $len($best) * 1.3)) $best = $n;
         }
         if ($best !== null) break;
     }
-    $scored = nr_best_scored_node($xp);
+    $scored = nr_best_scored_node($xp, $lens);
     // INFO: an <article>/<main> much larger than the densest text block usually contains teasers
-    if ($scored !== null && ($best === null || !nr_contains($best, $scored) || mb_strlen($best->textContent) > 3 * mb_strlen($scored->textContent))) {
-        if ($best === null || mb_strlen(trim($scored->textContent)) > 300) $best = $scored;
+    if ($scored !== null && ($best === null || !nr_contains($best, $scored) || $len($best) > 3 * $len($scored))) {
+        if ($best === null || $len($scored) > 300) $best = $scored;
     }
 
     $content = '';
@@ -252,12 +256,30 @@ function nr_extract_article(string $html, string $url): array
     ];
 }
 
+// INFO: trimmed text length (characters) of every element, in one bottom-up pass over the document
+function nr_text_lengths(DOMXPath $xp): SplObjectStorage
+{
+    $lens = new SplObjectStorage();
+    $els = iterator_to_array($xp->query('//*'));
+    for ($i = count($els) - 1; $i >= 0; $i--) {
+        $sum = 0;
+        foreach ($els[$i]->childNodes as $c) {
+            if ($c instanceof DOMElement) $sum += $lens[$c] ?? 0;
+            elseif ($c instanceof DOMText) $sum += mb_strlen(trim($c->nodeValue ?? ''));
+        }
+        $lens[$els[$i]] = $sum;
+    }
+    return $lens;
+}
+
 // INFO: Readability-style scoring – paragraphs vote for their parent (full) and grandparent (half);
-//       link-heavy blocks (teaser lists, tag clouds) lose
-function nr_best_scored_node(DOMXPath $xp): ?DOMElement
+//       link-heavy blocks (teaser lists, tag clouds) lose. Link density only for the top candidates (CPU bound).
+function nr_best_scored_node(DOMXPath $xp, ?SplObjectStorage $lens = null): ?DOMElement
 {
     $scores = new SplObjectStorage();
-    foreach ($xp->query('//p|//pre|//td|//blockquote') as $p) {
+    // INFO: nested <td>/<blockquote> vote once (innermost) – each level would repeat the whole text
+    foreach ($xp->query('//p|//pre|//td[not(.//td)]|//blockquote[not(.//blockquote)]') as $i => $p) {
+        if ($i >= 5 * NR_MAX_PARSE_ITEMS) break;
         $text = nr_clean_text($p->textContent);
         $len = mb_strlen($text);
         if ($len < 25) continue;
@@ -269,13 +291,17 @@ function nr_best_scored_node(DOMXPath $xp): ?DOMElement
             $scores[$node] = (isset($scores[$node]) ? $scores[$node] : 0) + $score * $w;
         }
     }
+    $top = [];
+    foreach ($scores as $node) $top[] = [$scores[$node], $node];
+    usort($top, fn($a, $b) => $b[0] <=> $a[0]);
+
     $best = null;
     $bestScore = 0.0;
-    foreach ($scores as $node) {
-        $text = mb_strlen($node->textContent) ?: 1;
+    foreach (array_slice($top, 0, 5) as [$raw, $node]) {
+        $text = (isset($lens[$node]) ? $lens[$node] : mb_strlen($node->textContent)) ?: 1;
         $links = 0;
         foreach ($node->getElementsByTagName('a') as $a) $links += mb_strlen($a->textContent);
-        $s = $scores[$node] * (1 - min(0.9, $links / $text));
+        $s = $raw * (1 - min(0.9, $links / $text));
         if ($s > $bestScore) { $bestScore = $s; $best = $node; }
     }
     return $best;
@@ -318,7 +344,7 @@ function nr_article_jsonld(DOMXPath $xp): array
 }
 
 // INFO: GET /api/article?url=<article>[&feed=<feed>&id=<entry id>]
-//       1. full text from the cached feed – no upstream request, no rate limit
+//       1. full text from the cached feed (matched by id or URL) – no upstream request, no rate limit
 //       2. otherwise the page is fetched once (SSRF-checked, rate limited), extracted and cached
 function nr_article_handle(): never
 {
@@ -353,20 +379,27 @@ function nr_article_handle(): never
     $usable = $cached !== null && !isset($cached['data']['error']);
     $stale = $usable ? $cached : null;
 
-    if ($wait = nr_rate_hit('article', NR_RATE_ARTICLE_MISS)) {
+    if ($wait = nr_rate_hit_wide('article', NR_RATE_ARTICLE_MISS, NR_RATE_ARTICLE_MISS_48)) {
         if ($usable) nr_article_serve($cached, 'STALE');
         nr_rate_reject($wait);
     }
 
-    $lock = nr_lock($url, NR_LOCK_WAIT, 'article');
+    // INFO: like the Collector – a stale copy is served at once while another request fetches the page
+    $lock = nr_lock($url, 0, 'article');
     if ($lock === false) {
         if ($stale) nr_article_serve($stale, 'STALE');
-        nr_busy();
+        $lock = nr_lock($url, NR_LOCK_WAIT, 'article');
+        if ($lock === false) nr_busy();
     }
     $fresh = nr_cache_read($url, 'article');
     if ($fresh !== null && $fresh['age'] < 60) {
         nr_unlock($lock);
         nr_article_serve($fresh, 'HIT');
+    }
+    if (!nr_upstream_slot()) {
+        nr_unlock($lock);
+        if ($stale) nr_article_serve($stale, 'STALE');
+        nr_busy('Too many upstream fetches are running – try again shortly.');
     }
 
     $page = nr_fetch($url, NR_ACCEPT_HTML);
@@ -402,6 +435,7 @@ function nr_article_from_feed(string $url, string $feed, string $id): void
         if (($id !== '' && hash_equals((string)$e['id'], $id)) || nr_normalize_url((string)$e['url']) === $norm) {
             header('X-Article-Source: feed');
             header('Cache-Control: public, max-age=3600');
+            nr_etag_check('feed|' . $e['id'] . '|' . $cachedFeed['data']['cachedAt']);
             nr_json(['article' => [
                 'url' => $e['url'], 'title' => $e['title'] ?: null, 'byline' => null, 'siteName' => $cachedFeed['data']['source']['title'] ?? null,
                 'lang' => null, 'publishedAt' => $e['publishedAt'] ?? null, 'image' => $e['image'] ?? null,
@@ -420,6 +454,7 @@ function nr_article_serve(array $cached, string $state): never
         nr_json(['error' => $data['error'], 'meta' => ['cached' => true]], 422);
     }
     header('Cache-Control: public, max-age=' . max(0, NR_ARTICLE_TTL - $cached['age']));
+    nr_etag_check('page|' . $data['article']['url'] . '|' . $data['cachedAt'] . '|' . $state);
     nr_json(['article' => $data['article'], 'meta' => [
         'cached' => $state !== 'MISS', 'cachedAt' => nr_iso((int)$data['cachedAt']), 'version' => NR_VERSION,
     ]]);

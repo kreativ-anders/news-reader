@@ -75,8 +75,8 @@ export class OfflineStore extends EventTarget {
         if (!KEEP.has(items.get(r.id)?.data?.s)) return;
         await db.write(['articles'], (tx) => tx.objectStore('articles').put(row));
         this.meta.set(r.id, summary(row));
-        if (row.ok) saved++;
-        this.emit();
+        // INFO: only a saved copy changes what the list shows – failed attempts stay silent
+        if (row.ok) { saved++; this.emit(); }
       });
       if (saved) navigator.storage?.persist?.().catch(() => {});
     })().finally(() => { this.running = null; });
@@ -208,6 +208,9 @@ export function openReader(article, { t, lang, onClose }) {
 
   const prevFocus = document.activeElement;
   document.documentElement.classList.add('reader-open');
+  // INFO: aria-modal alone does not keep Tab inside – the page behind the reader becomes inert
+  const behind = [...document.body.children].filter((el) => !el.inert);
+  behind.forEach((el) => { el.inert = true; });
   document.body.append(root);
   if (article.pos > 0.02 && article.pos < 0.98) {
     requestAnimationFrame(() => { root.scrollTop = article.pos * (root.scrollHeight - root.clientHeight); progress(); });
@@ -233,6 +236,7 @@ export function openReader(article, { t, lang, onClose }) {
     const max = root.scrollHeight - root.clientHeight;
     const pos = max > 0 ? root.scrollTop / max : 1;
     root.remove();
+    behind.forEach((el) => { el.inert = false; });
     document.documentElement.classList.remove('reader-open');
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     current = null;

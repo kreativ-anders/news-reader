@@ -72,7 +72,8 @@ function nr_sync_put(string $file): never
 
     $blob = nr_sync_body();
 
-    $lock = nr_sync_lock();
+    $lock = nr_sync_lock($file);
+    $global = null;
     try {
         $stored  = @file_get_contents($file);
         $exists  = $stored !== false;
@@ -88,9 +89,10 @@ function nr_sync_put(string $file): never
             nr_error('CONFLICT', 'The vault was changed by another device – fetch and merge first.', 412);
         }
         if (!$exists) {
-            if ($wait = nr_rate_hit('sync-create', NR_RATE_SYNC_CREATE)) {
-                nr_rate_reject($wait);
-            }
+            $wait = nr_rate_hit_wide('sync-create', NR_RATE_SYNC_CREATE, NR_RATE_SYNC_CREATE_48)
+                ?: nr_rate_hit('sync-create', NR_RATE_SYNC_CREATE_ALL, '*');
+            if ($wait) nr_rate_reject($wait);
+            $global = nr_sync_lock();
             if (nr_sync_count() >= NR_SYNC_MAX_VAULTS) {
                 nr_sync_gc(); // INFO: expired vaults must not count – clean up once before refusing
                 if (nr_sync_count() >= NR_SYNC_MAX_VAULTS) {
@@ -109,8 +111,8 @@ function nr_sync_put(string $file): never
             nr_error('SYNC_WRITE_FAILED', 'Could not store the vault.', 500);
         }
     } finally {
-        flock($lock, LOCK_UN);
-        fclose($lock);
+        nr_sync_unlock($global);
+        nr_sync_unlock($lock);
     }
 
     $etag = nr_sync_etag($blob);
@@ -120,7 +122,7 @@ function nr_sync_put(string $file): never
 
 function nr_sync_delete(string $file): never
 {
-    $lock = nr_sync_lock();
+    $lock = nr_sync_lock($file);
     try {
         $stored = @file_get_contents($file);
         if ($stored === false) {
@@ -133,8 +135,7 @@ function nr_sync_delete(string $file): never
         }
         @unlink($file);
     } finally {
-        flock($lock, LOCK_UN);
-        fclose($lock);
+        nr_sync_unlock($lock);
     }
     http_response_code(204);
     exit;
@@ -181,17 +182,26 @@ function nr_sync_body(): string
     return $raw;
 }
 
-// INFO: one global lock for all writes – writes are tiny and rare
-function nr_sync_lock()
+// INFO: writes to a vault lock its stripe (256 lock files, by the first hash byte); creating a vault also
+//       takes the global lock for the vault count. Order is always stripe → global (no deadlock).
+function nr_sync_lock(?string $file = null)
 {
     if (!is_dir(NR_SYNC_DIR) && !@mkdir(NR_SYNC_DIR, 0770, true) && !is_dir(NR_SYNC_DIR)) {
         nr_error('SERVER_MISCONFIGURED', 'Sync storage is not writable (var/sync).', 500);
     }
-    $fh = @fopen(NR_SYNC_DIR . '/.lock', 'c');
+    $name = $file !== null ? '.lock-' . substr(basename($file), 0, 2) : '.lock';
+    $fh = @fopen(NR_SYNC_DIR . '/' . $name, 'c');
     if ($fh === false || !flock($fh, LOCK_EX)) {
         nr_error('SERVER_MISCONFIGURED', 'Sync storage is not writable (var/sync).', 500);
     }
     return $fh;
+}
+
+function nr_sync_unlock($fh): void
+{
+    if (!is_resource($fh)) return;
+    flock($fh, LOCK_UN);
+    fclose($fh);
 }
 
 function nr_sync_etag(string $blob): string
@@ -201,12 +211,7 @@ function nr_sync_etag(string $blob): string
 
 function nr_sync_etag_matches(string $header, string $etag): bool
 {
-    foreach (explode(',', $header) as $candidate) {
-        $candidate = trim($candidate);
-        if (str_starts_with($candidate, 'W/')) $candidate = substr($candidate, 2);
-        if ($candidate !== '' && hash_equals($etag, $candidate)) return true;
-    }
-    return false;
+    return nr_etag_matches($header, $etag);
 }
 
 function nr_sync_count(): int

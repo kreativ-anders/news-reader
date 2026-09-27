@@ -4,10 +4,17 @@ declare(strict_types=1);
 const NR_ACCEPT      = 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.1';
 const NR_ACCEPT_HTML = 'text/html, application/xhtml+xml;q=0.9, */*;q=0.1';
 
-// INFO: redirects are followed manually so that every hop passes nr_validate_target()
-function nr_fetch(string $url, string $accept = NR_ACCEPT): array
+// INFO: redirects are followed manually so that every hop passes nr_validate_target().
+//       $conditional = ['etag' => …, 'lastModified' => …] sends If-None-Match/If-Modified-Since (304 → status 304).
+//       A response prepared by nr_fetch_prime() is returned without a request.
+function nr_fetch(string $url, string $accept = NR_ACCEPT, array $conditional = []): array
 {
+    if (($primed = nr_fetch_prime($url)) !== null) return $primed;
     $current = $url;
+    $extra = array_values(array_filter([
+        isset($conditional['etag']) ? 'If-None-Match: ' . $conditional['etag'] : null,
+        isset($conditional['lastModified']) ? 'If-Modified-Since: ' . $conditional['lastModified'] : null,
+    ]));
 
     for ($hop = 0; $hop <= NR_MAX_REDIRECTS; $hop++) {
         $check = nr_validate_target($current);
@@ -21,8 +28,8 @@ function nr_fetch(string $url, string $accept = NR_ACCEPT): array
         }
 
         $res = extension_loaded('curl')
-            ? nr_request_curl($current, $accept, $timeout)
-            : nr_request_stream($current, $accept, $timeout);
+            ? nr_request_curl($current, $accept, $timeout, $extra)
+            : nr_request_stream($current, $accept, $timeout, $extra);
 
         if ($res['tooLarge']) {
             return nr_err('UPSTREAM_TOO_LARGE', 'The source response exceeded ' . NR_MAX_BODY_BYTES . ' bytes.');
@@ -35,23 +42,46 @@ function nr_fetch(string $url, string $accept = NR_ACCEPT): array
         $headers = $res['headers'];
 
         if ($status >= 300 && $status < 400 && isset($headers['location'])) {
-            $current = nr_absolute_url($headers['location'], $current);
+            $current = nr_absolute_url($headers['location'], $current, false);
             continue;
         }
         if ($status >= 400) {
             return nr_err('UPSTREAM_HTTP_ERROR', 'The source returned HTTP ' . $status . '.', ['status' => $status]);
         }
 
-        return [
+        $ok = [
             'ok'          => true,
             'body'        => $res['body'],
             'contentType' => strtolower($headers['content-type'] ?? ''),
             'finalUrl'    => $current,
             'status'      => $status,
         ];
+        nr_fetch_validators($current, array_filter([
+            'etag'         => isset($headers['etag']) && strlen($headers['etag']) <= 200 ? $headers['etag'] : null,
+            'lastModified' => isset($headers['last-modified']) && strlen($headers['last-modified']) <= 100 ? $headers['last-modified'] : null,
+        ]));
+        return $ok;
     }
 
     return nr_err('TOO_MANY_REDIRECTS', 'More than ' . NR_MAX_REDIRECTS . ' redirects.');
+}
+
+// INFO: upstream validators (ETag/Last-Modified) of the responses fetched in this request, by final URL
+function nr_fetch_validators(string $url, ?array $set = null): array
+{
+    static $seen = [];
+    if ($set !== null) $seen[$url] = $set;
+    return $seen[$url] ?? [];
+}
+
+// INFO: hands a response that was already fetched (conditional refresh) to the next nr_fetch() of the same URL
+function nr_fetch_prime(string $url, ?array $res = null): ?array
+{
+    static $primed = [];
+    if ($res !== null) { $primed[$url] = $res; return null; }
+    $hit = $primed[$url] ?? null;
+    unset($primed[$url]);
+    return $hit;
 }
 
 // INFO: set_time_limit() counts CPU time only on Linux – network waits need their own wall-clock budget
@@ -62,22 +92,28 @@ function nr_time_left(): int
     return (int)floor(NR_TIME_BUDGET - (microtime(true) - $start));
 }
 
-function nr_request_curl(string $url, string $accept, int $timeout): array
+// INFO: one handle per request – curl_reset() clears the options, connections and TLS sessions are reused
+function nr_request_curl(string $url, string $accept, int $timeout, array $extraHeaders = []): array
 {
+    static $ch = null;
     $body = '';
     $tooLarge = false;
     $headers = [];
 
-    $ch = curl_init($url);
+    $ch ??= curl_init();
+    curl_reset($ch);
     curl_setopt_array($ch, [
+        CURLOPT_URL            => $url,
         CURLOPT_FOLLOWLOCATION => false,
         CURLOPT_PROXY          => '',   // WARNING: a proxy would bypass the IP pinning below
         CURLOPT_CONNECTTIMEOUT => min(NR_CONNECT_TIMEOUT, $timeout),
         CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_LOW_SPEED_LIMIT => NR_LOW_SPEED_LIMIT,
+        CURLOPT_LOW_SPEED_TIME => NR_LOW_SPEED_TIME,
         CURLOPT_USERAGENT      => NR_USER_AGENT,
         CURLOPT_ENCODING       => '',
         CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-        CURLOPT_HTTPHEADER     => ['Accept: ' . $accept, 'Accept-Language: en,de;q=0.8'],
+        CURLOPT_HTTPHEADER     => ['Accept: ' . $accept, 'Accept-Language: en,de;q=0.8', ...$extraHeaders],
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,
         CURLOPT_HEADERFUNCTION => function ($ch, string $line) use (&$headers): int {
@@ -105,7 +141,9 @@ function nr_request_curl(string $url, string $accept, int $timeout): array
     $pin = nr_pinned_ips($host);
     if ($pin) {
         $addr = str_contains($pin[0], ':') ? '[' . $pin[0] . ']' : $pin[0];
-        curl_setopt($ch, CURLOPT_RESOLVE, [$host . ':' . nr_url_port($url) . ':' . $addr]);
+        // INFO: "-host:port" drops an entry an earlier request of this handle added
+        $hostPort = $host . ':' . nr_url_port($url);
+        curl_setopt($ch, CURLOPT_RESOLVE, ['-' . $hostPort, $hostPort . ':' . $addr]);
     }
 
     if (NR_CA_BUNDLE !== '' && is_file(NR_CA_BUNDLE)) {
@@ -126,7 +164,7 @@ function nr_request_curl(string $url, string $accept, int $timeout): array
 }
 
 // INFO: fallback without ext-curl (HTTPS needs ext-openssl)
-function nr_request_stream(string $url, string $accept, int $timeout): array
+function nr_request_stream(string $url, string $accept, int $timeout, array $extraHeaders = []): array
 {
     $fail = fn(string $msg) => ['status' => 0, 'headers' => [], 'body' => '', 'error' => $msg, 'tooLarge' => false];
 
@@ -146,6 +184,7 @@ function nr_request_stream(string $url, string $accept, int $timeout): array
         'Accept-Language: en,de;q=0.8',
         'Accept-Encoding: gzip',
         'Connection: close',
+        ...$extraHeaders,
     ];
     // INFO: same IP pinning as with curl – connect to the validated address, keep Host header and TLS name
     $pin = nr_pinned_ips($host);
@@ -183,6 +222,9 @@ function nr_request_stream(string $url, string $accept, int $timeout): array
         return $fail(preg_replace('/^fopen\([^)]*\):\s*/', '', (string)$err) ?: 'connection failed');
     }
 
+    // INFO: same low-speed abort as with curl: every read waits at most NR_LOW_SPEED_TIME seconds, and the
+    //       average rate must reach NR_LOW_SPEED_LIMIT once NR_LOW_SPEED_TIME seconds have passed
+    stream_set_timeout($fp, min($timeout, NR_LOW_SPEED_TIME));
     $start = microtime(true);
     $body = '';
     $tooLarge = false;
@@ -191,9 +233,14 @@ function nr_request_stream(string $url, string $accept, int $timeout): array
         if ($chunk === false) break;
         $body .= $chunk;
         if (strlen($body) > NR_MAX_BODY_BYTES) { $tooLarge = true; break; }
-        if (microtime(true) - $start > $timeout) {
+        $elapsed = microtime(true) - $start;
+        if ($elapsed > $timeout || stream_get_meta_data($fp)['timed_out']) {
             fclose($fp);
             return $fail('timeout');
+        }
+        if ($elapsed >= NR_LOW_SPEED_TIME && strlen($body) / $elapsed < NR_LOW_SPEED_LIMIT) {
+            fclose($fp);
+            return $fail('transfer too slow');
         }
     }
     $meta = stream_get_meta_data($fp);
@@ -254,7 +301,8 @@ function nr_validate_target(string $url): ?array
     }
 
     $host = strtolower(trim($host, '[]'));
-    $ips = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : nr_resolve_host($host);
+    // INFO: every hop is checked, but a host is resolved only once per request
+    $ips = filter_var($host, FILTER_VALIDATE_IP) ? [$host] : (nr_pinned_ips($host) ?: nr_resolve_host($host));
 
     if ($ips === []) {
         return nr_err('DNS_FAILED', 'The host could not be resolved.');
@@ -276,7 +324,7 @@ function nr_url_port(string $url): int
     return str_starts_with(strtolower($url), 'https:') ? 443 : 80;
 }
 
-// INFO: public unicast only; unwraps IPv4-mapped, IPv4-compatible, NAT64 and 6to4 addresses
+// INFO: public unicast only; unwraps IPv4-mapped, SIIT (::ffff:0:0/96), IPv4-compatible, NAT64 and 6to4 addresses
 function nr_is_public_ip(string $ip): bool
 {
     $flags = FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE | (defined('FILTER_FLAG_GLOBAL_RANGE') ? FILTER_FLAG_GLOBAL_RANGE : 0);
@@ -295,7 +343,8 @@ function nr_is_public_ip(string $ip): bool
     }
 
     $prefix = substr($bin, 0, 12);
-    if ($prefix === str_repeat("\0", 10) . "\xff\xff" || $prefix === str_repeat("\0", 12) || $prefix === "\x00\x64\xff\x9b" . str_repeat("\0", 8)) {
+    $zero8 = str_repeat("\0", 8);
+    if ($prefix === $zero8 . "\0\0\xff\xff" || $prefix === $zero8 . "\xff\xff\0\0" || $prefix === $zero8 . "\0\0\0\0" || $prefix === "\x00\x64\xff\x9b" . $zero8) {
         $v4 = inet_ntop(substr($bin, 12));
         return $v4 !== false && nr_is_public_ip($v4);
     }
@@ -304,9 +353,13 @@ function nr_is_public_ip(string $ip): bool
         return $v4 !== false && nr_is_public_ip($v4);
     }
     $first = ord($bin[0]);
+    $second = ord($bin[1]);
     return ($first & 0xfe) !== 0xfc                               // INFO: fc00::/7 ULA
-        && !($first === 0xfe && (ord($bin[1]) & 0xc0) === 0x80)    // INFO: fe80::/10 link-local
-        && $first !== 0xff;                                        // INFO: ff00::/8 multicast
+        && !($first === 0xfe && ($second & 0x80) === 0x80)         // INFO: fe80::/10 link-local, fec0::/10 site-local
+        && $first !== 0xff                                         // INFO: ff00::/8 multicast
+        && !str_starts_with($bin, "\x00\x64\xff\x9b\x00\x01")        // INFO: 64:ff9b:1::/48 local-use NAT64
+        && !($first === 0x3f && $second === 0xff && (ord($bin[2]) & 0xf0) === 0) // INFO: 3fff::/20 documentation
+        && !($first === 0x5f && $second === 0x00);                 // INFO: 5f00::/16 SRv6 SIDs
 }
 
 // INFO: validated addresses per host for the current request – set with $ips, read without
@@ -342,9 +395,10 @@ function nr_is_http_url(string $url): bool
     return strlen($url) <= 2048 && preg_match('#^https?://[^/\s?\#]+#i', $url) === 1;
 }
 
-function nr_absolute_url(string $href, string $base): string
+// INFO: $decode = false for URLs that are no HTML (Location headers, robots.txt) – "&amp;" there is literal
+function nr_absolute_url(string $href, string $base, bool $decode = true): string
 {
-    $href = trim(html_entity_decode($href, ENT_QUOTES | ENT_HTML5));
+    $href = trim($decode ? html_entity_decode($href, ENT_QUOTES | ENT_HTML5) : $href);
     if ($href === '') return $base;
     if (preg_match('#^[a-z][a-z0-9+.-]*:#i', $href)) return $href;
 

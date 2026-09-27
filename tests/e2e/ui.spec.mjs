@@ -138,20 +138,22 @@ test.describe('card actions stay accessible although they appear on hover', () =
   });
 });
 
-test('a long teaser can be expanded and collapsed; a short one has no toggle', async ({ app, page }) => {
+test('a long teaser opens with its chevron or a click on the text; a short one has no chevron', async ({ app, page }) => {
   await app.follow(`${FX()}/feeds/long.xml`);
   await app.go('inbox');
   await expect(app.card('Second post').locator('[data-sum]')).toBeHidden();
   const card = app.card('A post with a long teaser');
-  const toggle = card.getByRole('button', { name: 'Show full teaser' });
+  const toggle = card.getByRole('button', { name: 'Full teaser' });
+  const clamped = () => card.locator('.sum').evaluate((p) => p.scrollHeight > p.clientHeight + 1);
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  const clamped = () => card.locator('.sum').evaluate((p) => p.scrollHeight > p.clientHeight + 1);
   expect(await clamped()).toBe(true);
   await toggle.click();
-  await expect(card.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   expect(await clamped()).toBe(false);
-  // stays open when the list re-renders
-  await app.go('later'); await app.go('inbox');
-  await expect(app.card('A post with a long teaser').getByRole('button', { name: 'Show less' })).toBeVisible();
+  await card.locator('.sum').click();                       // the text itself collapses it again
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await card.locator('.sum').click();
+  await app.go('later'); await app.go('inbox');              // stays open when the list re-renders
+  await expect(app.card('A post with a long teaser').getByRole('button', { name: 'Full teaser' })).toHaveAttribute('aria-expanded', 'true');
 });

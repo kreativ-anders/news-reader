@@ -88,13 +88,12 @@ export async function putLocal(records) {
 
 // INFO: a marker is only removed if the record was not changed again meanwhile
 export async function outboxAck(markers) {
+  if (!markers.length) return;
   const db = await open();
   const tx = db.transaction(['outbox'], 'readwrite');
   const ob = tx.objectStore('outbox');
-  for (const m of markers) {
-    const cur = await done(ob.get([m.kind, m.id]));
-    if (cur && cur.updatedAt === m.updatedAt) ob.delete([m.kind, m.id]);
-  }
+  const cur = new Map((await done(ob.getAll())).map((m) => [key(m), m.updatedAt]));
+  for (const m of markers) if (cur.get(key(m)) === m.updatedAt) ob.delete([m.kind, m.id]);
   return txDone(tx);
 }
 
@@ -128,17 +127,21 @@ export async function outboxAll() {
   });
 }
 
-// INFO: last write wins; malformed records from the vault are ignored
-export async function applyRemote(records) {
+// INFO: last write wins; malformed records, timestamps too far in the future and skip(r) are ignored.
+//       A local record with such a timestamp (accepted before this check) loses against any valid one.
+export async function applyRemote(records, skip = () => false) {
+  const now = Date.now();
   const db = await open();
   const tx = db.transaction(['records'], 'readwrite');
   const rs = tx.objectStore('records');
+  const cur = new Map((await done(rs.getAll())).map((r) => [key(r), r.updatedAt]));
   const applied = [];
   for (const r of records) {
-    if (!isRecord(r)) continue;
-    const cur = await done(rs.get([r.kind, r.id]));
-    if (!cur || r.updatedAt > cur.updatedAt) {
+    if (!validRecord(r, now) || skip(r)) continue;
+    const t = cur.get(key(r));
+    if (t === undefined || r.updatedAt > t || t > now + MAX_SKEW_MS) {
       rs.put(r);
+      cur.set(key(r), r.updatedAt);
       applied.push(r);
     }
   }
@@ -164,5 +167,25 @@ export async function deleteEntriesForFeed(feedId) {
   return putEntries([], ids);
 }
 
-const isRecord = (r) => r && (r.kind === 'feed' || r.kind === 'item' || r.kind === 'device') && typeof r.id === 'string'
-  && Number.isFinite(r.updatedAt) && r.data && typeof r.data === 'object';
+const key = (r) => `${r.kind}\u0000${r.id}`;
+
+export const MAX_SKEW_MS = 864e5;
+export const ITEM_STATES = ['new', 'reading', 'later', 'done', 'dismissed'];
+
+const str = (v) => typeof v === 'string';
+const optStr = (v) => v == null || str(v);
+const num = (v) => Number.isFinite(v) && Math.abs(v) < 8.64e15;
+const optNum = (v) => v == null || num(v);
+const optFlag = (v) => v == null || v === 0 || v === 1 || v === false || v === true;
+const SCHEMA = {
+  feed: (d) => str(d.url) && optStr(d.title) && optStr(d.g) && optNum(d.since) && optNum(d.added) && optFlag(d.d),
+  item: (d) => ITEM_STATES.includes(d.s) && optStr(d.t) && optStr(d.u) && optStr(d.i) && optStr(d.f) && (optStr(d.p) || num(d.p)),
+  device: (d) => optStr(d.name) && optStr(d.platform) && optStr(d.pub) && optNum(d.since) && optNum(d.seen) && optFlag(d.r),
+};
+
+// INFO: shape check for records from the vault (written by other devices); unknown extra fields are kept
+export function validRecord(r, now = Date.now()) {
+  return !!r && typeof r === 'object' && Object.hasOwn(SCHEMA, r.kind) && str(r.id) && r.id.length > 0 && r.id.length <= 200
+    && num(r.updatedAt) && r.updatedAt >= 0 && r.updatedAt <= now + MAX_SKEW_MS
+    && !!r.data && typeof r.data === 'object' && !Array.isArray(r.data) && SCHEMA[r.kind](r.data);
+}

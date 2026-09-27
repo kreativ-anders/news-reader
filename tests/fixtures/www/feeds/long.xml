@@ -9,7 +9,7 @@
       <link>{{base}}/article/second.html</link>
       <guid isPermaLink="false">fixture-long-1</guid>
       <pubDate>{{date:0.2}}</pubDate>
-      <description>This teaser is deliberately long. It keeps going well past the two lines a card shows, so the reader needs a way to see the rest of it without opening the article. The last words of this teaser are the proof: the end is visible.</description>
+      <description>This teaser is deliberately long. It keeps going well past the two lines that a card shows, even on a wide desktop screen, so the reader needs a way to see the rest of it without opening the article. The last words of this teaser are the proof that it works: the end is visible.</description>
     </item>
   </channel>
 </rss>

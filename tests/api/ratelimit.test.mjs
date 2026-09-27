@@ -1,5 +1,6 @@
 // Rate limits of the Collector and the article endpoint (lab profile with tiny limits).
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { describe, it } from 'node:test';
 import { servers, assertError } from './helpers.mjs';
 
@@ -27,5 +28,37 @@ describe('rate limits', () => {
     assert.equal(fromFeed.status, 200);
     assert.equal(fromFeed.json.article.source, 'feed');
     assert.equal((await art(s.fx.url + '/article/second.html')).header('x-collector-cache'), 'HIT', 'cached copy still served');
+  });
+});
+
+describe('IPv6 /48 and global buckets', () => {
+  // INFO: php -S only listens on 127.0.0.1 – the limiter runs in the sandbox with faked client addresses
+  const hits = (code) => JSON.parse(execFileSync(process.env.PHP_BIN || 'php', ['-r', `
+    require 'src/config.php'; require 'src/response.php'; require 'src/ratelimit.php';
+    $out = [];
+    ${code}
+    echo json_encode($out);`], { cwd: s.api.dir, encoding: 'utf8' }));
+
+  it('many /64s of one /48 hit the /48 limit', () => {
+    const r = hits(`for ($i = 0; $i < 6; $i++) {
+      $_SERVER['REMOTE_ADDR'] = sprintf('2001:db8:aa:%x::1', $i);
+      $out[] = nr_rate_hit_wide('t48', [2, 600], [4, 600]) === 0;
+    }`);
+    assert.deepEqual(r, [true, true, true, true, false, false]);
+  });
+
+  it('a /64 limit still applies inside a /48; IPv4 clients have no /48 bucket', () => {
+    const r = hits(`$_SERVER['REMOTE_ADDR'] = '2001:db8:bb:1::1';
+      for ($i = 0; $i < 3; $i++) $out[] = nr_rate_hit_wide('t64', [2, 600], [100, 600]) === 0;
+      for ($i = 0; $i < 3; $i++) { $_SERVER['REMOTE_ADDR'] = '203.0.113.' . $i; $out[] = nr_rate_hit_wide('t4', [1, 600], [1, 600]) === 0; }`);
+    assert.deepEqual(r, [true, true, false, true, true, true]);
+  });
+
+  it('the global sync-create bucket counts all clients together', () => {
+    const r = hits(`for ($i = 0; $i < 4; $i++) {
+      $_SERVER['REMOTE_ADDR'] = '198.51.100.' . $i;
+      $out[] = nr_rate_hit('tall', [3, 600], '*') === 0;
+    }`);
+    assert.deepEqual(r, [true, true, true, false]);
   });
 });

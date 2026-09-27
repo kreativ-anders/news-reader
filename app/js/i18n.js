@@ -45,16 +45,16 @@ function merge(base, over) {
 
 export async function loadI18n(baseUrl, lang = getLang()) {
   const base = String(baseUrl).replace(/\/?$/, '/');
-  const en = await loadJson(base + 'en.json');
-  const dict = lang === 'en' ? en : merge(en, await loadJson(base + lang + '.json'));
-  const plural = new Intl.PluralRules(lang);
+  const [en, own] = await Promise.all([loadJson(base + 'en.json'), lang === 'en' ? null : loadJson(base + lang + '.json')]);
+  const dict = own ? merge(en, own) : en;
+  const plural = new Intl.PluralRules(lang), num = new Intl.NumberFormat(lang);
   const lookup = (key) => key.split('.').reduce((o, k) => (o == null ? o : o[k]), dict);
   const t = (key, vars = {}) => {
     let s;
     if (typeof vars.n === 'number') s = lookup(`${key}_${plural.select(vars.n)}`) ?? lookup(`${key}_other`);
     s ??= lookup(key);
     if (typeof s !== 'string') return key;
-    return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+    return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? (typeof vars[k] === 'number' ? num.format(vars[k]) : String(vars[k])) : m));
   };
   t.lang = lang;
   return t;

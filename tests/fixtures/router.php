@@ -28,6 +28,12 @@ $special = [
     '/text.txt'     => fn() => send('text/plain', "just some text\n"),
     '/slow'         => function () { sleep(3); send('application/rss+xml', expand(file_get_contents(__DIR__ . '/www/feeds/rss.xml'))); },
     '/guess/feed'   => fn() => send('application/atom+xml', expand(file_get_contents(__DIR__ . '/www/feeds/atom.xml'))),
+    '/etag-feed'    => function () {
+        header('ETag: "fixture-v1"');
+        header('Last-Modified: Mon, 01 Jan 2024 00:00:00 GMT');
+        if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === '"fixture-v1"') { http_response_code(304); return; }
+        send('application/rss+xml', expand(file_get_contents(__DIR__ . '/www/feeds/rss.xml')));
+    },
 ];
 
 if (isset($special[$path])) {

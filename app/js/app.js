@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -108,16 +108,25 @@ function ago(ts) {
 }
 const clock = (ts) => new Date(ts).toLocaleTimeString(t.lang, { hour: '2-digit', minute: '2-digit' });
 
-const entryTime = (e) => Date.parse(e.publishedAt || '') || e.firstSeen || 0;
-const liveFeeds = () => [...S.feeds.values()].filter((f) => !f.data.d).sort((a, b) => (a.data.title || a.data.url).localeCompare(b.data.title || b.data.url));
-const stateOf = (id) => S.items.get(id)?.data?.s || 'new';
+// INFO: render() fills this memo once per pass – counts, sidebar, list and filter all need the same derived lists
+let memo = null;
+const memoized = (key, fn) => (memo ? (memo[key] ??= fn()) : fn());
+
+const entryTime = (e) => (e.ts ??= Date.parse(e.publishedAt || '') || e.firstSeen || 0);
+let coll = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
+const byName = (a, b) => coll.compare(a, b);
 const feedTitle = (id) => { const f = S.feeds.get(id); return f ? (cleanTitle(f.data.title) || host(f.data.url)) : ''; };
+const liveFeeds = () => memoized('live', () => [...S.feeds.values()].filter((f) => !f.data.d).sort((a, b) => byName(feedTitle(a.id), feedTitle(b.id))));
+const stateOf = (id) => S.items.get(id)?.data?.s || 'new';
+// INFO: dismissed/new records are pruned after 30 days (sync.js) – for feeds followed longer than that, older entries
+//       must not come back as new, so the inbox starts at most 30 days back
+const sinceOf = (f, now = Date.now()) => ((f.data.added || 0) < now - KEEP_UNSEEN_MS ? Math.max(f.data.since || 0, now - KEEP_UNSEEN_MS) : f.data.since || 0);
 
 // INFO: S.filter is '' (all), a feed id ("f…") or a folder ("g:<name>")
 const folderOf = (id) => S.feeds.get(id)?.data?.g || '';
 const inFilter = (fid, filter = S.filter) => !filter || (filter.startsWith('g:') ? folderOf(fid) === filter.slice(2) : fid === filter);
 const filterName = (filter) => (filter.startsWith('g:') ? filter.slice(2) : feedTitle(filter));
-const folders = () => [...new Set(liveFeeds().map((f) => f.data.g).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+const folders = () => [...new Set(liveFeeds().map((f) => f.data.g).filter(Boolean))].sort(byName);
 
 // INFO: favicon from the Collector (source.icon), else /favicon.ico of the site; on error a monogram stays visible
 const iconFailed = new Set();
@@ -136,16 +145,32 @@ function feedIcon(id, fallbackUrl = '') {
   return `<span class="fi" style="--fi-h:${hue}" aria-hidden="true">${esc(letter)}${img}</span>`;
 }
 
+// INFO: server error codes → text in the app's language (the raw message goes into the tooltip)
+const ERRC = {
+  NO_FEED_DETECTED: 'no_feed', PLATFORM_NO_FEED: 'platform', DNS_FAILED: 'dns', UPSTREAM_FETCH_FAILED: 'upstream', UPSTREAM_HTTP_ERROR: 'upstream',
+  UPSTREAM_TOO_LARGE: 'too_large', TOO_MANY_REDIRECTS: 'redirects', INVALID_URL: 'invalid', UNSUPPORTED_URL: 'invalid', FORBIDDEN_HOST: 'invalid',
+  RATE_LIMITED: 'busy', BUSY: 'busy', SYNC_DISABLED: 'sync_disabled', FORBIDDEN_NETWORK: 'network', SERVER_FULL: 'full',
+  PAYLOAD_TOO_LARGE: 'sync_too_big', SERVER_MISCONFIGURED: 'misconfigured', NOT_AN_ARTICLE: 'no_article', NO_CONTENT: 'no_article',
+};
+// INFO: errors without a code (or TIMEOUT / UNREACHABLE / HTTP_nnn from feeds.js) already carry translated text
+function errText(code, message = '') {
+  if (ERRC[code]) return t('errc.' + ERRC[code]);
+  if (!code || code === 'TIMEOUT' || code === 'UNREACHABLE' || /^HTTP_/.test(code)) return message || t('errc.generic');
+  return t('errc.generic');
+}
+const errHtml = (e) => `<span class="err" title="${esc(e.message || '')}">${esc(errText(e.code, e.message))}</span>`;
+
 async function loadAll() {
   S.feeds.clear(); S.items.clear(); S.entries.clear();
   for (const r of await db.getAll('records')) {
     if (r.kind === 'feed') S.feeds.set(r.id, r);
     else if (r.kind === 'item') S.items.set(r.id, r);
   }
-  for (const e of await db.getAll('entries')) S.entries.set(e.id, e);
-  S.lastRefresh = await db.kvGet('lastRefresh', 0);
-  Object.entries(await db.kvGet('fetchState', {})).forEach(([k, v]) => S.fetch.set(k, v));
-  S.swipe = { ...SWIPE_DEFAULT, ...(await db.kvGet('swipe', {})) };
+  const [entries, last, fetchState, swipe] = await Promise.all([db.getAll('entries'), db.kvGet('lastRefresh', 0), db.kvGet('fetchState', {}), db.kvGet('swipe', {})]);
+  for (const e of entries) S.entries.set(e.id, e);
+  S.lastRefresh = last;
+  Object.entries(fetchState).forEach(([k, v]) => S.fetch.set(k, v));
+  S.swipe = { ...SWIPE_DEFAULT, ...swipe };
 }
 
 async function commit(records) {
@@ -158,10 +183,10 @@ async function commit(records) {
 const feedUrlOf = (id) => S.feeds.get(id)?.data?.url || '';
 const scheduleOffline = (delay) => offline.schedule(() => S.items, feedUrlOf, delay);
 
-function itemRecord(id, s) {
+function itemRecord(id, s, extra = {}) {
   const e = S.entries.get(id);
   const prev = S.items.get(id)?.data || {};
-  const data = { s };
+  const data = { s, ...extra };
   // INFO: snapshot so "Later" and "Done" stay complete after the entry left the feed
   const title = e?.title ?? prev.t, u = e?.url ?? prev.u, f = e?.feedId ?? prev.f, p = e?.publishedAt ?? prev.p, i = e?.image || prev.i;
   if (title) data.t = title;
@@ -172,17 +197,16 @@ function itemRecord(id, s) {
   return { kind: 'item', id, data, updatedAt: Date.now() };
 }
 
-async function setState(ids, s, { toast = true, animate = true, label = '' } = {}) {
+async function setState(ids, s, { toast = true, animate = true, label = '', extra } = {}) {
   ids = [].concat(ids);
   const before = ids.map((id) => S.items.get(id) || null);
   if (animate) await leave(ids, s);
-  await commit(ids.map((id) => itemRecord(id, s)));
+  await commit(ids.map((id) => itemRecord(id, s, extra)));
   render();
-  if (toast) {
-    const what = t(`toast.${s}`);
-    showToast(label || (ids.length > 1 ? t('toast.many', { n: ids.length, what }) : what), () => restore(ids, before));
-  }
+  if (toast) showToast(label || stateToast(s, ids.length), () => restore(ids, before));
 }
+
+const stateToast = (s, n) => (n > 1 ? t(`toast.n_${s}`, { n }) : t(`toast.${s}`));
 
 async function restore(ids, before) {
   const now = Date.now();
@@ -217,8 +241,7 @@ async function flushOpened() {
   await leave(ids, 'done');
   ids.forEach((id) => lingering.delete(id));
   render();
-  const what = t('toast.done');
-  showToast(ids.length > 1 ? t('toast.many', { n: ids.length, what }) : what, () => restore(ids, before));
+  showToast(stateToast('done', ids.length), () => restore(ids, before));
 }
 
 const lingersIn = (id, view) => lingering.get(id)?.view === view;
@@ -272,9 +295,15 @@ async function refreshFeed(feed, force = false) {
   return res;
 }
 
+// INFO: the Collector caches a source for hours – an automatic refresh skips feeds whose copy cannot have changed yet
+const due = (f, now) => { const st = S.fetch.get(f.id); return !st?.ok || !st.next || st.next <= now; };
+
 async function refreshAll(force = false) {
-  const feeds = liveFeeds();
-  if (S.refreshing || !feeds.length) return;
+  const all = liveFeeds(), now = Date.now();
+  if (!all.length) { if (force) showToast(t('toast.no_feeds')); return; }
+  const feeds = force ? all : all.filter((f) => due(f, now));
+  if (S.refreshing) return;
+  const before = inboxEntries('').length;
   S.refreshing = true;
   $('#refreshBtn').setAttribute('aria-busy', 'true');
   const results = await pool(feeds, 4, (f) => refreshFeed(f, force));
@@ -282,7 +311,7 @@ async function refreshAll(force = false) {
   results.forEach((r, i) => {
     if (!r.ok) {
       failed++;
-      S.fetch.set(feeds[i].id, { ...(S.fetch.get(feeds[i].id) || {}), at: Date.now(), ok: false, error: r.error.message, code: r.error.code });
+      S.fetch.set(feeds[i].id, { ...(S.fetch.get(feeds[i].id) || {}), at: Date.now(), ok: false, error: r.error.message, code: r.error.code, next: 0 });
     }
   });
   S.lastRefresh = Date.now();
@@ -291,8 +320,9 @@ async function refreshAll(force = false) {
   S.refreshing = false;
   $('#refreshBtn').removeAttribute('aria-busy');
   render();
-  if (failed === feeds.length && results[0]?.error?.code === 'UNREACHABLE') showToast(results[0].error.message);
+  if (feeds.length && failed === feeds.length && results[0]?.error?.code === 'UNREACHABLE') showToast(results[0].error.message);
   else if (failed) showToast(t('toast.refresh_failed', { n: failed }), () => go('feeds'), t('toast.details'));
+  else if (force) { const n = Math.max(0, inboxEntries('').length - before); showToast(n ? t('toast.checked', { n }) : t('toast.checked_none')); }
 }
 
 function toEntry(e, feedId, firstSeen) {
@@ -302,18 +332,32 @@ function toEntry(e, feedId, firstSeen) {
 }
 
 // INFO: per device (fetchState), not synced – icon and site only decorate the feed list
-const sourceMeta = (res) => ({ icon: httpUrl(res.source?.icon) || '', site: httpUrl(res.source?.siteUrl) || '' });
+const sourceMeta = (res) => ({
+  icon: httpUrl(res.source?.icon) || '', site: httpUrl(res.source?.siteUrl) || '',
+  feed: res.source?.feedUrl ? feedId(res.source.feedUrl) : '', next: Date.parse(res.meta?.nextRefreshAfter || '') || 0,
+});
 
 const toEntries = (list, feedId, firstSeenOf) => (Array.isArray(list) ? list : [])
   .filter((e) => e && typeof e.id === 'string' && httpUrl(e.url))
   .map((e) => toEntry(e, feedId, firstSeenOf(e.id)));
 
-async function addFeed(input, { quiet = false, title = '', folder = '' } = {}) {
+// INFO: "later" = the feed is added even if the server is busy or unreachable (OPML import) – the next refresh fills it
+const RETRY_LATER = ['RATE_LIMITED', 'BUSY', 'TIMEOUT', 'UNREACHABLE'];
+async function addFeed(input, { quiet = false, title = '', folder = '', later = false, persist = true } = {}) {
   const url = normalizeUrl(input);
   if (!url) throw new Error(t('err.invalid_url'));
   const id = feedId(url);
   if (S.feeds.get(id) && !S.feeds.get(id).data.d) throw new Error(t('err.already_following'));
-  const res = await fetchFeed(url, { t });
+  let res;
+  try {
+    res = await fetchFeed(url, { t });
+  } catch (e) {
+    if (!later || !RETRY_LATER.includes(e.code)) throw e;
+    res = { entries: [], source: {}, pending: e };
+  }
+  // INFO: two addresses of the same site (page and feed) resolve to one feed
+  const resolved = res.source?.feedUrl ? feedId(res.source.feedUrl) : '';
+  if (resolved && liveFeeds().some((f) => f.id === resolved || S.fetch.get(f.id)?.feed === resolved)) throw new Error(t('err.already_following'));
   const now = Date.now();
   const fresh = toEntries(res.entries, id, () => now);
   const times = fresh.map(entryTime).sort((a, b) => b - a);
@@ -326,8 +370,10 @@ async function addFeed(input, { quiet = false, title = '', folder = '' } = {}) {
   await commit([rec]);
   await db.putEntries(fresh);
   fresh.forEach((e) => S.entries.set(e.id, e));
-  S.fetch.set(id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, ...sourceMeta(res) });
-  await db.kvSet('fetchState', Object.fromEntries(S.fetch));
+  S.fetch.set(id, res.pending
+    ? { at: now, ok: false, error: res.pending.message, code: res.pending.code, next: 0 }
+    : { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, ...sourceMeta(res) });
+  if (persist) await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   if (!quiet) render();
   return { rec, res };
 }
@@ -342,15 +388,19 @@ async function removeFeed(id) {
 }
 
 function inboxEntries(filter = S.filter) {
-  const since = new Map(liveFeeds().map((f) => [f.id, f.data.since || 0]));
-  return [...S.entries.values()]
-    .filter((e) => since.has(e.feedId) && (stateOf(e.id) === 'new' || lingersIn(e.id, 'inbox')) && inFilter(e.feedId, filter) && entryTime(e) >= since.get(e.feedId))
-    .sort((a, b) => entryTime(b) - entryTime(a));
+  const all = memoized('inbox', () => {
+    const now = Date.now();
+    const since = new Map(liveFeeds().map((f) => [f.id, sinceOf(f, now)]));
+    return [...S.entries.values()]
+      .filter((e) => since.has(e.feedId) && (stateOf(e.id) === 'new' || lingersIn(e.id, 'inbox')) && entryTime(e) >= since.get(e.feedId))
+      .sort((a, b) => entryTime(b) - entryTime(a));
+  });
+  return filter ? all.filter((e) => inFilter(e.feedId, filter)) : all;
 }
 
 function itemsIn(s) {
-  return [...S.items.values()]
-    .filter((r) => r.data.s === s ? !lingering.has(r.id) || lingersIn(r.id, s) : lingersIn(r.id, s))
+  return memoized('items:' + s, () => [...S.items.values()]
+    .filter((r) => (r.data.s === s && !r.data.h) ? !lingering.has(r.id) || lingersIn(r.id, s) : lingersIn(r.id, s))
     .sort((a, b) => (lingering.get(b.id)?.before?.updatedAt ?? b.updatedAt) - (lingering.get(a.id)?.before?.updatedAt ?? a.updatedAt))
     .map((r) => {
       const e = S.entries.get(r.id);
@@ -365,7 +415,7 @@ function itemsIn(s) {
         time: e ? entryTime(e) : Date.parse(r.data.p || '') || 0,
         changed: r.updatedAt,
       };
-    });
+    }));
 }
 
 function counts() {
@@ -380,6 +430,7 @@ const ACTIONS = {
   reading: [['done', 'act.done', ICON.done, 'main', 'd'], ['later', 'act.later', ICON.later, '', 'l'], ['dismissed', 'act.drop', ICON.x, 'x', 'x']],
   later: [['reading', 'act.reading', ICON.now, 'main', 'o'], ['done', 'act.done', ICON.done, '', 'd'], ['dismissed', 'act.remove', ICON.x, 'x', 'x']],
   done: [['reading', 'act.again', ICON.back, '', 'o'], ['later', 'act.later', ICON.later, '', 'l']],
+  dismissed: [['new', 'act.restore', ICON.back, 'main', '']],
 };
 
 // INFO: configured swipe actions [right, left], limited to what the view offers
@@ -391,15 +442,19 @@ function swipeFor(view) {
 
 // INFO: actions sit in the meta line – shown on hover, focus and for the keyboard selection (always on touch).
 //       Only the main action keeps its label; the key is in the tooltip and in the "?" overview.
-// INFO: the teaser is clamped to two lines; the toggle is unhidden by markClamped() only when text is cut off
+// INFO: the teaser is clamped to two lines. Only when text is cut off, markClamped() shows a small chevron
+//       (a disclosure button with a fixed name, state in aria-expanded); clicking the teaser itself toggles, too.
 const openSums = new Set();
 function sumHtml(id, text) {
-  const open = openSums.has(id);
-  return `<p class="sum${open ? ' open' : ''}" id="s-${esc(id)}">${esc(text)}</p><button type="button" class="sum-t" data-sum aria-expanded="${open}" aria-controls="s-${esc(id)}"${open ? '' : ' hidden'}>${t(open ? 'act.sum_less' : 'act.sum_more')}</button>`;
+  const open = openSums.has(id), name = esc(t('act.sum_full'));
+  return `<div class="sumw"><p class="sum${open ? ' open' : ''}" id="s-${esc(id)}">${esc(text)}</p><button type="button" class="sum-t" data-sum aria-expanded="${open}" aria-controls="s-${esc(id)}" aria-label="${name}" title="${name}"${open ? '' : ' hidden'}>${ICON.chev}</button></div>`;
 }
 
 function markClamped() {
-  $$('#view .sum:not(.open)').forEach((p) => { p.nextElementSibling.hidden = p.scrollHeight <= p.clientHeight + 1; });
+  if (getDensity() === 'compact') return;
+  const ps = $$('#view .sum:not(.open)');
+  const cut = ps.map((p) => p.scrollHeight > p.clientHeight + 1);
+  ps.forEach((p, i) => { p.nextElementSibling.hidden = !cut[i]; p.classList.toggle('cut', cut[i]); });
 }
 
 function toggleSum(btn) {
@@ -407,9 +462,9 @@ function toggleSum(btn) {
   const id = btn.closest('.card').dataset.id;
   const open = !p.classList.contains('open');
   p.classList.toggle('open', open);
-  if (open) openSums.add(id); else openSums.delete(id);
+  p.classList.remove('cut');
+  if (open) openSums.add(id); else { openSums.delete(id); markClamped(); }
   btn.setAttribute('aria-expanded', String(open));
-  btn.textContent = t(open ? 'act.sum_less' : 'act.sum_more');
 }
 
 let clampTimer = null;
@@ -420,7 +475,7 @@ function card(it, view) {
   const [right, left] = swipeFor(view);
   const when = view === 'inbox' ? it.time : it.changed;
   const acts = ACTIONS[view].map(([s, label, icon, cls, key]) =>
-    `<button type="button" class="act ${cls}" data-act="${s}" title="${esc(t(label))} (${key})" aria-label="${esc(t(label))}" aria-describedby="t-${esc(it.id)}" aria-keyshortcuts="${key}">${icon}${cls === 'main' ? `<span>${t(label)}</span>` : ''}</button>`).join('');
+    `<button type="button" class="act ${cls}" data-act="${s}" title="${esc(t(label))}${key ? ` (${key})` : ''}" aria-label="${esc(t(label))}" aria-describedby="t-${esc(it.id)}"${key ? ` aria-keyshortcuts="${key}"` : ''}>${icon}${cls === 'main' ? `<span>${t(label)}</span>` : ''}</button>`).join('');
   const words = offline.words(it.id);
   const saved = offline.has(it.id) ? `<span class="offline" title="${esc(t('reader.saved'))}">${ICON.offline}<span class="sr">${t('reader.saved')}</span>${words ? `<span>${t('reader.minutes', { n: Math.max(1, Math.round(words / 220)) })}</span>` : ''}</span>` : '';
   const image = S.dupImg.has(it.image) ? '' : httpUrl(it.image);
@@ -469,37 +524,73 @@ function dayGroups(list, view, whenOf) {
     if (!g || g.k !== k) groups.push(g = { k, w, items: [] });
     g.items.push(it);
   }
-  return groups.map((g) => `<section class="day"><h2 class="day-h"><span>${esc(dayLabel(g.w))}</span><b>${g.items.length}</b></h2>
+  return groups.map((g) => `<section class="day"><h2 class="day-h"><span>${esc(dayLabel(g.w))}</span><b aria-hidden="true">${g.items.length}</b><span class="sr">, ${t('day.posts', { n: g.items.length })}</span></h2>
     <ol class="list">${g.items.map((it) => card(it, view)).join('')}</ol></section>`).join('');
 }
 
 const badge = (n) => (n ? (n > 999 ? '999+' : String(n)) : '');
 
+// INFO: a redraw replaces the focused element – remember what it was (id or data attributes) and focus its successor
+const FOCUS_ATTRS = ['data-feed-act', 'data-device-act', 'data-fold', 'data-quiet', 'data-filter', 'data-view', 'data-more', 'data-refresh'];
+function focusSelector(a) {
+  if (!a || a === document.body || !a.closest('#view, #srcSec') || a.closest('.card')) return null;
+  if (a.id) return '#' + CSS.escape(a.id);
+  const attr = FOCUS_ATTRS.find((x) => a.hasAttribute(x));
+  if (!attr) return null;
+  const scope = a.closest('[data-feed], [data-device]');
+  const pre = scope ? (scope.dataset.feed ? `[data-feed="${CSS.escape(scope.dataset.feed)}"] ` : `[data-device="${CSS.escape(scope.dataset.device)}"] `) : '';
+  return `${pre}[${attr}="${CSS.escape(a.getAttribute(attr))}"]`;
+}
+const viewHeading = () => $('#view h1');
+
+function renderCounts(c = counts()) {
+  $$('[data-count]').forEach((b) => { b.textContent = badge(c[b.dataset.count]); });
+  document.title = (c.inbox ? `(${c.inbox}) ` : '') + (S.view === 'inbox' ? 'News' : `${viewName(S.view)} – News`);
+  if (navigator.setAppBadge) navigator.setAppBadge(c.inbox).catch(() => {});
+}
+const viewName = (v) => t(v === 'settings' ? 'app.settings' : v === 'dismissed' ? 'views.dismissed.title' : 'nav.' + v);
+
+// INFO: background redraws (sync, visibility, offline copies) must not wipe half-typed input in Feeds / Settings
+function editing() {
+  const a = document.activeElement;
+  if (a?.closest?.('#view') && a.matches('input, textarea, select')) return true;
+  return $$('#view input[type="text"], #view input:not([type])').some((i) => i.value !== i.defaultValue);
+}
+function renderSoft() {
+  if ((S.view === 'feeds' || S.view === 'settings') && editing()) return renderCounts();
+  render();
+}
+
 function render() {
+  memo = {};
+  try { renderNow(); } finally { memo = null; }
+}
+
+function renderNow() {
   if (S.filter && !folderFeeds(S.view).some((f) => inFilter(f.id))) S.filter = '';
   const c = counts();
-  $$('[data-count]').forEach((b) => { b.textContent = badge(c[b.dataset.count]); });
+  renderCounts(c);
   $$('.nav [data-view], .top [data-view]').forEach((b) => {
     if (b.dataset.view === S.view && !(S.view === 'inbox' && S.filter)) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
   S.dupImg = repeatedImages();
-  renderFeedNav();
-  document.title = c.inbox ? `(${c.inbox}) News` : 'News';
-  if (navigator.setAppBadge) navigator.setAppBadge(c.inbox).catch(() => {});
-
-  const views = { inbox: renderInbox, reading: renderItems, later: renderItems, done: renderItems, feeds: renderFeeds, settings: renderSettings };
   const scroll = window.scrollY;
-  const refocus = !!document.activeElement?.closest?.('#view .card');
+  const active = document.activeElement;
+  const refocus = !!active?.closest?.('#view .card');
+  const again = focusSelector(active);
+  renderFeedNav();
+  const views = { inbox: renderInbox, reading: renderItems, later: renderItems, done: renderItems, dismissed: renderItems, feeds: renderFeeds, settings: renderSettings };
   views[S.view]();
   markClamped();
   window.scrollTo(0, scroll);
   const i = applyKb();
   // INFO: the focused card (or its button) was replaced – without this, focus would fall back to <body>
-  if (refocus) (cardsInView()[i] || viewEl).focus({ preventScroll: true });
+  if (refocus) (cardsInView()[i] || viewHeading() || viewEl).focus({ preventScroll: true });
+  else if (again && !document.activeElement?.closest?.('#view, #srcSec')) ($(again) || viewHeading() || viewEl).focus({ preventScroll: true });
 }
 
-const FOLDER_VIEWS = ['inbox', 'reading', 'later', 'done'];
+const FOLDER_VIEWS = ['inbox', 'reading', 'later', 'done', 'dismissed'];
 let feedNavOpen = store.get('news.feedNav') !== '0';
 let closedFolders = new Set();
 try { closedFolders = new Set(JSON.parse(store.get('news.folders.closed', '[]'))); } catch { /* INFO: broken value */ }
@@ -519,7 +610,7 @@ function folderFeeds(view, n = perFeed(view)) {
   const gone = [...n.keys()]
     .filter((id) => !liveIds.has(id) && S.feeds.has(id))
     .map((id) => S.feeds.get(id))
-    .sort((a, b) => feedTitle(a.id).localeCompare(feedTitle(b.id)));
+    .sort((a, b) => byName(feedTitle(a.id), feedTitle(b.id)));
   return [...live, ...gone];
 }
 
@@ -561,7 +652,7 @@ function renderFeedNav() {
     if (f.data.g && !f.data.d) byFolder.set(f.data.g, [...(byFolder.get(f.data.g) || []), f]);
     else loose.push(f);
   }
-  const html = [...byFolder].sort(([a], [b]) => a.localeCompare(b)).map(([g, group]) => {
+  const html = [...byFolder].sort(([a], [b]) => byName(a, b)).map(([g, group]) => {
     const total = group.reduce((sum, f) => sum + (n.get(f.id) || 0), 0);
     const closed = closedFolders.has(g);
     const cur = S.filter === 'g:' + g ? ' aria-current="page"' : '';
@@ -577,7 +668,7 @@ function renderFeedNav() {
 function filterSelect() {
   const feeds = folderFeeds(S.view);
   const opt = (value, label) => `<option value="${esc(value)}"${S.filter === value ? ' selected' : ''}>${esc(label)}</option>`;
-  const groups = [...new Set(feeds.map((f) => f.data.g).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const groups = [...new Set(feeds.map((f) => f.data.g).filter(Boolean))].sort(byName);
   const opts = groups.map((g) => `<optgroup label="${esc(g)}">${opt('g:' + g, t('inbox.folder_all', { name: g }))}${feeds.filter((f) => f.data.g === g).map((f) => opt(f.id, feedTitle(f.id))).join('')}</optgroup>`).join('')
     + feeds.filter((f) => !f.data.g).map((f) => opt(f.id, feedTitle(f.id))).join('');
   return `<select id="filter" aria-label="${esc(t('inbox.filter'))}"><option value="">${t('inbox.all_feeds')}</option>${opts}</select>`;
@@ -586,18 +677,31 @@ function filterSelect() {
 const crumb = () => (S.filter ? `<small class="crumb"> · ${esc(filterName(S.filter))}</small>` : '');
 
 // INFO: posting rhythm and how much of a feed you actually read – a basis for unfollowing, instead of follower counts
+function allFeedStats() {
+  return memoized('stats', () => {
+    const now = Date.now(), m = new Map();
+    const get = (id) => m.get(id) || m.set(id, { recent: 0, oldest: now, read: 0, dropped: 0, unread: 0 }).get(id);
+    const since = new Map(liveFeeds().map((f) => [f.id, sinceOf(f, now)]));
+    for (const e of S.entries.values()) {
+      const x = get(e.feedId), ts = entryTime(e);
+      if (ts && now - ts < 28 * 864e5) { x.recent++; x.oldest = Math.min(x.oldest, ts); }
+      if (since.has(e.feedId) && stateOf(e.id) === 'new' && ts >= since.get(e.feedId)) x.unread++;
+    }
+    for (const r of S.items.values()) {
+      if (!r.data.f) continue;
+      if (r.data.s === 'dismissed') get(r.data.f).dropped++;
+      else if (r.data.s !== 'new') get(r.data.f).read++;
+    }
+    return m;
+  });
+}
+
 function feedStats(id) {
-  const now = Date.now();
-  const times = [...S.entries.values()].filter((e) => e.feedId === id).map(entryTime).filter((x) => x && now - x < 28 * 864e5);
-  const span = times.length ? Math.max(864e5, now - Math.min(...times)) : 0;
-  const perWeek = span ? times.length / span * 7 * 864e5 : 0;
-  let read = 0, dropped = 0;
-  for (const r of S.items.values()) {
-    if (r.data.f !== id) continue;
-    if (r.data.s === 'dismissed') dropped++;
-    else if (r.data.s !== 'new') read++;
-  }
-  return { perWeek, read, dropped, rate: read + dropped >= 5 ? Math.round(read / (read + dropped) * 100) : null };
+  const x = allFeedStats().get(id) || { recent: 0, oldest: 0, read: 0, dropped: 0, unread: 0 };
+  const span = x.recent ? Math.max(864e5, Date.now() - x.oldest) : 0;
+  const perWeek = span ? x.recent / span * 7 * 864e5 : 0;
+  const { read, dropped } = x;
+  return { perWeek, read, dropped, unread: x.unread, rate: read + dropped >= 5 ? Math.round(read / (read + dropped) * 100) : null };
 }
 
 function statsText(id) {
@@ -638,15 +742,15 @@ function inboxLine(n) {
 function renderInbox() {
   const feeds = liveFeeds();
   if (!feeds.length) {
-    viewEl.innerHTML = `<div class="vh"><div><h1>${t('inbox.title')}</h1></div></div>
-      <div class="empty">${ICON.view.inbox}<strong>${t('inbox.empty_title')}</strong>${t('inbox.empty_text')}<br>
-      <button class="btn btn-primary" data-view="feeds" type="button">${t('inbox.add_first')}</button></div>`;
+    viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t('inbox.title')}</h1></div></div>
+      <div class="empty onboard">${ICON.view.inbox}<strong>${t('inbox.empty_title')}</strong><span>${t('inbox.empty_text')}</span><span>${t('inbox.empty_how')}</span>
+      <span class="row"><button class="btn btn-primary" data-view="feeds" type="button">${t('inbox.add_first')}</button><button class="btn btn-ghost" type="button" id="startImport">${ICON.upload}<span>${t('inbox.import')}</span></button><button class="btn btn-ghost" type="button" id="startPair">${t('inbox.pair')}</button></span></div>`;
     return;
   }
   const all = inboxEntries();
   const list = all.slice(0, S.shown);
   viewEl.innerHTML = `<div class="vh">
-      <div><h1>${t('inbox.title')}${crumb()}</h1><p>${inboxLine(all.length)}</p></div>
+      <div><h1 tabindex="-1">${t('inbox.title')}${crumb()}</h1><p>${inboxLine(all.length)}</p></div>
       <div class="tools">
         ${filterSelect()}
         ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>` : ''}
@@ -658,18 +762,24 @@ function renderInbox() {
 
 function renderItems() {
   const v = `views.${S.view}`;
-  let list = itemsIn(S.view).filter((it) => inFilter(it.feedId));
-  if (S.view === 'done') list = list.slice(0, 300);
+  const all = itemsIn(S.view).filter((it) => inFilter(it.feedId));
+  const list = all.slice(0, S.shown);
   const clear = S.view === 'done' && list.length
     ? `<button class="btn btn-danger" type="button" id="clearDone">${ICON.trash}<span>${t('views.done.clear')}</span></button>`
     : S.view === 'later' && list.length
       ? `<button class="btn btn-ghost" type="button" id="laterAllDone">${ICON.done}<span>${t('views.later.all_done')}</span></button>` : '';
+  const aside = S.view === 'done' ? `<button class="btn btn-ghost" type="button" data-view="dismissed">${ICON.x}<span>${t('views.done.show_dismissed')}</span></button>`
+    : S.view === 'dismissed' ? `<button class="btn btn-ghost" type="button" data-view="done">${ICON.back}<span>${t('nav.done')}</span></button>` : '';
   const hasFolders = folderFeeds(S.view).length > 0;
-  const tools = hasFolders || clear ? `<div class="tools">${hasFolders ? filterSelect() : ''}${clear}</div>` : '';
-  viewEl.innerHTML = `<div class="vh"><div><h1>${t(v + '.title')}${crumb()}</h1><p>${t(v + '.text')}</p></div>${tools}</div>
+  const tools = hasFolders || clear || aside ? `<div class="tools">${hasFolders ? filterSelect() : ''}${aside}${clear}</div>` : '';
+  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t(v + '.title')}${crumb()}</h1><p>${t(v + '.text')}</p></div>${tools}</div>
     ${context()}
-    ${list.length ? dayGroups(list, S.view, (it) => it.changed) : `<div class="empty">${ICON.view[S.view] || ''}<strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}`;
+    ${list.length ? dayGroups(list, S.view, (it) => it.changed) : `<div class="empty">${ICON.view[S.view] || ICON.x}<strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}
+    ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button></div>` : ''}`;
 }
+
+// INFO: how the Collector found the posts, in plain words – the technical strategy name stays in the tooltip
+const strategyPill = (s) => `<span class="pill" style="--v:${strategyVar(s)}" title="${esc(s)}">${t('feeds.strategy_' + (s === 'sitemap' ? 'sitemap' : s.startsWith('html') ? 'page' : 'feed'))}</span>`;
 
 function renderFeeds() {
   const feeds = liveFeeds();
@@ -677,13 +787,13 @@ function renderFeeds() {
   const bookmarklet = `javascript:location.href=${JSON.stringify(app + '?add=')}+encodeURIComponent(location.href)`;
   const row = (f) => {
     const st = S.fetch.get(f.id) || {};
-    const unread = [...S.entries.values()].filter((e) => e.feedId === f.id && stateOf(e.id) === 'new' && entryTime(e) >= (f.data.since || 0)).length;
+    const unread = feedStats(f.id).unread;
     const name = esc(feedTitle(f.id));
     return `<div class="feedrow has-fi" data-feed="${esc(f.id)}">${feedIcon(f.id)}
       <div class="t">${esc(feedTitle(f.id) || f.data.url)}</div>
       <div class="u">${esc(f.data.url)}</div>
-      <div class="st">${st.strategy ? `<span class="pill" style="--v:${strategyVar(st.strategy)}">${esc(st.strategy)}</span>` : ''}
-        <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err">· ${esc(st.error)}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
+      <div class="st">${st.strategy ? strategyPill(st.strategy) : ''}
+        <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err" title="${esc(st.error || '')}">· ${esc(errText(st.code, st.error))}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
       <div class="ops">
         <button class="icon-btn" type="button" data-feed-act="folder" title="${esc(t('feeds.folder'))}" aria-label="${esc(t('feeds.folder'))}: ${name}">${ICON.folder}</button>
         <button class="icon-btn" type="button" data-feed-act="refresh" title="${esc(t('feeds.refresh'))}" aria-label="${esc(t('feeds.refresh'))}: ${name}">${ICON.refresh}</button>
@@ -695,11 +805,11 @@ function renderFeeds() {
   const rows = groups.map((g) => `<h3 class="fold-title">${ICON.folder}<span>${esc(g)}</span></h3>${feeds.filter((f) => f.data.g === g).map(row).join('')}`).join('')
     + (groups.length && feeds.some((f) => !f.data.g) ? `<h3 class="fold-title">${t('feeds.no_folder')}</h3>` : '')
     + feeds.filter((f) => !f.data.g).map(row).join('');
-  viewEl.innerHTML = `<div class="vh"><div><h1>${t('feeds.title')}</h1><p>${t('feeds.count', { n: feeds.length })}</p></div></div>
+  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t('feeds.title')}</h1><p>${t('feeds.count', { n: feeds.length })}</p></div></div>
     <section class="panel">
       <h2>${t('feeds.follow_title')}</h2>
-      <p>${t('feeds.follow_text')}</p>
-      <form class="row" id="addForm"><input type="url" id="addUrl" inputmode="url" autocomplete="url" placeholder="https://example.com/blog" required aria-label="${esc(t('feeds.url_label'))}"><button class="btn btn-primary" type="submit">${t('feeds.follow')}</button></form>
+      <p id="followText">${t('feeds.follow_text')}</p>
+      <form class="row" id="addForm"><input type="text" id="addUrl" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" enterkeyhint="go" placeholder="${esc(t('feeds.placeholder'))}" required aria-label="${esc(t('feeds.url_label'))}" aria-describedby="followText addResult"><button class="btn btn-primary" type="submit">${t('feeds.follow')}</button></form>
       <div class="result" id="addResult" aria-live="polite"></div>
     </section>
     <section class="panel">
@@ -728,7 +838,10 @@ async function renderSettings() {
   const swipeOpts = (cur) => SWIPE_CHOICES.map((s) => opt(s, t(s === 'none' ? 'act.none' : 'act.' + s), cur)).join('');
   if (S.view !== 'settings') return; // INFO: the user navigated away while the settings were loading
   const site = '../' + (t.lang === 'en' ? '' : t.lang + '/'); // INFO: legal pages of the landing site, in the app's language
-  viewEl.innerHTML = `<div class="vh"><div><h1>${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p><p class="legal"><a href="${site}privacy.html">${t('settings.privacy')}</a> · <a href="${site}imprint.html">${t('settings.imprint')}</a></p></div></div>
+  const local = t('settings.local_text', {
+    feeds: t('settings.local_feeds', { n: liveFeeds().length }), items: t('settings.local_items', { n: S.items.size }), entries: t('settings.local_entries', { n: S.entries.size }),
+  });
+  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t('settings.title')}</h1><p>${t('settings.subtitle', { version: VERSION })}</p><p class="legal"><a href="${site}privacy.html">${t('settings.privacy')}</a> · <a href="${site}imprint.html">${t('settings.imprint')}</a></p></div></div>
     <section class="panel">
       <h2>${t('settings.look_title')}</h2>
       <div class="grid2">
@@ -737,20 +850,6 @@ async function renderSettings() {
         <label class="field"><span>${t('settings.density')}</span><select id="densitySel">${DENSITIES.map((d) => opt(d, t('settings.density_' + d), getDensity())).join('')}</select></label>
         <label class="field"><span>${t('settings.acts')}</span><select id="actsSel">${ACT_MODES.map((m) => opt(m, t('settings.acts_' + m), getActs())).join('')}</select></label>
       </div>
-    </section>
-    <section class="panel">
-      <h2>${t('settings.swipe_title')}</h2>
-      <p>${t('settings.swipe_text')}</p>
-      <div class="grid2">
-        <label class="field"><span>${t('settings.swipe_right')}</span><select id="swipeRight">${swipeOpts(S.swipe.right)}</select></label>
-        <label class="field"><span>${t('settings.swipe_left')}</span><select id="swipeLeft">${swipeOpts(S.swipe.left)}</select></label>
-      </div>
-    </section>
-    <section class="panel">
-      <h2>${t('settings.server_title')}</h2>
-      <p>${t('settings.server_text')}</p>
-      <form class="row" id="serverForm"><input type="url" id="serverUrl" value="${esc(custom || '')}" placeholder="${esc(defaultServer())}" aria-label="${esc(t('settings.server_label'))}"><button class="btn btn-ghost" type="submit">${t('settings.save')}</button><button class="btn btn-ghost" type="button" id="serverTest">${t('settings.test')}</button></form>
-      <div class="result" id="serverResult" aria-live="polite"></div>
     </section>
     <section class="panel" id="syncPanel">
       <h2>${t('settings.sync_title')}</h2>
@@ -766,10 +865,10 @@ async function renderSettings() {
         <dl class="kv" style="margin-top:14px"><dt>${t('settings.server')}</dt><dd>${esc(new URL('api/sync', server).href)}</dd><dt>${t('settings.status')}</dt><dd id="syncDetail">${esc(statusText(sync.status, true))}</dd></dl>`
       : `
         <p>${t('settings.sync_intro')}</p>${cryptoAvailable() ? '' : `<p class="err">${t('settings.sync_https')}</p>`}
-        <div class="row"><button class="btn btn-primary" type="button" id="createVault">${t('settings.create_vault')}</button></div>
+        <div class="row"><button class="btn btn-primary" type="button" id="createVault"${cryptoAvailable() ? '' : ' disabled'}>${t('settings.create_vault')}</button></div>
         <h2 style="margin-top:20px">${t('settings.join_title')}</h2>
         <p>${t('settings.join_text')}</p>
-        <form class="row" id="joinForm"><input type="text" id="joinKey" placeholder="${esc(t('settings.join_placeholder'))}" autocomplete="off" aria-label="${esc(t('settings.join_placeholder'))}"><button class="btn btn-ghost" type="submit">${t('settings.join')}</button></form>`}
+        <form class="row" id="joinForm"><input type="text" id="joinKey" placeholder="${esc(t('settings.join_placeholder'))}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="${esc(t('settings.join_placeholder'))}" aria-describedby="syncResult"><button class="btn btn-ghost" type="submit">${t('settings.join')}</button></form>`}
       <div class="result" id="syncResult" aria-live="polite"></div>
     </section>
     ${key ? `<section class="panel" id="devicesPanel">
@@ -778,13 +877,29 @@ async function renderSettings() {
       <div id="devices"></div>
       <div class="row"><button class="btn btn-ghost" type="button" id="rotateKey">${t('devices.rotate')}</button></div>
     </section>` : ''}
-    <section class="panel">
+    <section class="panel only-touch">
+      <h2>${t('settings.swipe_title')}</h2>
+      <p>${t('settings.swipe_text')}</p>
+      <div class="grid2">
+        <label class="field"><span>${t('settings.swipe_right')}</span><select id="swipeRight">${swipeOpts(S.swipe.right)}</select></label>
+        <label class="field"><span>${t('settings.swipe_left')}</span><select id="swipeLeft">${swipeOpts(S.swipe.left)}</select></label>
+      </div>
+    </section>
+    <section class="panel only-keys">
       <h2>${t('settings.keyboard')}</h2>
+      <p>${t('settings.keys_text')}</p>
+      <div class="grid2"><label class="field"><span>${t('settings.keys')}</span><select id="keysSel">${KEY_MODES.map((m) => opt(m, t('settings.keys_' + m), getKeys())).join('')}</select></label></div>
       ${keysHtml()}
     </section>
     <section class="panel">
+      <h2>${t('settings.server_title')}</h2>
+      <p>${t('settings.server_text')}</p>
+      <form class="row keep" id="serverForm"><input type="text" inputmode="url" autocapitalize="off" spellcheck="false" id="serverUrl" value="${esc(custom || '')}" placeholder="${esc(defaultServer())}" aria-label="${esc(t('settings.server_label'))}" aria-describedby="serverResult"><span class="btns"><button class="btn btn-ghost" type="submit">${t('settings.save')}</button><button class="btn btn-ghost" type="button" id="serverTest">${t('settings.test')}</button></span></form>
+      <div class="result" id="serverResult" aria-live="polite"></div>
+    </section>
+    <section class="panel">
       <h2>${t('settings.local_title')}</h2>
-      <p>${t('settings.local_text', { feeds: S.feeds.size, items: S.items.size, entries: S.entries.size })}</p>
+      <p>${local}</p>
       <div class="row"><button class="btn btn-danger" type="button" id="resetLocal">${t('settings.reset')}</button></div>
     </section>`;
   if (key) {
@@ -793,8 +908,12 @@ async function renderSettings() {
   }
 }
 
-const KEYS = [['j k', 'key_jk'], ['o', 'key_o'], ['l', 'key_l'], ['x', 'key_x'], ['d', 'key_d'], ['u', 'key_u'], ['r', 'key_r'], ['1–5', 'key_num'], ['/', 'key_search'], ['v', 'key_v'], ['?', 'key_help']];
+const KEYS = [['j k', 'key_jk'], ['↓ ↑', 'key_arrows'], ['o', 'key_o'], ['Enter', 'key_enter'], ['l', 'key_l'], ['x', 'key_x'], ['d', 'key_d'], ['u', 'key_u'], ['r', 'key_r'], ['1–5', 'key_num'], ['/', 'key_search'], ['Ctrl+K', 'key_ctrlk'], ['v', 'key_v'], ['Esc', 'key_esc'], ['?', 'key_help']];
 const keysHtml = () => `<ul class="keys">${KEYS.map(([k, label]) => `<li>${k.split(' ').map((x) => x.split('–').map((y) => `<kbd>${esc(y)}</kbd>`).join('–')).join('')}${t('settings.' + label)}</li>`).join('')}</ul>`;
+
+// INFO: single-key shortcuts can be switched off (speech input, tremor) – WCAG 2.1.4
+const KEY_MODES = ['on', 'off'];
+const getKeys = () => (store.get('news.keys') === 'off' ? 'off' : 'on');
 
 async function renderDevices() {
   const box = $('#devices');
@@ -808,7 +927,7 @@ async function renderDevices() {
     return `<div class="feedrow device" data-device="${esc(d.id)}">
       <div class="t">${name}${self ? ` <span class="pill" style="--v:var(--v-direct)">${t('devices.this')}</span>` : ''}</div>
       ${d.data.platform !== d.data.name ? `<div class="u">${esc(d.data.platform)}</div>` : ''}
-      <div class="st"><span>${self ? t('devices.active_now') : t('devices.seen', { when: ago(d.data.seen) })}</span>${since ? `<span>· ${t('devices.since', { date: since })}</span>` : ''}</div>
+      <div class="st"><span>${self ? t('devices.active_now') : t('devices.seen', { when: ago(d.data.seen) })}</span>${since ? `<span>· ${t('devices.since', { date: since })}</span>` : ''}${d.pubChanged ? `<span class="err">· ${t('devices.key_changed')}</span>` : ''}</div>
       <div class="ops">
         <button class="icon-btn" type="button" data-device-act="rename" title="${esc(t('devices.rename'))}" aria-label="${esc(t('devices.rename'))}: ${name}">${ICON.edit}</button>
         ${self ? '' : `<button class="icon-btn" type="button" data-device-act="remove" title="${esc(t('devices.remove'))}" aria-label="${esc(t('devices.remove'))}: ${name}">${ICON.trash}</button>`}
@@ -820,13 +939,13 @@ async function deviceAction(act, id) {
   const d = (await sync.devices()).find((x) => x.id === id);
   if (!d) return;
   if (act === 'rename') {
-    const name = prompt(t('devices.rename_prompt'), d.data.name || '');
+    const name = await ask({ title: t('devices.rename'), label: t('devices.rename_prompt'), value: d.data.name || '' });
     if (name === null || !name.trim()) return;
     await sync.renameDevice(id, name);
     return renderDevices();
   }
   if (act !== 'remove') return;
-  const keyless = (await sync.devices()).filter((x) => x.id !== id && !x.data.pub).length;
+  const keyless = (await sync.devices()).filter((x) => x.id !== id && (!x.data.pub || x.pubChanged)).length;
   const body = `<p>${t('devices.remove_body', { name: esc(d.data.name) })}</p>${keyless ? `<p>${t('devices.keyless', { n: keyless })}</p>` : ''}`;
   if (!await dialog({ title: t('devices.remove_title'), body, ok: t('devices.remove_ok'), danger: true })) return;
   await rekey(() => sync.revoke(id), 'devices.removed');
@@ -840,7 +959,7 @@ async function rekey(action, doneKey) {
     await action();
     showToast(t(doneKey));
   } catch (e) {
-    showToast(e.code === 'offline' ? t('devices.offline') : t('devices.rotate_failed', { msg: e.message }));
+    showToast(e.code === 'offline' ? t('devices.offline') : t('devices.rotate_failed', { msg: errText(e.code, e.message) }));
   }
   if (S.view === 'settings') render();
 }
@@ -877,6 +996,7 @@ async function drawQr(text) {
 async function useLanguage(lang) {
   t = await loadI18n('i18n/', lang);
   rtf = new Intl.RelativeTimeFormat(t.lang, { numeric: 'auto', style: 'short' });
+  coll = new Intl.Collator(t.lang, { sensitivity: 'base', numeric: true });
   applyI18n(t);
   paintStatus(sync.status);
 }
@@ -892,7 +1012,7 @@ function statusText(st, long = false) {
     case 'offline': return join(t('sync.offline'), p);
     case 'unreachable': return join(t(long ? 'sync.unreachable_long' : 'sync.unreachable'), p);
     case 'error': {
-      const msg = st.code && t('sync.' + st.code) !== 'sync.' + st.code ? t('sync.' + st.code) : st.message;
+      const msg = st.code && t('sync.' + st.code) !== 'sync.' + st.code ? t('sync.' + st.code) : errText(st.code, st.message);
       return join(long ? t('sync.error_long', { msg }) : t('sync.error'), p);
     }
     default: return st.state;
@@ -925,17 +1045,39 @@ function paintStatus(st) {
 }
 
 let toastTimer = null;
+let toastMs = 0;
 let lastUndo = null;
+function hideToast() {
+  const el = $('#toast');
+  // INFO: focus inside the toast would fall back to <body>
+  if (el.contains(document.activeElement)) (cardsInView()[Math.max(0, S.kbPos)] || viewHeading() || viewEl).focus({ preventScroll: true });
+  el.hidden = true;
+}
+function armToast() { clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, toastMs); }
 function showToast(msg, action, actionLabel) {
   const el = $('#toast');
   const isUndo = action && !actionLabel;
-  actionLabel = actionLabel || t('toast.undo');
-  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button type="button">${esc(actionLabel)}</button>` : ''}`;
   el.hidden = false;
+  // INFO: undo stays available with "u" until the next action, even after the toast is gone
   lastUndo = isUndo ? action : null;
-  if (action) $('button', el).onclick = () => { el.hidden = true; lastUndo = null; action(); };
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; lastUndo = null; }, action ? 6000 : 3500);
+  const label = isUndo ? t('toast.undo') : actionLabel;
+  el.innerHTML = `<span>${esc(msg)}</span>${action ? `<button type="button"${isUndo ? ` aria-keyshortcuts="u" title="${esc(t('toast.undo_key'))}"` : ''}>${esc(label)}</button>` : ''}`;
+  if (action) $('button', el).onclick = () => { lastUndo = null; hideToast(); action(); };
+  toastMs = action ? 10000 : 4000;
+  armToast();
+}
+['mouseenter', 'focusin'].forEach((ev) => $('#toast').addEventListener(ev, () => clearTimeout(toastTimer)));
+['mouseleave', 'focusout'].forEach((ev) => $('#toast').addEventListener(ev, (e) => { if (!$('#toast').contains(e.relatedTarget)) armToast(); }));
+
+// INFO: a text question in the app's own dialog (window.prompt is unstyled and speaks the browser's language)
+async function ask({ title, label, value = '' }) {
+  const body = `<label class="field"><span>${esc(label)}</span><input type="text" id="askIn" maxlength="80" autocomplete="off" value="${esc(value)}"></label>`;
+  const answer = dialog({ title, body, ok: t('settings.save') });
+  const input = $('#askIn');
+  input.focus();
+  input.select();
+  input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#dlgOk').click(); } };
+  return (await answer) ? input.value : null;
 }
 
 function dialog({ title, body, ok = t('dlg.ok'), cancel = t('dlg.cancel'), danger = false }) {
@@ -953,12 +1095,27 @@ function dialog({ title, body, ok = t('dlg.ok'), cancel = t('dlg.cancel'), dange
   });
 }
 
-function go(view, filter = '') {
-  if (S.view !== view || S.filter !== filter) { S.view = view; S.filter = filter; S.shown = PAGE; S.kbId = ''; S.kbPos = -1; S.share = ''; window.scrollTo(0, 0); }
-  history.replaceState(null, '', view === 'inbox' ? location.pathname : `${location.pathname}#${view}`);
+const VIEWS = ['inbox', 'reading', 'later', 'done', 'dismissed', 'feeds', 'settings'];
+function go(view, filter = '', { push = true } = {}) {
+  const changed = S.view !== view;
+  if (changed || S.filter !== filter) { S.view = view; S.filter = filter; S.shown = PAGE; S.kbId = ''; S.kbPos = -1; S.share = ''; window.scrollTo(0, 0); }
+  const url = view === 'inbox' ? location.pathname : `${location.pathname}#${view}`;
+  if (push && changed) history.pushState(null, '', url); else history.replaceState(null, '', url);
   render();
-  viewEl.focus({ preventScroll: true });
+  (viewHeading() || viewEl).focus({ preventScroll: true });
 }
+window.addEventListener('popstate', () => {
+  if (readerOpen()) return;
+  // INFO: a pairing link opened while the app is already open only changes the hash – strip it the same way
+  if (/(^|&)pair=/.test(location.hash.slice(1))) {
+    window.nrIncoming = { search: '', hash: location.hash };
+    history.replaceState(null, '', location.pathname);
+    handleIncoming().then(() => render());
+    return;
+  }
+  const v = location.hash.slice(1) || 'inbox';
+  if (VIEWS.includes(v)) go(v, '', { push: false });
+});
 
 document.addEventListener('click', async (ev) => {
   const el = ev.target;
@@ -984,13 +1141,18 @@ document.addEventListener('click', async (ev) => {
   }
   if (el.closest('#searchBtn')) return openPalette();
   const viewBtn = el.closest('[data-view]');
-  if (viewBtn) return go(viewBtn.dataset.view);
+  if (viewBtn) {
+    go(viewBtn.dataset.view);
+    // INFO: "Add your first feed" leads straight into the address field
+    if (viewBtn.closest('.onboard')) $('#addUrl')?.focus();
+    return;
+  }
 
   const cardEl = el.closest('.card');
   if (cardEl) {
     const id = cardEl.dataset.id;
     selectCard(cardEl, false);
-    const sumBtn = el.closest('[data-sum]');
+    const sumBtn = el.closest('[data-sum]') || (el.closest('.sum.cut, .sum.open') && !getSelection().toString() ? $('[data-sum]', cardEl) : null);
     if (sumBtn) return toggleSum(sumBtn);
     const act = el.closest('[data-act]');
     if (act) {
@@ -1007,7 +1169,12 @@ document.addEventListener('click', async (ev) => {
       return markOpened(id, { background: ev.ctrlKey || ev.metaKey });
     }
   }
-  if (el.closest('[data-more]')) { S.shown += PAGE; return render(); }
+  if (el.closest('[data-more]')) {
+    const first = S.shown;
+    S.shown += PAGE;
+    render();
+    return cardsInView()[first]?.focus({ preventScroll: true });
+  }
   if (el.closest('[data-refresh]')) return refreshAll(true);
 
   const feedBtn = el.closest('[data-feed-act]');
@@ -1028,13 +1195,21 @@ document.addEventListener('click', async (ev) => {
     case 'clearDone': {
       const ids = itemsIn('done').filter((it) => inFilter(it.feedId)).map((it) => it.id);
       if (!ids.length || !await dialog({ title: t('dlg.clear_done_title'), body: t('dlg.clear_done_body', { n: ids.length }), ok: t('dlg.clear_done_ok'), danger: true })) return;
-      return setState(ids, 'dismissed', { animate: false, label: t('toast.cleared', { n: ids.length }) });
+      // INFO: cleared posts stay "done" (hidden with h:1) – they were read, so the feed's read rate must not drop
+      return setState(ids, 'done', { animate: false, extra: { h: 1 }, label: t('toast.cleared', { n: ids.length }) });
     }
+    case 'startImport': go('feeds'); return $('#opmlIn')?.click();
+    case 'startPair': go('settings'); return $('#joinKey')?.focus();
     case 'opmlPick': return $('#opmlIn').click();
     case 'opmlOut': return exportOpml();
     case 'serverTest': return testServer();
     case 'createVault':
-      await sync.createVault();
+      try {
+        await sync.createVault();
+      } catch (e) {
+        $('#syncResult').innerHTML = errHtml(e);
+        return;
+      }
       await loadAll();
       return render();
     case 'syncNow': return sync.run();
@@ -1046,7 +1221,7 @@ document.addEventListener('click', async (ev) => {
     case 'copyLink': {
       const link = pairingLink(await db.kvGet('vaultKey'), await db.kvGet('server'));
       try { await navigator.clipboard.writeText(link); showToast(t('toast.link_copied')); }
-      catch { await dialog({ title: t('dlg.link_title'), body: `<textarea rows="4" readonly>${esc(link)}</textarea>`, cancel: '' }); }
+      catch { await dialog({ title: t('dlg.link_title'), body: `<textarea rows="4" readonly aria-label="${esc(t('dlg.link_title'))}">${esc(link)}</textarea>`, cancel: '' }); }
       return;
     }
     case 'leaveVault':
@@ -1056,7 +1231,7 @@ document.addEventListener('click', async (ev) => {
       return;
     case 'wipeVault':
       if (await dialog({ title: t('dlg.wipe_title'), body: t('dlg.wipe_body'), ok: t('dlg.wipe_ok'), danger: true })) {
-        try { await sync.wipeServer(); showToast(t('toast.server_deleted')); } catch (e) { showToast(e.message); }
+        try { await sync.wipeServer(); showToast(t('toast.server_deleted')); } catch (e) { showToast(errText(e.code, e.message)); }
       }
       return;
     case 'resetLocal':
@@ -1076,18 +1251,24 @@ document.addEventListener('click', async (ev) => {
 
 document.addEventListener('change', async (ev) => {
   const id = ev.target.id;
-  if (id === 'filter') go(S.view, ev.target.value);
+  if (id === 'filter') { go(S.view, ev.target.value, { push: false }); $('#filter')?.focus(); }
   if (id === 'opmlIn' && ev.target.files[0]) importOpml(ev.target.files[0]);
   if (id === 'langSel') { setLang(ev.target.value); await useLanguage(ev.target.value); render(); }
   if (id === 'themeSel') setTheme(ev.target.value);
   if (id === 'densitySel') setDensity(ev.target.value);
   if (id === 'actsSel') setActs(ev.target.value);
+  if (id === 'keysSel') store.set('news.keys', ev.target.value);
   if (id === 'swipeRight' || id === 'swipeLeft') {
     S.swipe = { right: $('#swipeRight').value, left: $('#swipeLeft').value };
     await db.kvSet('swipe', S.swipe);
     showToast(t('toast.saved'));
   }
 });
+
+function fieldError(input, out, html) {
+  out.innerHTML = html || '';
+  if (html) input?.setAttribute('aria-invalid', 'true'); else input?.removeAttribute('aria-invalid');
+}
 
 document.addEventListener('submit', async (ev) => {
   const id = ev.target.id;
@@ -1097,14 +1278,15 @@ document.addEventListener('submit', async (ev) => {
     const out = $('#addResult');
     const btn = $('button[type="submit"]', ev.target);
     btn.disabled = true;
+    fieldError($('#addUrl'), out, '');
     out.innerHTML = t('feeds.asking');
     try {
       const { rec, res } = await addFeed($('#addUrl').value, { quiet: true });
       S.share = '';
       render();
-      $('#addResult').innerHTML = `<span class="pill" style="--v:${strategyVar(res.source?.strategy)}">${esc(res.source?.strategy)}</span> ${t('feeds.following', { title: esc(rec.data.title), n: res.entries.length })}`;
+      $('#addResult').innerHTML = `${res.source?.strategy ? strategyPill(res.source.strategy) : ''} ${t('feeds.following', { title: esc(rec.data.title), n: res.entries.length })}`;
     } catch (e) {
-      out.innerHTML = `<span class="err">${esc(e.message)}</span>`;
+      fieldError($('#addUrl'), out, errHtml(e));
     } finally {
       btn.disabled = false;
     }
@@ -1113,7 +1295,7 @@ document.addEventListener('submit', async (ev) => {
     const v = $('#serverUrl').value.trim();
     if (v) {
       const u = normalizeUrl(v);
-      if (!u) { $('#serverResult').innerHTML = `<span class="err">${t('settings.invalid_url')}</span>`; return; }
+      if (!u) { fieldError($('#serverUrl'), $('#serverResult'), `<span class="err">${t('settings.invalid_url')}</span>`); return; }
       await db.kvSet('server', u.endsWith('/') ? u : u + '/');
     } else {
       await db.kvDel('server');
@@ -1124,7 +1306,7 @@ document.addEventListener('submit', async (ev) => {
   if (id === 'joinForm') {
     const raw = $('#joinKey').value.trim();
     const parsed = parsePairing(raw);
-    if (!parsed) { $('#syncResult').innerHTML = `<span class="err">${t('settings.join_invalid')}</span>`; return; }
+    if (!parsed) { fieldError($('#joinKey'), $('#syncResult'), `<span class="err">${t('settings.join_invalid')}</span>`); return; }
     await joinVault(parsed);
   }
 });
@@ -1133,13 +1315,13 @@ async function feedAction(act, id) {
   const f = S.feeds.get(id);
   if (!f) return;
   if (act === 'refresh') {
-    try { await refreshFeed(f, true); } catch (e) { S.fetch.set(id, { ...(S.fetch.get(id) || {}), at: Date.now(), ok: false, error: e.message }); }
+    try { await refreshFeed(f, true); } catch (e) { S.fetch.set(id, { ...(S.fetch.get(id) || {}), at: Date.now(), ok: false, error: e.message, code: e.code, next: 0 }); }
     await db.kvSet('fetchState', Object.fromEntries(S.fetch));
     return render();
   }
   if (act === 'folder') return askFolder(f);
   if (act === 'rename') {
-    const name = prompt(t('feeds.rename_prompt'), feedTitle(id));
+    const name = await ask({ title: t('feeds.rename'), label: t('feeds.rename_prompt'), value: feedTitle(id) });
     if (name === null) return;
     await commit([{ ...f, data: { ...f.data, title: name.trim() || f.data.title }, updatedAt: Date.now() }]);
     return render();
@@ -1191,11 +1373,12 @@ async function importOpml(file) {
   let done = 0;
   out.textContent = t('feeds.importing', { n: todo.length });
   const results = await pool(todo, 3, async (f) => {
-    const r = await addFeed(f.url, { quiet: true, title: f.title, folder: f.folder });
+    const r = await addFeed(f.url, { quiet: true, title: f.title, folder: f.folder, later: true, persist: false });
     out.textContent = t('feeds.importing_progress', { done: ++done, n: todo.length });
     return r;
   });
-  const failed = results.map((r, i) => (r.ok ? null : `${todo[i].url}: ${r.error.message}`)).filter(Boolean);
+  await db.kvSet('fetchState', Object.fromEntries(S.fetch));
+  const failed = results.map((r, i) => (r.ok ? null : `${todo[i].url}: ${errText(r.error.code, r.error.message)}`)).filter(Boolean);
   render();
   const o = $('#opmlResult');
   if (o) o.innerHTML = `${t('feeds.imported', { ok: todo.length - failed.length, n: todo.length })}${failed.length ? `<br><span class="err">${failed.map(esc).join('<br>')}</span>` : ''}`;
@@ -1262,7 +1445,7 @@ function selectCard(card, scroll = true, focus = scroll) {
   S.kbId = card.dataset.id;
   applyKb();
   if (focus) card.focus({ preventScroll: true });
-  if (scroll) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (scroll) card.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
 document.addEventListener('keydown', (ev) => {
@@ -1274,6 +1457,7 @@ document.addEventListener('keydown', (ev) => {
   if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing || readerOpen()) return;
   if (ev.target.closest('input, textarea, select, dialog, [contenteditable]') || $('#dlg')?.open || $('#palette')?.open) return;
   const k = ev.key;
+  if (getKeys() === 'off' && k.length === 1) return;
   if (k === '/') { ev.preventDefault(); openPalette(); return; }
   if (k === '?') { dialog({ title: t('settings.keyboard'), body: keysHtml(), cancel: '' }); return; }
   if (k === 'v') {
@@ -1286,7 +1470,7 @@ document.addEventListener('keydown', (ev) => {
   const views = ['inbox', 'reading', 'later', 'done', 'feeds'];
   if (k >= '1' && k <= '5') { go(views[+k - 1]); return; }
   if (k === 'r') { refreshAll(true); return; }
-  if (k === 'u' && lastUndo) { const f = lastUndo; lastUndo = null; $('#toast').hidden = true; f(); return; }
+  if (k === 'u' && lastUndo) { const f = lastUndo; lastUndo = null; hideToast(); f(); return; }
   const cards = cardsInView();
   if (!cards.length) return;
   const cur = applyKb();
@@ -1304,8 +1488,20 @@ document.addEventListener('keydown', (ev) => {
 // INFO: search and go to – views, folders and feeds without a query, plus every known post title with one.
 //       A post jumps to the view it is in and gets the keyboard selection; dismissed posts open the original.
 const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const STATE_VIEW = { new: 'inbox', reading: 'reading', later: 'later', done: 'done' };
+const STATE_VIEW = { new: 'inbox', reading: 'reading', later: 'later', done: 'done', dismissed: 'dismissed' };
 let pal = { results: [], sel: 0 };
+let corpus = null;
+
+function postCorpus() {
+  const posts = new Map();
+  for (const e of inboxEntries('')) posts.set(e.id, { id: e.id, title: e.title, summary: e.summary, feedId: e.feedId, url: e.url, time: entryTime(e), s: 'new' });
+  for (const r of S.items.values()) {
+    if (r.data.s === 'new' || posts.has(r.id)) continue;
+    const e = S.entries.get(r.id);
+    posts.set(r.id, { id: r.id, title: e?.title || r.data.t || '', summary: e?.summary || '', feedId: e?.feedId || r.data.f, url: e?.url || r.data.u, time: r.updatedAt, s: r.data.s });
+  }
+  return [...posts.values()].filter((p) => p.title).map((p) => ({ ...p, nt: norm(p.title), ns: norm(p.summary) }));
+}
 
 function paletteResults(q) {
   const words = norm(q).split(/\s+/).filter(Boolean);
@@ -1318,16 +1514,15 @@ function paletteResults(q) {
   for (const g of folders()) if (hit(g)) out.push({ kind: 'filter', id: 'g:' + g, label: g, sub: t('pal.folder'), icon: ICON.folder });
   for (const f of liveFeeds()) if (hit(feedTitle(f.id), f.data.url)) out.push({ kind: 'filter', id: f.id, label: feedTitle(f.id), sub: host(f.data.url), icon: feedIcon(f.id) });
   if (!words.length) return out;
-  const posts = new Map();
-  for (const e of inboxEntries('')) posts.set(e.id, { id: e.id, title: e.title, summary: e.summary, feedId: e.feedId, url: e.url, time: entryTime(e), s: 'new' });
-  for (const r of S.items.values()) {
-    if (r.data.s === 'new' || posts.has(r.id)) continue;
-    const e = S.entries.get(r.id);
-    posts.set(r.id, { id: r.id, title: e?.title || r.data.t || '', summary: e?.summary || '', feedId: e?.feedId || r.data.f, url: e?.url || r.data.u, time: r.updatedAt, s: r.data.s });
-  }
-  const found = [...posts.values()].filter((p) => p.title && hit(p.title, p.summary)).sort((a, b) => b.time - a.time).slice(0, 40);
+  corpus ??= postCorpus();
+  const found = corpus
+    .map((p) => ({ p, title: words.every((w) => p.nt.includes(w)) }))
+    .filter(({ p, title }) => title || words.every((w) => p.nt.includes(w) || p.ns.includes(w)))
+    .sort((a, b) => (b.title - a.title) || (b.p.time - a.p.time))
+    .slice(0, 40)
+    .map(({ p }) => p);
   for (const p of found) {
-    const where = STATE_VIEW[p.s] ? t('nav.' + STATE_VIEW[p.s]) : t('act.dismissed');
+    const where = viewName(STATE_VIEW[p.s] || 'dismissed');
     out.push({ kind: 'post', id: p.id, s: p.s, url: p.url, label: p.title, sub: `${feedTitle(p.feedId) || host(p.url)} · ${where}`, icon: ICON.doc });
   }
   return out;
@@ -1356,6 +1551,7 @@ function movePalette(d) {
 function openPalette() {
   const d = $('#palette');
   if (d.open) return;
+  corpus = null;
   $('#palIn').value = '';
   paintPalette();
   d.showModal();
@@ -1370,20 +1566,19 @@ function pickPalette(r) {
   const view = STATE_VIEW[r.s];
   if (!view) { openUrl(r.url); return; }
   go(view);
-  if (view === 'inbox') {
-    const i = inboxEntries().findIndex((e) => e.id === r.id);
-    if (i >= S.shown) S.shown = i + 1;
-  }
+  const i = (view === 'inbox' ? inboxEntries() : itemsIn(view)).findIndex((e) => e.id === r.id);
+  if (i >= S.shown) S.shown = i + 1;
   S.kbId = r.id;
   render();
   const c = viewEl.querySelector(`.card[data-id="${CSS.escape(r.id)}"]`);
   if (c) selectCard(c); else openUrl(r.url);
 }
 
-$('#palIn').addEventListener('input', paintPalette);
+let palTimer = null;
+$('#palIn').addEventListener('input', () => { clearTimeout(palTimer); palTimer = setTimeout(paintPalette, 80); });
 $('#palIn').addEventListener('keydown', (ev) => {
   if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); movePalette(ev.key === 'ArrowDown' ? 1 : -1); }
-  if (ev.key === 'Enter') { ev.preventDefault(); pickPalette(pal.results[pal.sel]); }
+  if (ev.key === 'Enter') { ev.preventDefault(); if (palTimer) { clearTimeout(palTimer); palTimer = null; paintPalette(); } pickPalette(pal.results[pal.sel]); }
   // INFO: in a filled search field, Esc would only clear the text – one press closes the palette
   if (ev.key === 'Escape') { ev.preventDefault(); $('#palette').close(); }
 });
@@ -1466,12 +1661,15 @@ viewEl.addEventListener('pointerup', endSwipe);
 viewEl.addEventListener('pointercancel', endSwipe);
 
 // INFO: incoming links – share target, bookmarklet, pairing
+// WARNING: the inline script in index.html already moved ?… and #pair=… into window.nrIncoming (keeps them away from analytics)
 async function handleIncoming() {
-  const q = new URLSearchParams(location.search);
+  const inc = window.nrIncoming || { search: location.search, hash: location.hash };
+  delete window.nrIncoming;
+  const q = new URLSearchParams(inc.search);
   const shared = q.get('add') || q.get('url') || extractUrl(q.get('text')) || extractUrl(q.get('title'));
-  const hash = new URLSearchParams(location.hash.slice(1));
+  const hash = new URLSearchParams(inc.hash.slice(1));
   const pair = hash.get('pair');
-  const view = location.hash.slice(1);
+  const view = inc.hash.slice(1);
 
   if (shared || pair || q.toString()) history.replaceState(null, '', location.pathname);
 
@@ -1484,7 +1682,7 @@ async function handleIncoming() {
     S.share = shared;
     return;
   }
-  if (['reading', 'later', 'done', 'feeds', 'settings'].includes(view)) S.view = view;
+  if (VIEWS.includes(view)) S.view = view;
 }
 
 sync.addEventListener('status', (e) => {
@@ -1500,15 +1698,14 @@ sync.addEventListener('removed', (e) => {
 sync.addEventListener('remote', async (e) => {
   const newFeeds = e.detail.filter((r) => r.kind === 'feed' && !r.data.d && !S.feeds.has(r.id));
   const gone = e.detail.filter((r) => r.kind === 'feed' && r.data.d);
-  await loadAll();
   for (const r of gone) await db.deleteEntriesForFeed(r.id);
-  if (gone.length) await loadAll();
-  render();
+  await loadAll();
+  renderSoft();
   if (e.detail.some((r) => r.kind === 'item')) scheduleOffline();
   if (newFeeds.length) {
     await pool(newFeeds, 4, (r) => refreshFeed(S.feeds.get(r.id)));
     await db.kvSet('fetchState', Object.fromEntries(S.fetch));
-    render();
+    renderSoft();
   }
 });
 
@@ -1519,14 +1716,19 @@ document.addEventListener('auxclick', (ev) => {
   if (id) markOpened(id, { background: true });
 });
 window.addEventListener('online', () => { sync.run(); scheduleOffline(2000); });
-offline.addEventListener('change', () => { if (S.view === 'later' || S.view === 'reading') render(); });
+// INFO: offline copies arrive one by one – one redraw for a burst of them
+let offlineTimer = null;
+offline.addEventListener('change', () => {
+  clearTimeout(offlineTimer);
+  offlineTimer = setTimeout(() => { if (S.view === 'later' || S.view === 'reading') renderSoft(); }, 400);
+});
 window.addEventListener('offline', () => sync.run());
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   flushOpened();
   sync.run();
   if (Date.now() - S.lastRefresh > AUTO_REFRESH_MS) refreshAll();
-  else render();
+  else renderSoft();
 });
 setInterval(() => { if (document.visibilityState === 'visible') sync.run(); }, 5 * 60 * 1000);
 
@@ -1534,20 +1736,28 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
+// INFO: one hint per device on touch screens – swiping is otherwise invisible
+function swipeTip() {
+  if (!matchMedia('(pointer: coarse)').matches || store.get('news.tip.swipe') || !cardsInView().length) return;
+  const [right, left] = swipeFor(S.view);
+  if (!right || !left) return;
+  store.set('news.tip.swipe', '1');
+  showToast(t('inbox.swipe_tip', { right: t('act.' + right), left: t('act.' + left) }));
+}
+
 (async function boot() {
-  await useLanguage(getLang());
-  try {
-    await loadAll();
-  } catch (e) {
-    viewEl.innerHTML = `<div class="empty"><strong>${t('err.storage_title')}</strong>${esc(e.message)}<br>${t('err.storage_hint')}</div>`;
+  // INFO: pruning runs before the first load, so pruned records never reach the lists
+  const [, failed] = await Promise.all([useLanguage(getLang()), sync.maintain().catch(() => {}).then(() => loadAll()).then(() => null, (e) => e)]);
+  if (failed) {
+    viewEl.innerHTML = `<div class="empty"><strong>${t('err.storage_title')}</strong>${esc(failed.message)}<br>${t('err.storage_hint')}</div>`;
     return;
   }
-  await offline.load().catch(() => {});
   await sync.init();
   render();
   await handleIncoming();
   render();
+  offline.load().then(() => { renderSoft(); scheduleOffline(3000); }, () => {});
   sync.run();
   if (Date.now() - S.lastRefresh > AUTO_REFRESH_MS) refreshAll();
-  scheduleOffline(3000);
+  swipeTip();
 })();

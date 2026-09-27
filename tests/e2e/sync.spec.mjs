@@ -9,6 +9,7 @@ test('pair two devices, sync feeds and item states both ways', async ({ app, pag
   await app.follow(`${FX()}/feeds/atom.xml`);
   await app.go('inbox');
   await app.card('Atom entry one').locator('[data-act="later"]').click();
+  await expect(app.badge('later')).toHaveText('1'); // committed before the vault is created
   await app.go('settings');
   await page.locator('#createVault').click();
   await expect(page.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
@@ -38,7 +39,14 @@ test('pair two devices, sync feeds and item states both ways', async ({ app, pag
   await expect(pageB.locator('#refreshBtn')).not.toHaveAttribute('aria-busy', 'true', { timeout: 15_000 });
   await b.card('Atom entry three').locator('[data-act="dismissed"]').click();
   await expect(b.cards()).toHaveCount(1);
-  await expect.poll(() => b.pending(), { timeout: 15_000 }).toBe(0); // pushed (debounced ~1.5 s)
+  // local changes wait ~20 s – leaving the page (hidden) sends them at once
+  expect(await b.pending()).toBeGreaterThan(0);
+  await pageB.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    delete document.visibilityState;
+  });
+  await expect.poll(() => b.pending(), { timeout: 15_000 }).toBe(0);
   await expect(pageB.locator('#syncPill')).toHaveAttribute('data-state', 'ok');
 
   await page.locator('#syncPill').click(); // sync now

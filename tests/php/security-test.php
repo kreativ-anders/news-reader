@@ -72,3 +72,89 @@ test('rate limit: IPv6 clients are grouped per /64', function () {
 test('sync accepts vault snapshots and key-change forwards only', function () {
     assert_same(['NRS1', 'NRF1'], NR_SYNC_MAGICS);
 });
+
+test('SSRF: SIIT, local-use NAT64, site-local, documentation and SRv6 ranges are blocked', function () {
+    foreach (['64:ff9b:1::1', '64:ff9b:1:ffff::808:808', '::ffff:0:7f00:1', '::ffff:0:a00:1', 'fec0::1', 'feff::1', '3fff::1', '3fff:fff::1', '5f00::1', '5f00:ffff::1'] as $ip) {
+        assert_false(nr_is_public_ip($ip), "$ip must be blocked");
+    }
+    foreach (['::ffff:0:808:808', '64:ff9b::808:808', '3fff:1000::1', '5f01::1', '2606:4700:4700::1111'] as $ip) {
+        assert_true(nr_is_public_ip($ip), "$ip is public");
+    }
+});
+
+test('rate limit: IPv6 /48 grouping for the wide buckets', function () {
+    $prev = $_SERVER['REMOTE_ADDR'] ?? null;
+    try {
+        $_SERVER['REMOTE_ADDR'] = '2001:db8:1:2::1';
+        $a = nr_rate_client(6);
+        assert_matches('#/48$#', $a);
+        $_SERVER['REMOTE_ADDR'] = '2001:db8:1:ffff::1';
+        assert_same($a, nr_rate_client(6), 'same /48');
+        assert_true(nr_rate_client() !== nr_rate_client(6), '/64 and /48 keys differ');
+        $_SERVER['REMOTE_ADDR'] = '2001:db8:2::1';
+        assert_true($a !== nr_rate_client(6), 'other /48');
+        $_SERVER['REMOTE_ADDR'] = '203.0.113.7';
+        assert_same('203.0.113.7', nr_rate_client(6), 'IPv4 stays a single address');
+    } finally {
+        $_SERVER['REMOTE_ADDR'] = $prev;
+    }
+    foreach (['NR_RATE_COLLECT_MISS', 'NR_RATE_ARTICLE_MISS', 'NR_RATE_SYNC_CREATE'] as $c) {
+        assert_true(constant($c . '_48')[0] > constant($c)[0], "$c: /48 allows more than /64");
+    }
+    assert_true(NR_RATE_SYNC_CREATE_ALL[0] > NR_RATE_SYNC_CREATE_48[0]);
+});
+
+test('redirect targets and robots.txt lines are not HTML-decoded', function () {
+    assert_same('https://ex.test/a?x=1&amp;y=2', nr_absolute_url('/a?x=1&amp;y=2', 'https://ex.test/', false));
+    assert_same('https://ex.test/a?x=1&y=2', nr_absolute_url('/a?x=1&amp;y=2', 'https://ex.test/'));
+});
+
+test('deeply nested HTML is extracted quickly (no LIBXML_PARSEHUGE, linear text lengths)', function () {
+    $text = str_repeat('<p>Lorem ipsum, dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.</p>', 3000);
+    foreach ([['<div class="share x">', '</div>'], ['<blockquote>', '</blockquote>'], ['<article><h2><a href="/a">T</a></h2>', '</article>'], ['<div><p>Nested text, long enough to vote for its parent.</p>', '</div>']] as [$open, $close]) {
+        $html = '<html><body>' . str_repeat($open, 2000) . $text . str_repeat($close, 2000) . '</body></html>';
+        $t = microtime(true);
+        nr_extract_article($html, 'https://example.org/a');
+        nr_listing_articles(nr_load_html($html), 'https://example.org/');
+        assert_true(microtime(true) - $t < 2, "$open: took " . round(microtime(true) - $t, 2) . ' s');
+    }
+});
+
+test('feed full text is capped per entry and per feed (cache size)', function () {
+    $para = '<p>' . str_repeat('Lorem ipsum dolor sit amet, consectetur adipiscing elit. ', 20) . '</p>';
+    $big = str_repeat($para, 120);   // ~140 KB
+    $mid = str_repeat($para, 70);    // ~80 KB
+    $entries = [nr_entry('https://example.org/big', 'Big', null, null, null, '', null, $big)];
+    for ($i = 0; $i < 20; $i++) $entries[] = nr_entry('https://example.org/m' . $i, 'M' . $i, null, null, null, '', null, $mid);
+    $out = nr_with_fulltext($entries);
+    assert_false(isset($out[0]['content']), 'over NR_FULLTEXT_MAX_BYTES');
+    $kept = array_filter($out, fn($e) => isset($e['content']));
+    assert_true(count($kept) >= 10 && count($kept) < 20, 'budget stops after ~1 MB, kept ' . count($kept));
+    assert_true(array_sum(array_map(fn($e) => strlen($e['content']), $kept)) <= NR_FULLTEXT_BUDGET);
+    assert_same(500, mb_strlen(nr_entry('https://example.org/t', str_repeat('x', 5000), null)['title']), 'titles are capped');
+});
+
+test('large sitemaps: only the newest entries are built, same order as before', function () {
+    $x = '<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    for ($i = 0; $i < 20000; $i++) {
+        $x .= '<url><loc>https://e.org/blog/p' . $i . '</loc>' . ($i % 4 ? '<lastmod>' . gmdate('Y-m-d', 1600000000 + ($i % 500) * 86400) . '</lastmod>' : '') . '</url>';
+    }
+    $x .= '</urlset>';
+    $t = microtime(true);
+    $e = nr_parse_sitemap($x, 'https://e.org/sitemap.xml', 'https://e.org/blog');
+    assert_true(microtime(true) - $t < 2, 'fast');
+    assert_same(NR_MAX_ENTRIES, count($e));
+    $dates = array_map(fn($x) => $x['updatedAt'], $e);
+    $sorted = $dates;
+    rsort($sorted);
+    assert_same($sorted, $dates, 'newest first');
+    assert_same('https://e.org/blog/p19999', $e[0]['url'], 'ties: later sitemap position first (as nr_finalize_entries)');
+});
+
+test('ETag matching for cached API responses', function () {
+    assert_true(nr_etag_matches('W/"abc"', 'W/"abc"'));
+    assert_true(nr_etag_matches('"abc"', 'W/"abc"'));
+    assert_true(nr_etag_matches('"x", W/"abc"', 'W/"abc"'));
+    assert_false(nr_etag_matches('"abd"', 'W/"abc"'));
+    assert_false(nr_etag_matches('', 'W/"abc"'));
+});

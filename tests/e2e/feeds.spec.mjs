@@ -4,7 +4,7 @@ import { test, expect, API, FX } from './fixtures.mjs';
 test('follow a website → discovered feed, entries in the inbox @mobile', async ({ app, page }) => {
   await app.open();
   const result = await app.follow(`${FX()}/blog/`);
-  await expect(result.locator('.pill')).toHaveText('discovered');
+  await expect(result.locator('.pill')).toHaveAttribute('title', 'discovered');
   await expect(result).toContainText('Fixture Blog');
   await expect(page.locator('.feedrow')).toHaveCount(1);
   await app.go('inbox');
@@ -18,7 +18,7 @@ test('every resolution strategy can be followed', async ({ app, page }) => {
   await app.open();
   for (const [path, strategy] of [['/feeds/atom.xml', 'direct'], ['/guess/', 'guessed'], ['/news/', 'sitemap'], ['/magazine/', 'html-article'], ['/jsonld/', 'html-jsonld'], ['/links/', 'html-links']]) {
     const result = await app.follow(FX() + path);
-    await expect(result.locator('.pill'), path).toHaveText(strategy);
+    await expect(result.locator('.pill'), path).toHaveAttribute('title', strategy);
   }
   await expect(page.locator('.feedrow')).toHaveCount(6);
   await app.go('inbox');
@@ -29,7 +29,7 @@ test('every resolution strategy can be followed', async ({ app, page }) => {
 test('errors are shown, not thrown', async ({ app, page }) => {
   await app.open();
   await expect((await app.follow(`${FX()}/empty/`)).locator('.err')).toBeVisible();
-  await expect((await app.follow(`${FX()}/missing`)).locator('.err')).toContainText('404');
+  await expect((await app.follow(`${FX()}/missing`)).locator('.err')).toHaveAttribute('title', /404/);
   await app.follow(`${FX()}/feeds/rdf.xml`);
   await expect((await app.follow(`${FX()}/feeds/rdf.xml`)).locator('.err')).toBeVisible(); // already following
   await expect(page.locator('.feedrow')).toHaveCount(1);
@@ -40,10 +40,11 @@ test('refresh, rename and unfollow a feed', async ({ app, page }) => {
   await app.follow(`${FX()}/feeds/rdf.xml`);
   const row = page.locator('.feedrow').first();
   await row.locator('[data-feed-act="refresh"]').click();
-  await expect(row.locator('.pill')).toHaveText('direct');
+  await expect(row.locator('.pill')).toHaveAttribute('title', 'direct');
 
-  page.once('dialog', (d) => d.accept('Renamed feed'));
   await row.locator('[data-feed-act="rename"]').click();
+  await page.locator('#askIn').fill('Renamed feed');
+  await page.locator('#dlgOk').click();
   await expect(row.locator('.t')).toHaveText('Renamed feed');
 
   await row.locator('[data-feed-act="remove"]').click();

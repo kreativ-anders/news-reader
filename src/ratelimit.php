@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 // INFO: file-based fixed-window rate limiter – one file per (bucket, client), named
 //       sha256(salt|bucket|client). The client address itself is never written to disk.
-//       Returns 0 if allowed, otherwise the seconds until the window resets.
-function nr_rate_hit(string $bucket, array $rule): int
+//       Returns 0 if allowed, otherwise the seconds until the window resets. $client defaults to nr_rate_client().
+function nr_rate_hit(string $bucket, array $rule, ?string $client = null): int
 {
     [$max, $window] = $rule;
     if ($max <= 0) return 0;
@@ -13,7 +13,7 @@ function nr_rate_hit(string $bucket, array $rule): int
         return 0; // WARNING: fails open – rate limiting must never break the service
     }
 
-    $file = NR_RATE_DIR . '/' . hash('sha256', nr_rate_salt() . '|' . $bucket . '|' . nr_rate_client());
+    $file = NR_RATE_DIR . '/' . hash('sha256', nr_rate_salt() . '|' . $bucket . '|' . ($client ?? nr_rate_client()));
     $fh = @fopen($file, 'c+');
     if ($fh === false) return 0;
 
@@ -39,16 +39,25 @@ function nr_rate_hit(string $bucket, array $rule): int
     }
 }
 
-// INFO: IPv6 clients usually own a whole /64 – counting single addresses would make the limit trivial to bypass
-function nr_rate_client(): string
+// INFO: IPv6 clients usually own a whole /64 – counting single addresses would make the limit trivial to bypass.
+//       $prefixBytes = 6 gives the /48 a site usually gets.
+function nr_rate_client(int $prefixBytes = 8): string
 {
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
     $bin = @inet_pton($ip);
     if ($bin === false) return $ip;
     if (strlen($bin) === 16 && !str_starts_with($bin, str_repeat("\0", 10) . "\xff\xff")) {
-        return bin2hex(substr($bin, 0, 8)) . '::/64';
+        return bin2hex(substr($bin, 0, $prefixBytes)) . '::/' . ($prefixBytes * 8);
     }
     return inet_ntop(substr($bin, -4)) ?: $ip;
+}
+
+// INFO: per /64 first, then per /48 for IPv6 clients – one /48 holds 65536 /64s
+function nr_rate_hit_wide(string $bucket, array $rule, array $rule48): int
+{
+    if ($wait = nr_rate_hit($bucket, $rule)) return $wait;
+    $wide = nr_rate_client(6);
+    return str_ends_with($wide, '/48') ? nr_rate_hit($bucket . '/48', $rule48, $wide) : 0;
 }
 
 function nr_rate_salt(): string

@@ -4,6 +4,7 @@ declare(strict_types=1);
 function nr_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = '', ?string $image = null, ?string $content = null, ?string $author = null): array
 {
     $title = nr_clean_text($title);
+    if (mb_strlen($title) > 500) $title = rtrim(mb_substr($title, 0, 499)) . '…'; // INFO: bounds the cache size
     $summary = $summary !== null && $summary !== '' ? nr_summary($summary, $title) : '';
     $author = nr_author((string)$author);
     $entry = [
@@ -47,14 +48,20 @@ function nr_finalize_entries(array $entries, bool $sortByDate): array
     return array_slice($entries, 0, NR_MAX_ENTRIES);
 }
 
-// INFO: full text is only kept in the server cache – /api/collect strips it, /api/article serves it
+// INFO: full text is only kept in the server cache – /api/collect strips it, /api/article serves it.
+//       Capped per entry and per feed: the cache belongs to anyone who can name a URL.
 function nr_with_fulltext(array $entries): array
 {
+    $budget = NR_FULLTEXT_BUDGET;
     foreach ($entries as &$e) {
         if (!isset($e['content'])) continue;
-        $full = nr_fulltext($e['content'], $e['url']);
-        if ($full === null) unset($e['content']);
-        else $e['content'] = $full;
+        $full = strlen($e['content']) <= 4 * NR_FULLTEXT_MAX_BYTES ? nr_fulltext($e['content'], $e['url']) : null;
+        if ($full === null || strlen($full) > NR_FULLTEXT_MAX_BYTES || strlen($full) > $budget) {
+            unset($e['content']);
+            continue;
+        }
+        $e['content'] = $full;
+        $budget -= strlen($full);
     }
     return $entries;
 }
@@ -397,7 +404,8 @@ function nr_load_html(string $html): DOMDocument
     $prev = libxml_use_internal_errors(true);
     $dom = new DOMDocument();
     // INFO: the XML prolog forces UTF-8 interpretation
-    $dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NONET | LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_COMPACT | LIBXML_PARSEHUGE);
+    // WARNING: no LIBXML_PARSEHUGE – it lifts the nesting limit (256), and deeply nested pages cost quadratic CPU
+    $dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NONET | LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_COMPACT);
     libxml_clear_errors();
     libxml_use_internal_errors($prev);
     return $dom;
@@ -556,7 +564,8 @@ function nr_listing_articles(DOMDocument $dom, string $baseUrl): array
     $xp = new DOMXPath($dom);
     $entries = [];
 
-    foreach ($xp->query('//article[not(ancestor::nav) and not(ancestor::footer)]') as $n => $article) {
+    // INFO: an <article> that contains others is a wrapper, not a teaser
+    foreach ($xp->query('//article[not(ancestor::nav) and not(ancestor::footer) and not(.//article)]') as $n => $article) {
         if ($n >= NR_MAX_PARSE_ITEMS) break;
         $heading = $xp->query('.//*[self::h1 or self::h2 or self::h3 or self::h4]', $article)->item(0);
         $link = $heading ? $xp->query('.//a[@href] | ancestor::a[@href]', $heading)->item(0) : null;
@@ -572,7 +581,7 @@ function nr_listing_articles(DOMDocument $dom, string $baseUrl): array
         if ($time instanceof DOMElement) {
             $date = nr_parse_date($time->getAttribute('datetime') ?: $time->textContent);
         }
-        $date ??= nr_find_date_in_text($article->textContent);
+        $date ??= nr_find_date_in_text(mb_substr($article->textContent, 0, 2000));
 
         $p = $xp->query('.//p', $article)->item(0);
         $image = null;
@@ -658,7 +667,7 @@ function nr_title_and_date_from_link(DOMElement $a, DOMXPath $xp): array
         $s = nr_clean_text($t->nodeValue ?? '');
         if ($s !== '') $segments[] = $s;
     }
-    $date ??= nr_find_date_in_text(implode(' | ', $segments));
+    $date ??= nr_find_date_in_text(mb_substr(implode(' | ', $segments), 0, 2000));
 
     if ($h !== null) {
         $title = nr_clean_text($h->textContent);
@@ -684,7 +693,7 @@ function nr_sitemap_candidates(string $url): array
     if ($robots['ok']) {
         foreach (preg_split('/\R/', $robots['body']) ?: [] as $line) {
             if (preg_match('/^\s*sitemap:\s*(\S+)/i', $line, $m)) {
-                $candidates[] = nr_absolute_url($m[1], $origin);
+                $candidates[] = nr_absolute_url($m[1], $origin, false);
             }
         }
     }
@@ -734,13 +743,17 @@ function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
 
     if ($name !== 'urlset') return [];
 
-    $entries = [];
+    // INFO: lightweight tuples first (sitemaps list up to 50,000 URLs), full entries only for the newest –
+    //       same de-duplication and order as nr_finalize_entries()
+    $items = [];
     foreach (nr_child_elements($root, 'url') as $node) {
         $loc = nr_child_text($node, ['loc']);
-        if ($loc === '') continue;
+        if ($loc === '' || !nr_is_http_url($loc)) continue;
 
         $path = rtrim((string)parse_url($loc, PHP_URL_PATH), '/');
         if (!nr_is_article_path($path, $basePath)) continue;
+        $key = nr_normalize_url($loc);
+        if (isset($items[$key])) continue;
 
         $newsTitle = '';
         $newsDate = null;
@@ -748,25 +761,25 @@ function nr_parse_sitemap(string $body, string $sitemapUrl, string $requestedUrl
             $newsTitle = nr_child_text($news, ['title']);
             $newsDate = nr_parse_date(nr_child_text($news, ['publication_date']));
         }
-
         $lastmod = nr_parse_date(nr_child_text($node, ['lastmod']));
+        $items[$key] = [count($items), $loc, $newsTitle, $newsDate, $lastmod, $node];
+    }
+    usort($items, function ($a, $b) {
+        $da = $a[3] ?? $a[4] ?? '';
+        $db = $b[3] ?? $b[4] ?? '';
+        return [$db === '' ? 0 : 1, $db, -$a[0]] <=> [$da === '' ? 0 : 1, $da, -$b[0]];
+    });
+
+    $entries = [];
+    foreach (array_slice($items, 0, NR_MAX_ENTRIES) as [, $loc, $newsTitle, $newsDate, $lastmod, $node]) {
         $image = null;
         foreach (nr_child_elements($node, 'image') as $img) {
             $image = nr_image_url(nr_child_text($img, ['loc']), $loc);
             if ($image !== null) break;
         }
-        $entries[] = nr_entry(
-            $loc,
-            $newsTitle !== '' ? $newsTitle : nr_title_from_slug($loc),
-            $newsDate,
-            $lastmod,
-            null,
-            '',
-            $image
-        );
+        $entries[] = nr_entry($loc, $newsTitle !== '' ? $newsTitle : nr_title_from_slug($loc), $newsDate, $lastmod, null, '', $image);
     }
-
-    return nr_finalize_entries($entries, true);
+    return $entries;
 }
 
 function nr_title_from_slug(string $url): string

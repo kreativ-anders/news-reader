@@ -14,6 +14,11 @@ const AAD_FORWARD = new TextEncoder().encode('newsreader-sync-v1 forward');
 const ECDH = { name: 'ECDH', namedCurve: 'P-256' };
 const MAX_ROUNDS = 5;
 const PRUNE_AFTER_MS = 180 * 864e5;
+const PRUNE_TRIAGED_MS = 30 * 864e5;   // dismissed / reset-to-new items
+const MAINTAIN_EVERY_MS = 864e5;
+const UPLOAD_DELAY_MS = 20000;
+const MAX_PLAIN_BYTES = 32 << 20;
+const TOO_LARGE_TARGET = 800_000;
 const DEVICE_TOUCH_MS = 3600e3;
 const DEVICE_NAME_MAX = 60;
 
@@ -26,9 +31,14 @@ export class Sync extends EventTarget {
     this.debounce = null;
     this.keys = null;
     this.leaving = false;
+    // INFO: local changes wait UPLOAD_DELAY_MS, but leave with the page
+    const flush = () => this.flush();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+    window.addEventListener('pagehide', flush);
   }
 
   async init() {
+    await this.maintain().catch(() => {});
     this.status.lastSync = await db.kvGet('lastSync', null);
     await this.refreshPending();
     this.emitStatus(await db.kvGet('vaultKey') ? 'idle' : 'local');
@@ -45,14 +55,30 @@ export class Sync extends EventTarget {
     this.dispatchEvent(new CustomEvent('status', { detail: { ...this.status } }));
   }
 
-  schedule(delay = 1500) {
+  schedule(delay = UPLOAD_DELAY_MS) {
     clearTimeout(this.debounce);
     this.refreshPending().then(() => this.emitStatus(this.status.state));
     this.debounce = setTimeout(() => this.run(), delay);
   }
 
-  // INFO: concurrent calls are coalesced into one follow-up run
+  flush() {
+    if (this.debounce) this.run();
+  }
+
+  // INFO: local housekeeping, at most daily: the same pruning as a sync round; without a vault the outbox
+  //       markers are dropped too (joinVault() marks everything again)
+  async maintain({ force = false } = {}) {
+    const now = Date.now();
+    if (!force && now - await db.kvGet('lastMaintain', 0) < MAINTAIN_EVERY_MS) return;
+    await db.prune((r) => prunable(r, now));
+    if (!await db.kvGet('vaultKey')) await db.outboxClear();
+    await db.kvSet('lastMaintain', now);
+  }
+
+  // INFO: concurrent calls are coalesced into one follow-up run; a pending scheduled upload is included
   run() {
+    clearTimeout(this.debounce);
+    this.debounce = null;
     if (this.running) {
       this.again = true;
       return this.running;
@@ -121,8 +147,8 @@ export class Sync extends EventTarget {
       remoteEtag = res.headers.get('ETag');
       const blob = await decrypt(keys.aes, new Uint8Array(await res.arrayBuffer()));
       if (blob.forward) return this.follow(blob.data);
-      remote = blob.data.records || [];
-      changed.push(...await db.applyRemote(remote));
+      remote = Array.isArray(blob.data?.records) ? blob.data.records : [];
+      changed.push(...await db.applyRemote(remote, (r) => prunable(r, now)));
     } else if (res.status !== 404) {
       throw await httpError(res);
     }
@@ -132,26 +158,31 @@ export class Sync extends EventTarget {
     const sent = await db.getAll('outbox');
 
     let dirty;
+    let records = null;
     if (res.status === 304) {
       dirty = sent.length > 0;
     } else {
-      const inVault = new Map(remote.map((r) => [`${r.kind}\u0000${r.id}`, r.updatedAt]));
-      dirty = (await db.getAll('records')).some((r) => !prunable(r, now) && !(inVault.get(`${r.kind}\u0000${r.id}`) >= r.updatedAt));
+      const inVault = new Map(remote.filter((r) => db.validRecord(r, now)).map((r) => [`${r.kind}\u0000${r.id}`, r.updatedAt]));
+      records = await db.prune((r) => prunable(r, now));
+      dirty = records.some((r) => !(inVault.get(`${r.kind}\u0000${r.id}`) >= r.updatedAt));
     }
 
     if (!dirty) {
+      if (records) await this.pinKeys(records);
       await db.kvSet('etag', remoteEtag);
       await db.outboxAck(sent);
       return true;
     }
 
-    const records = await db.prune((r) => prunable(r, now));
-    const blob = await encrypt(keys.aes, { v: 1, at: now, records }, MAGIC, AAD);
-    const put = await request(endpoint, keys.token, {
-      method: 'PUT',
-      body: blob,
-      headers: { 'Content-Type': 'application/octet-stream', ...(remoteEtag ? { 'If-Match': remoteEtag } : { 'If-None-Match': '*' }) },
-    });
+    records ??= await db.prune((r) => prunable(r, now));
+    await this.pinKeys(records);
+    const conditional = remoteEtag ? { 'If-Match': remoteEtag } : { 'If-None-Match': '*' };
+    let put = await putSnapshot(endpoint, keys, records, now, conditional);
+    // INFO: vault over the server limit – drop the oldest finished items and try once more
+    if (put.status === 413) {
+      records = await shrink(records, put.size);
+      put = await putSnapshot(endpoint, keys, records, now, conditional);
+    }
     // INFO: 410 = the location became a forward meanwhile – the next round follows it
     if (put.status === 412 || put.status === 410) {
       await db.kvDel('etag');
@@ -170,7 +201,7 @@ export class Sync extends EventTarget {
 
   async follow(forward) {
     const id = await db.kvGet('deviceId');
-    const own = (forward.envelopes || []).find((e) => e.id === id);
+    const own = (Array.isArray(forward?.envelopes) ? forward.envelopes : []).find((e) => e?.id === id);
     const pair = await db.kvGet('deviceKey');
     const key = own && pair ? await unwrapKey(own, pair.priv) : null;
     if (!key) return 'removed';
@@ -182,10 +213,13 @@ export class Sync extends EventTarget {
 
   // INFO: new vault key → full snapshot to the new location → forward at the old location (If-Match, so no
   //       change of another device is lost) → switch locally. A failed attempt leaves an orphan that expires.
-  async rotateKey() {
+  //       exclude: device ids that never get the new key, whatever the merged device list says
+  async rotateKey({ exclude = [] } = {}) {
     if (!navigator.onLine) throw Object.assign(new Error('offline'), { code: 'offline' });
+    clearTimeout(this.debounce);
+    this.debounce = null;
     while (this.running) await this.running.catch(() => {});
-    this.running = this.rotateOnce().finally(() => {
+    this.running = this.rotateOnce(exclude).finally(() => {
       this.running = null;
       if (this.again) {
         this.again = false;
@@ -201,7 +235,7 @@ export class Sync extends EventTarget {
     }
   }
 
-  async rotateOnce() {
+  async rotateOnce(exclude = []) {
     this.emitStatus('syncing');
     const endpoint = await syncEndpoint();
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -215,18 +249,20 @@ export class Sync extends EventTarget {
       }
       if (!done) continue;
 
+      // INFO: re-mark after the merge, so a removed device cannot undo its removal in the new vault
+      for (const id of exclude) await this.markRemoved(id);
       const now = Date.now();
       const newKey = randomKey();
       const next = await deriveVaultKeys(newKey);
-      const holders = (await this.devices()).filter((d) => typeof d.data.pub === 'string');
+      const holders = await this.keyHolders(exclude);
       const envelopes = await Promise.all(holders.map((d) => wrapKey(newKey, d.id, d.data.pub)));
 
-      const records = await db.prune((r) => prunable(r, now));
-      const created = await request(endpoint, next.token, {
-        method: 'PUT',
-        body: await encrypt(next.aes, { v: 1, at: now, records }, MAGIC, AAD),
-        headers: { 'Content-Type': 'application/octet-stream', 'If-None-Match': '*' },
-      });
+      let records = await db.prune((r) => prunable(r, now));
+      let created = await putSnapshot(endpoint, next, records, now, { 'If-None-Match': '*' });
+      if (created.status === 413) {
+        records = await shrink(records, created.size);
+        created = await putSnapshot(endpoint, next, records, now, { 'If-None-Match': '*' });
+      }
       if (!created.ok) throw await httpError(created);
       const newEtag = created.headers.get('ETag') || (await created.json()).etag;
 
@@ -256,6 +292,8 @@ export class Sync extends EventTarget {
     await db.kvDel('etag');
     await db.kvDel('deviceId');
     await db.kvDel('deviceKey');
+    await db.kvDel('pubPins');
+    await db.kvDel('revoked');
     await db.outboxAll();
     // INFO: the vault key lives in IndexedDB – ask the browser not to evict it under storage pressure
     navigator.storage?.persist?.().catch(() => {});
@@ -278,6 +316,8 @@ export class Sync extends EventTarget {
     await db.kvDel('etag');
     await db.kvDel('deviceId');
     await db.kvDel('deviceKey');
+    await db.kvDel('pubPins');
+    await db.kvDel('revoked');
     await db.outboxClear();
     this.keys = null;
     await this.refreshPending();
@@ -286,32 +326,66 @@ export class Sync extends EventTarget {
 
   // INFO: device list – records {kind:'device', id, data:{name, platform, since, seen, pub, r?}} inside the encrypted vault.
   //       removeDevice() marks the record; revoke() also rotates the key so the removed device is locked out.
+  //       pubChanged: the public key differs from the one first seen for this id – such a device gets no new key.
   async devices() {
-    return (await db.getAll('records'))
-      .filter((r) => r.kind === 'device' && !r.data.r)
+    const all = (await db.getAll('records')).filter((r) => r.kind === 'device');
+    const pins = await this.pinKeys(all);
+    return all
+      .filter((r) => !r.data.r)
+      .map((r) => (pins[r.id] && r.data.pub !== pins[r.id] ? { ...r, pubChanged: true } : r))
       .sort((a, b) => (b.data.seen || 0) - (a.data.seen || 0));
+  }
+
+  // INFO: trust on first use – the first public key seen for a device id is kept
+  async pinKeys(records) {
+    const pins = await db.kvGet('pubPins', {});
+    let added = false;
+    for (const r of records) {
+      if (r.kind === 'device' && typeof r.data.pub === 'string' && !Object.hasOwn(pins, r.id)) {
+        pins[r.id] = r.data.pub;
+        added = true;
+      }
+    }
+    if (added) await db.kvSet('pubPins', pins);
+    return pins;
+  }
+
+  // INFO: devices that get a wrapped new key: pinned key unchanged, not removed/revoked, no key of a revoked device
+  async keyHolders(exclude = []) {
+    const out = new Set([...exclude, ...await db.kvGet('revoked', [])]);
+    const all = (await db.getAll('records')).filter((r) => r.kind === 'device');
+    const pins = await this.pinKeys(all);
+    const outPubs = new Set(all.filter((r) => out.has(r.id)).map((r) => r.data.pub).concat([...out].map((id) => pins[id])).filter(Boolean));
+    return (await this.devices()).filter((d) => typeof d.data.pub === 'string' && !d.pubChanged && !out.has(d.id) && !outPubs.has(d.data.pub));
   }
 
   async renameDevice(id, name) {
     const cur = await db.get('records', ['device', id]);
     const clean = String(name ?? '').trim().slice(0, DEVICE_NAME_MAX);
     if (!cur || !clean) return;
-    await db.putLocal([{ ...cur, data: { ...cur.data, name: clean }, updatedAt: Date.now() }]);
-    this.schedule();
+    await db.putLocal([{ ...cur, data: { ...cur.data, name: clean }, updatedAt: nextStamp(cur) }]);
+    this.schedule(0);
   }
 
   async removeDevice(id, { sync = true } = {}) {
-    const cur = await db.get('records', ['device', id]);
-    if (!cur) return;
-    await db.putLocal([{ ...cur, data: { ...cur.data, r: 1 }, updatedAt: Date.now() }]);
+    if (!await this.markRemoved(id)) return;
     if (sync) this.schedule(0);
+  }
+
+  async markRemoved(id) {
+    const cur = await db.get('records', ['device', id]);
+    if (!cur) return false;
+    await db.putLocal([{ ...cur, data: { ...cur.data, r: 1 }, updatedAt: nextStamp(cur) }]);
+    return true;
   }
 
   // WARNING: the removed device keeps whatever it already downloaded – only future changes are protected
   async revoke(id) {
     if (!navigator.onLine) throw Object.assign(new Error('offline'), { code: 'offline' });
+    const revoked = await db.kvGet('revoked', []);
+    if (!revoked.includes(id)) await db.kvSet('revoked', [...revoked, id]);
     await this.removeDevice(id, { sync: false });
-    await this.rotateKey();
+    await this.rotateKey({ exclude: [id] });
   }
 
   async ownDeviceRemoved() {
@@ -351,12 +425,50 @@ export class Sync extends EventTarget {
   }
 }
 
+// INFO: newer than the current version, even if that one carries a (skewed) future timestamp within the limit
+function nextStamp(cur, now = Date.now()) {
+  return cur.updatedAt <= now + db.MAX_SKEW_MS ? Math.max(now, cur.updatedAt + 1) : now;
+}
+
 // INFO: deterministic on every device, so pruned records cannot be resurrected by an old device
-function prunable(r, now) {
-  if (now - r.updatedAt < PRUNE_AFTER_MS) return false;
-  if (r.kind === 'item') return r.data?.s === 'done' || r.data?.s === 'dismissed' || r.data?.s === 'new';
+export function prunable(r, now) {
+  const age = now - r.updatedAt;
+  if (r.kind === 'item') {
+    const s = r.data?.s;
+    return (s === 'dismissed' || s === 'new') ? age >= PRUNE_TRIAGED_MS : s === 'done' && age >= PRUNE_AFTER_MS;
+  }
+  if (age < PRUNE_AFTER_MS) return false;
   if (r.kind === 'feed') return !!r.data?.d;
   return r.kind === 'device';
+}
+
+// INFO: what the vault carries – dismissed items only what the feed stats and the search need, "new" only the state
+export function slim(r) {
+  if (r.kind !== 'item') return r;
+  const { s, f, t, u } = r.data;
+  if (s === 'new') return { ...r, data: { s } };
+  if (s !== 'dismissed') return r;
+  const data = { s };
+  if (f) data.f = f;
+  if (t) data.t = t;
+  if (u) data.u = u;
+  return { ...r, data };
+}
+
+async function putSnapshot(endpoint, keys, records, now, conditional) {
+  const body = await encrypt(keys.aes, { v: 1, at: now, records: records.map(slim) }, MAGIC, AAD);
+  const res = await request(endpoint, keys.token, { method: 'PUT', body, headers: { 'Content-Type': 'application/octet-stream', ...conditional } });
+  return Object.assign(res, { size: body.length });
+}
+
+// INFO: after a 413 – deletes the oldest finished items (done / dismissed / new) locally, as many as the
+//       size estimate says; the other devices do the same when their upload hits the limit
+async function shrink(records, size) {
+  const finished = records.filter((r) => r.kind === 'item' && ['done', 'dismissed', 'new'].includes(r.data.s))
+    .sort((a, b) => a.updatedAt - b.updatedAt);
+  const excess = Math.ceil(records.length * (1 - TOO_LARGE_TARGET / Math.max(size, TOO_LARGE_TARGET + 1)));
+  const drop = new Set(finished.slice(0, excess).map((r) => `${r.kind}\u0000${r.id}`));
+  return db.prune((r) => drop.has(`${r.kind}\u0000${r.id}`));
 }
 
 function describeDevice() {
@@ -453,10 +565,29 @@ async function decrypt(aes, buf) {
   } catch {
     throw Object.assign(new Error('Vault could not be decrypted – wrong key or damaged data.'), { code: 'decrypt' });
   }
-  if (flags & FLAG_GZIP) {
-    plain = new Uint8Array(await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
-  }
+  if (flags & FLAG_GZIP) plain = await gunzip(plain);
   return { forward, data: JSON.parse(new TextDecoder().decode(plain)) };
+}
+
+// INFO: streamed with a byte counter – a small gzip bomb must not exhaust memory
+export async function gunzip(bytes, max = MAX_PLAIN_BYTES) {
+  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')).getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > max) {
+      reader.cancel().catch(() => {});
+      throw Object.assign(new Error('Vault too large after decompression.'), { code: 'format' });
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out;
 }
 
 export async function serverBase() {

@@ -22,8 +22,11 @@ function nr_cache_read(string $url, string $ns = ''): ?array
     return ['data' => $data, 'age' => time() - (int)$data['cachedAt']];
 }
 
+// INFO: skipped when the disk is nearly full (the response is served anyway) – var/sync lives on the same disk
 function nr_cache_write(string $url, array $data, string $ns = ''): void
 {
+    $free = @disk_free_space(NR_CACHE_DIR);
+    if ($free !== false && $free < NR_CACHE_MIN_FREE) return;
     $data['cachedAt'] = time();
     $data['schema'] = NR_CACHE_SCHEMA;
     $file = nr_cache_path($url, 'json', $ns);
@@ -70,10 +73,47 @@ function nr_cache_ttl(array $cached, int $ttl, int $errorTtl): int
     return isset($cached['data']['error']) ? (int)($cached['data']['ttl'] ?? $errorTtl) : $ttl;
 }
 
-function nr_busy(): never
+function nr_busy(string $message = 'The source is being fetched by another request – try again shortly.'): never
 {
     header('Retry-After: 10');
-    nr_error('BUSY', 'The source is being fetched by another request – try again shortly.', 503);
+    nr_error('BUSY', $message, 503);
+}
+
+// INFO: bounds the PHP workers tied up by slow sources: at most NR_UPSTREAM_SLOTS upstream fetches at once, and
+//       NR_UPSTREAM_PER_CLIENT per client (/64). Slots are non-blocking flocks, released when the request ends.
+//       Fails open if the slot files cannot be created.
+function nr_upstream_slot(): bool
+{
+    static $held = null;
+    if ($held !== null) return true;
+
+    $take = function (array $files) {
+        foreach ($files as $f) {
+            $fh = @fopen($f, 'c');
+            if ($fh === false) return true;
+            if (flock($fh, LOCK_EX | LOCK_NB)) {
+                @touch($f); // INFO: keeps per-client slot files from the rate GC while in use
+                return $fh;
+            }
+            fclose($fh);
+        }
+        return false;
+    };
+
+    if (!is_dir(NR_RATE_DIR)) @mkdir(NR_RATE_DIR, 0775, true);
+    $client = hash('sha256', nr_rate_salt() . '|slot|' . nr_rate_client());
+    $mine = $take(array_map(fn($i) => NR_RATE_DIR . '/' . $client . '.slot' . $i, range(0, max(1, NR_UPSTREAM_PER_CLIENT) - 1)));
+    if ($mine === false) return false;
+
+    $slots = range(0, max(1, NR_UPSTREAM_SLOTS) - 1);
+    shuffle($slots);
+    $global = $take(array_map(fn($i) => NR_CACHE_DIR . '/.slot-' . $i, $slots));
+    if ($global === false) {
+        nr_unlock($mine);
+        return false;
+    }
+    $held = [$mine, $global];
+    return true;
 }
 
 function nr_unlock($fp): void
@@ -84,11 +124,28 @@ function nr_unlock($fp): void
     }
 }
 
-// INFO: bounds disk usage – anyone can make the Collector cache arbitrary public URLs
+// INFO: bounds disk usage – anyone can make the Collector cache arbitrary public URLs.
+//       Old files go first, then the oldest ones until the total is below NR_CACHE_MAX_BYTES.
 function nr_cache_gc(): void
 {
     $limit = time() - NR_CACHE_GC_AGE;
+    $files = [];
+    $total = 0;
     foreach (glob(NR_CACHE_DIR . '/*', GLOB_NOSORT) ?: [] as $f) {
-        if (@filemtime($f) < $limit) @unlink($f);
+        $st = @stat($f);
+        if ($st === false) continue;
+        if ($st['mtime'] < $limit) {
+            @unlink($f);
+            continue;
+        }
+        if (str_ends_with($f, '.lock')) continue;
+        $files[$f] = [$st['mtime'], $st['size']];
+        $total += $st['size'];
+    }
+    if ($total <= NR_CACHE_MAX_BYTES) return;
+    uasort($files, fn($a, $b) => $a[0] <=> $b[0]);
+    foreach ($files as $f => [, $size]) {
+        if ($total <= NR_CACHE_MAX_BYTES) break;
+        if (@unlink($f)) $total -= $size;
     }
 }
