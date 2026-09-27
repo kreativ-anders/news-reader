@@ -92,7 +92,10 @@ function nr_sync_put(string $file): never
                 nr_rate_reject($wait);
             }
             if (nr_sync_count() >= NR_SYNC_MAX_VAULTS) {
-                nr_error('SERVER_FULL', 'This server does not accept new vaults right now.', 507);
+                nr_sync_gc(); // INFO: expired vaults must not count – clean up once before refusing
+                if (nr_sync_count() >= NR_SYNC_MAX_VAULTS) {
+                    nr_error('SERVER_FULL', 'This server does not accept new vaults right now.', 507);
+                }
             }
         }
 
@@ -109,8 +112,6 @@ function nr_sync_put(string $file): never
         flock($lock, LOCK_UN);
         fclose($lock);
     }
-
-    if (random_int(1, 100) === 1) nr_sync_gc();
 
     $etag = nr_sync_etag($blob);
     header('ETag: ' . $etag);

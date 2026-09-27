@@ -222,7 +222,7 @@
     "sync_h": "Sincronizzazione cifrata end-to-end",
     "sync_text": "La sincronizzazione è facoltativa. Quando abbini dei dispositivi, i tuoi dati vengono cifrati sul tuo dispositivo (AES-256-GCM) prima del caricamento. La chiave non lascia mai i tuoi dispositivi, quindi non possiamo leggere il contenuto. Il server conserva un file cifrato per cassaforte, denominato con un hash del token di accesso, insieme a dimensione e data di modifica. Una cassaforte viene cancellata quando la rimuovi nell’app, e automaticamente 180 giorni dopo l’ultimo utilizzo. Base giuridica: art. 6, par. 1, lett. b GDPR.",
     "sources_h": "Contenuti delle fonti che segui",
-    "sources_text": "Le voci possono contenere immagini che il browser carica direttamente dal sito di origine o dal suo server di immagini, e «Leggi ora» apre l’articolo sul sito originale. In entrambi i casi il rispettivo gestore riceve il tuo indirizzo IP ed è responsabile di tale trattamento. L’app non invia alcun referrer.",
+    "sources_text": "Le voci e l’elenco dei feed possono contenere immagini e icone dei siti che il browser carica direttamente dal sito di origine o dal suo server di immagini, e «Leggi ora» apre l’articolo sul sito originale. In entrambi i casi il rispettivo gestore riceve il tuo indirizzo IP ed è responsabile di tale trattamento. L’app non invia alcun referrer.",
     "selfhost_h": "Altre istanze di News Reader",
     "selfhost_text": "Questa informativa vale solo per news-reader.app. News Reader è open source – se usi un’istanza gestita da altri, il titolare è il suo gestore.",
     "rights_h": "I tuoi diritti",

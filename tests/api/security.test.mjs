@@ -43,7 +43,7 @@ describe('rate limits (production config)', () => {
     const { readdirSync, readFileSync } = await import('node:fs');
     const dir = `${s.api.dir}/var/rate`;
     for (const f of readdirSync(dir)) {
-      if (f === '.salt') continue;
+      if (f === '.salt' || f === '.gc') continue; // INFO: .gc holds the time of the last cleanup (src/gc.php)
       assert.match(f, /^[0-9a-f]{64}$/);
       assert.ok(!readFileSync(`${dir}/${f}`, 'utf8').includes('127.0.0.1'));
     }

@@ -34,11 +34,17 @@ Writes the English text from `i18n/en.json` into the site pages (`PAGES`: index,
 Plain ES modules, no build step.
 
 - States: *Inbox* → *Read now* (opens original in a new tab, marks *Done*, undo toast) · *Later* · *Not interested*. *Read again* in *Done* → *Read now*. *Later* → *Mark all done* (respects feed filter).
-- Storage: IndexedDB `news` – feeds + item states (synced), entries (per device), `articles` (offline copies, per device), `kv.swipe` (swipe config, per device).
+- List: posts grouped by day (sticky header with count; *Inbox* by publication date, the other views by last change). Card actions appear on hover, focus and keyboard selection (always on touch); the main action keeps its label. Images a feed repeats on several posts (logos, placeholders) are hidden. Saved offline copies show the reading time. *Layout*: comfortable or compact (headlines only), per device (`localStorage` `news.density`, key `v`).
+- Sources (sidebar, desktop): folders and feeds of the current view with counts; feeds with nothing in the view fold behind *+ n more*; hidden with a single feed. Filter = one feed or one folder (narrow screens: select with option groups). Favicon: Collector `source.icon`, else `/favicon.ico` of `source.siteUrl`, else a monogram. Feed titles drop platform wording (*Stories by X on Medium* → *X*).
+- Folders: *Feeds* → folder button (free text, existing folders suggested; empty = none); synced as `g` in the feed record; OPML import reads the enclosing outline, export nests by folder.
+- Feed context (filtered to one feed): posts per week (last 28 days) and read rate (*later/read now/done* vs. *not interested*, from 5 decisions on) with folder / rename / unfollow; also in the *Feeds* list.
+- Inbox subtitle: first run explains the three choices, afterwards *n new · n sorted today*.
+- Search and go to (`/`, Ctrl/Cmd+K, search button): views, folders and feeds; with a query also every known post title – jumps to the post's view and selects it (*Not interested* posts open the original).
+- Storage: IndexedDB `news` – feeds + item states (synced), entries (per device), `articles` (offline copies, per device), `kv.swipe` (swipe config, per device), `kv.fetchState` (per feed: last check, strategy, icon, site – per device).
 - Retention: new subscriptions show the last 14 days; unseen entries that left the feed are kept 30 days; offline copies of done/dismissed items are dropped after 1 day.
 - Offline: service worker caches the app shell, changes are queued until the server is reachable. Entries moved to *Later* are saved once via `/api/article`; offline they open in a full-screen reader (scrolled to the end → *Done*).
 - Adding feeds: URL field, Web Share Target, bookmarklet (`?add=<url>`), OPML import/export.
-- Input: swipe (default right = Later, left = Not interested; configurable), keys `j`/`k`, `o`, `l`, `x`, `d`, `u`, `r`, `1`–`5`.
+- Input: swipe (default right = Later, left = Not interested; configurable), keys `j`/`k`, `o`, `l`, `x`, `d`, `u`, `r`, `1`–`5`, `/`, `v`, `?` (overview).
 - Server: defaults to the origin News is served from; changeable in *Settings*.
 
 ## Collector (`/api/collect`)
@@ -60,13 +66,16 @@ Resolution order (`strategy`):
 
 ```json
 {
-  "source":  { "inputUrl", "url", "type": "rss|rdf|atom|html|sitemap", "strategy", "rule", "feedUrl", "title" },
-  "entries": [ { "id": "sha256", "url", "title", "publishedAt", "updatedAt", "summary", "image" } ],
+  "source":  { "inputUrl", "url", "type": "rss|rdf|atom|html|sitemap", "strategy", "rule", "feedUrl", "title", "siteUrl", "icon" },
+  "entries": [ { "id": "sha256", "url", "title", "publishedAt", "updatedAt", "summary", "image", "author" } ],
   "meta":    { "count", "fetchedAt", "cached", "stale", "cachedAt", "nextRefreshAfter", "version" }
 }
 ```
 
 - `id` = sha256 of the GUID, else of the normalized URL. Feeds/sitemaps newest first; HTML keeps page order.
+- `summary`: plain text, max. `NR_SUMMARY_LENGTH`; feed furniture is removed (*The post … appeared first on …*, *… Zum Beitrag: …*, *Continue reading*, `[…]`, a repeated title).
+- `author`: Atom `<author><name>` (feed-level as fallback), `dc:creator` / `<author>` (e-mail form → name), JSON-LD `author`; `null` if unknown.
+- `source.siteUrl`: the feed's site link, or the page for HTML strategies. `source.icon`: `<link rel="icon">` of a fetched page (apple-touch-icon as fallback), else Atom `<icon>` / RSS `<image>`; `null` if unknown.
 - Header `X-Collector-Cache: HIT | MISS | STALE`.
 - Errors: 4xx + `{"error":{"code","message"}}` – `INVALID_URL`, `UNSUPPORTED_URL`, `FORBIDDEN_HOST`, `DNS_FAILED`, `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR`, `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS`, `NO_FEED_DETECTED`, `PLATFORM_NO_FEED`; `503 BUSY` (+ `Retry-After`) when another request fetches the same URL for longer than `NR_LOCK_WAIT`.
 - Cached errors: `NO_FEED_DETECTED` / `PLATFORM_NO_FEED` for `NR_ERROR_TTL`, temporary upstream failures (`UPSTREAM_FETCH_FAILED`, HTTP 5xx/429) for `NR_TRANSIENT_ERROR_TTL`.
@@ -106,7 +115,7 @@ vault key (32 random bytes, base64url; QR / app/#pair=<key>[&server=<url>])
 | `DELETE` | remove vault (`204`); `410 FORWARDED` if the location holds a forward |
 
 - Auth `Authorization: Bearer <token>`; file `var/sync/<2 hex>/<sha256(token)>.vault`; atomic writes under a global `flock`.
-- Blob: `"NRS1"` · flags (bit 0 = gzip) · 12-byte IV · ciphertext (AAD `newsreader-sync-v1`). Plaintext `{v:1, at, records:[{kind,id,data,updatedAt}]}`; `feed` → `{url,title,since,d?}`, `item` → `{s,t,u,f,p}`, `device` → `{name,platform,since,seen,pub,r?}`. Forward after a key change: `"NRF1"` · flags · IV · ciphertext under the old key (AAD `newsreader-sync-v1 forward`), plaintext `{v:1, at, envelopes:[{id,epk,iv,ct}]}`.
+- Blob: `"NRS1"` · flags (bit 0 = gzip) · 12-byte IV · ciphertext (AAD `newsreader-sync-v1`). Plaintext `{v:1, at, records:[{kind,id,data,updatedAt}]}`; `feed` → `{url,title,since,d?,g?}` (`g` = folder), `item` → `{s,t,u,f,p}`, `device` → `{name,platform,since,seen,pub,r?}`. Forward after a key change: `"NRF1"` · flags · IV · ciphertext under the old key (AAD `newsreader-sync-v1 forward`), plaintext `{v:1, at, envelopes:[{id,epk,iv,ct}]}`.
 - Client: GET → decrypt → merge (last write wins per record) → PUT full snapshot if newer; retry on `412` (max. 5). Deterministic pruning after 180 days.
 - Server sees: token hash, blob size, timestamps, client IP (web server log).
 - A pairing link is the key: joining a foreign link merges your data into that vault (and may switch the server). Only confirm links you created yourself.
@@ -131,6 +140,8 @@ vault key (32 random bytes, base64url; QR / app/#pair=<key>[&server=<url>])
 | `NR_MAX_PARSE_ITEMS` (feed items / listing elements inspected) | 1000 |
 | `NR_ALLOWED_PORTS` (upstream) | 80, 443, 8080, 8443 |
 | `NR_CACHE_GC_AGE` (cache files deleted after) | 14 d |
+
+Cleanup needs no cron: every request checks the time of the last run (`var/{cache,sync,rate}/.gc`); once an hour, one request per directory deletes expired files after its response was sent. Expired vaults never count against `NR_SYNC_MAX_VAULTS`.
 
 Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 grouped per `/64`), `429` + `Retry-After`; a rate-limited Collector request gets the stale copy if one exists. A per-URL `flock` lets one request refresh a source; concurrent requests get the stale copy or wait at most `NR_LOCK_WAIT` (then `503 BUSY`). An article fetch that fails keeps and serves an existing copy.
 

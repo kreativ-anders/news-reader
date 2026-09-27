@@ -28,6 +28,7 @@ require_once __DIR__ . '/../../src/cache.php';
 require_once __DIR__ . '/../../src/rules.php';
 require_once __DIR__ . '/../../src/resolver.php';
 require_once __DIR__ . '/../../src/ratelimit.php';
+require_once __DIR__ . '/../../src/gc.php';
 require_once __DIR__ . '/../../src/readable.php';
 require_once __DIR__ . '/../../src/sync.php';
 

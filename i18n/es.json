@@ -222,7 +222,7 @@
     "sync_h": "Sincronización cifrada de extremo a extremo",
     "sync_text": "La sincronización es opcional. Cuando vinculas dispositivos, tus datos se cifran en tu dispositivo (AES-256-GCM) antes de subirse. La clave nunca sale de tus dispositivos, así que no podemos leer el contenido. El servidor guarda un archivo cifrado por caja fuerte, con el nombre de un hash del token de acceso, junto con su tamaño y fecha de modificación. Una caja fuerte se elimina cuando la quitas en la app, y automáticamente 180 días después de su último uso. Base jurídica: art. 6, apdo. 1, letra b RGPD.",
     "sources_h": "Contenido de las fuentes que sigues",
-    "sources_text": "Las entradas pueden contener imágenes que tu navegador carga directamente del sitio de origen o de su servidor de imágenes, y «Leer ahora» abre el artículo en la web original. En ambos casos, el operador correspondiente recibe tu dirección IP y es responsable de ese tratamiento. La app no envía referente.",
+    "sources_text": "Las entradas y la lista de feeds pueden contener imágenes e iconos de sitios que tu navegador carga directamente del sitio de origen o de su servidor de imágenes, y «Leer ahora» abre el artículo en la web original. En ambos casos, el operador correspondiente recibe tu dirección IP y es responsable de ese tratamiento. La app no envía referente.",
     "selfhost_h": "Otras instancias de News Reader",
     "selfhost_text": "Esta política se aplica solo a news-reader.app. News Reader es código abierto – si usas una instancia gestionada por otra persona, su operador es el responsable del tratamiento.",
     "rights_h": "Tus derechos",

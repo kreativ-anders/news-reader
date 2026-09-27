@@ -36,7 +36,6 @@ function nr_rate_hit(string $bucket, array $rule): int
     } finally {
         flock($fh, LOCK_UN);
         fclose($fh);
-        if (random_int(1, 200) === 1) nr_rate_gc();
     }
 }
 

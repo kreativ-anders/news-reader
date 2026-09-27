@@ -53,8 +53,8 @@
     <p>Any website or feed URL → normalized entries. Works for sites without an RSS feed, too.</p>
     <pre><code>GET /api/collect?url=https://example.com/blog</code></pre>
     <pre><code>{
-  "source":  { "url": "…", "type": "rss", "strategy": "discovered", "title": "…" },
-  "entries": [ { "id": "…", "url": "…", "title": "…", "publishedAt": "…", "summary": "…", "image": "…" } ],
+  "source":  { "url": "…", "type": "rss", "strategy": "discovered", "title": "…", "siteUrl": "…", "icon": "…" },
+  "entries": [ { "id": "…", "url": "…", "title": "…", "publishedAt": "…", "summary": "…", "image": "…", "author": "…" } ],
   "meta":    { "count": 20, "cached": true }
 }</code></pre>
 

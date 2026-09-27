@@ -10,6 +10,7 @@ ini_set('log_errors', '1');
 require __DIR__ . '/../src/config.php';
 require __DIR__ . '/../src/response.php';
 require __DIR__ . '/../src/ratelimit.php';
+require __DIR__ . '/../src/gc.php';
 
 // INFO: minimum PHP version (README → Setup) – fail loudly instead of with subtle differences
 if (PHP_VERSION_ID < 80500) {
@@ -18,8 +19,12 @@ if (PHP_VERSION_ID < 80500) {
 
 $nrPath = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
 
+// INFO: retention periods (privacy policy) must hold without cron – src/gc.php
+nr_gc_schedule(NR_RATE_DIR, 'nr_rate_gc');
+
 if (preg_match('#/api/sync/?$#', $nrPath)) {
     require __DIR__ . '/../src/sync.php';
+    nr_gc_schedule(NR_SYNC_DIR, 'nr_sync_gc');
     nr_sync_handle();
 }
 
@@ -32,6 +37,8 @@ require __DIR__ . '/../src/http.php';
 require __DIR__ . '/../src/cache.php';
 require __DIR__ . '/../src/parsers.php';
 require __DIR__ . '/../src/readable.php';
+
+nr_gc_schedule(NR_CACHE_DIR, 'nr_cache_gc');
 
 if (preg_match('#/api/article/?$#', $nrPath)) {
     set_time_limit(NR_TIME_BUDGET + 30);

@@ -33,7 +33,6 @@ function nr_cache_write(string $url, array $data, string $ns = ''): void
         @unlink($tmp);
         return;
     }
-    if (random_int(1, 500) === 1) nr_cache_gc();
 }
 
 // INFO: per-URL lock so that concurrent requests do not hit the source in parallel. Waits at most $wait

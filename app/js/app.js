@@ -1318,6 +1318,8 @@ $('#palIn').addEventListener('input', paintPalette);
 $('#palIn').addEventListener('keydown', (ev) => {
   if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); movePalette(ev.key === 'ArrowDown' ? 1 : -1); }
   if (ev.key === 'Enter') { ev.preventDefault(); pickPalette(pal.results[pal.sel]); }
+  // INFO: in a filled search field, Esc would only clear the text – one press closes the palette
+  if (ev.key === 'Escape') { ev.preventDefault(); $('#palette').close(); }
 });
 $('#palList').addEventListener('click', (ev) => {
   const li = ev.target.closest('[data-i]');
