@@ -1,7 +1,7 @@
 {
   "app": { "tagline": "News Reader", "skip": "Aller au contenu", "noscript": "News a besoin de JavaScript pour fonctionner.", "refresh": "Actualiser les flux (r)", "settings": "Réglages", "views": "Vues", "search": "Rechercher et aller à (/)", "search_label": "Rechercher et aller à" },
   "nav": { "inbox": "Réception", "reading": "À lire", "later": "Plus tard", "done": "Terminé", "feeds": "Flux", "toggle_feeds": "Afficher/masquer les sources", "sources": "Sources", "toggle_folder": "Ouvrir/fermer le dossier {name}", "more_one": "+ {n} autre", "more_other": "+ {n} autres", "less": "Afficher moins" },
-  "act": { "reading": "Lire maintenant", "later": "Plus tard", "dismissed": "Pas intéressé", "done": "Terminé", "drop": "Abandonner", "remove": "Retirer", "again": "Relire", "none": "Rien" },
+  "act": { "reading": "Lire maintenant", "later": "Plus tard", "dismissed": "Pas intéressé", "done": "Terminé", "drop": "Abandonner", "remove": "Retirer", "again": "Relire", "none": "Rien", "sum_more": "Afficher tout l’extrait", "sum_less": "Afficher moins" },
   "toast": {
     "cleared": "Liste « Terminé » vidée",
     "reading": "Déplacé vers « À lire »", "later": "Gardé pour plus tard", "done": "Marqué comme terminé",

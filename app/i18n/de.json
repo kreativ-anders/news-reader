@@ -1,7 +1,7 @@
 {
   "app": { "tagline": "News Reader", "skip": "Zum Inhalt springen", "noscript": "News braucht JavaScript, um zu laufen.", "refresh": "Feeds aktualisieren (r)", "settings": "Einstellungen", "views": "Ansichten", "search": "Suchen und springen (/)", "search_label": "Suchen und springen" },
   "nav": { "inbox": "Eingang", "reading": "Jetzt lesen", "later": "Später", "done": "Erledigt", "feeds": "Feeds", "toggle_feeds": "Quellen ein-/ausklappen", "sources": "Quellen", "toggle_folder": "Ordner {name} auf-/zuklappen", "more_one": "+ {n} weitere", "more_other": "+ {n} weitere", "less": "Weniger anzeigen" },
-  "act": { "reading": "Jetzt lesen", "later": "Später", "dismissed": "Nicht interessiert", "done": "Erledigt", "drop": "Verwerfen", "remove": "Entfernen", "again": "Nochmal lesen", "none": "Nichts" },
+  "act": { "reading": "Jetzt lesen", "later": "Später", "dismissed": "Nicht interessiert", "done": "Erledigt", "drop": "Verwerfen", "remove": "Entfernen", "again": "Nochmal lesen", "none": "Nichts", "sum_more": "Ganzen Teaser zeigen", "sum_less": "Weniger zeigen" },
   "toast": {
     "cleared": "Erledigt-Liste geleert",
     "reading": "Nach „Jetzt lesen“ verschoben", "later": "Für später gemerkt", "done": "Als erledigt markiert",

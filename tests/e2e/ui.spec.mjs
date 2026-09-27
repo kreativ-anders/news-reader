@@ -102,7 +102,7 @@ test.describe('card actions stay accessible although they appear on hover', () =
     await page.keyboard.press('j');
     const first = app.cards().first();
     await expect(first).toBeFocused();
-    await expect(first.locator('.acts')).toHaveCSS('opacity', '1');
+    await expect(first.locator('[data-act="later"]')).toHaveCSS('opacity', '1');
     await page.keyboard.press('j');
     await expect(app.cards().nth(1)).toBeFocused();
     const next = await app.cards().nth(2).getAttribute('data-id');
@@ -112,13 +112,14 @@ test.describe('card actions stay accessible although they appear on hover', () =
     await app.cards().first().locator('h3 a').focus();
     await page.keyboard.press('Tab');
     await expect(app.cards().first().locator('[data-act="reading"]')).toBeFocused();
-    await expect(app.cards().first().locator('.acts')).toHaveCSS('opacity', '1');
+    await expect(app.cards().first().locator('[data-act="later"]')).toHaveCSS('opacity', '1');
   });
 
-  test('hidden without hover; visible in forced colours and with "always"', async ({ app, page }) => {
+  test('icon actions hidden without hover, "Read now" always shown; all visible in forced colours and with "always"', async ({ app, page }) => {
     await app.go('inbox');
     await page.mouse.move(0, 0);
-    const acts = app.card('Second post').locator('.acts');
+    await expect(app.card('Second post').locator('[data-act="reading"]')).toHaveCSS('opacity', '1');
+    const acts = app.card('Second post').locator('[data-act="later"]');
     await expect(acts).toHaveCSS('opacity', '0');
     await page.emulateMedia({ forcedColors: 'active' });
     await expect(acts).toHaveCSS('opacity', '1');
@@ -127,7 +128,7 @@ test.describe('card actions stay accessible although they appear on hover', () =
     await page.locator('#actsSel').selectOption('always');
     await app.go('inbox');
     await page.mouse.move(0, 0);
-    await expect(app.card('Second post').locator('.acts')).toHaveCSS('opacity', '1');
+    await expect(app.card('Second post').locator('[data-act="later"]')).toHaveCSS('opacity', '1');
   });
 
   test('palette announces the number of results', async ({ page }) => {
@@ -135,4 +136,22 @@ test.describe('card actions stay accessible although they appear on hover', () =
     await page.locator('#palIn').fill('post');
     await expect(page.locator('#palStatus')).toHaveText('4 results');
   });
+});
+
+test('a long teaser can be expanded and collapsed; a short one has no toggle', async ({ app, page }) => {
+  await app.follow(`${FX()}/feeds/long.xml`);
+  await app.go('inbox');
+  await expect(app.card('Second post').locator('[data-sum]')).toBeHidden();
+  const card = app.card('A post with a long teaser');
+  const toggle = card.getByRole('button', { name: 'Show full teaser' });
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  const clamped = () => card.locator('.sum').evaluate((p) => p.scrollHeight > p.clientHeight + 1);
+  expect(await clamped()).toBe(true);
+  await toggle.click();
+  await expect(card.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true');
+  expect(await clamped()).toBe(false);
+  // stays open when the list re-renders
+  await app.go('later'); await app.go('inbox');
+  await expect(app.card('A post with a long teaser').getByRole('button', { name: 'Show less' })).toBeVisible();
 });

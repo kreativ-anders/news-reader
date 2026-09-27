@@ -25,17 +25,18 @@ svg{display:block}
 .icon-btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.sync{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:var(--radius);border:1px solid var(--line-strong);background:var(--card);font-size:.8rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;max-width:52vw;overflow:hidden;text-overflow:ellipsis}
-.sync:hover{border-color:color-mix(in srgb,var(--brand) 50%,var(--line));color:var(--fg)}
-.sync .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--faint)}
-.sync[data-state="ok"] .dot,.sync[data-state="local"] .dot{background:var(--ok)}
-.sync[data-state="syncing"] .dot{background:var(--brand);animation:pulse 1s ease-in-out infinite}
-.sync[data-state="pending"] .dot,.sync[data-state="idle"] .dot{background:var(--warn)}
-.sync[data-state="offline"] .dot,.sync[data-state="unreachable"] .dot{background:var(--faint);box-shadow:inset 0 0 0 2px var(--muted)}
-.sync[data-state="error"] .dot{background:var(--err)}
+/* INFO: sync status without a frame – like the icon buttons next to it; the icon's shape tells the state, colour only adds to it */
+.sync{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 10px;border-radius:var(--radius);font-size:.8rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;max-width:52vw;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s}
+.sync:hover{background:var(--hover);color:var(--fg)}
+.sync .ico{display:grid;flex:none}
+.sync .ico svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sync[data-state="ok"] .ico{color:var(--ok)}
+.sync[data-state="syncing"] .ico{color:var(--brand-ink)}
+.sync[data-state="syncing"] .ico svg{animation:spin 1s linear infinite}
+.sync:is([data-state="pending"],[data-state="idle"]) .ico{color:var(--warn)}
 .sync[data-state="error"]{color:var(--err)}
+@media (max-width:420px){.sync .txt{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.sync{padding:0;width:40px;justify-content:center}}
 .sync .txt{overflow:hidden;text-overflow:ellipsis}
-@keyframes pulse{50%{opacity:.35;transform:scale(.8)}}
 
 .shell{display:grid;grid-template-columns:220px minmax(0,1fr);max-width:1080px;margin:0 auto;gap:32px;padding:24px 16px 48px}
 .nav{position:sticky;top:84px;align-self:start;display:flex;flex-direction:column;gap:4px}
@@ -125,16 +126,21 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 .card h3 a{text-decoration:none}
 .card h3 a:hover{color:var(--brand-ink);text-decoration:underline;text-underline-offset:3px}
 .card .sum{color:var(--muted);font-size:.9rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .sum.open{display:block;-webkit-line-clamp:unset}
+.card>.sum-t{grid-row:4;grid-column:1/-1;justify-self:start}
+.sum-t{all:unset;box-sizing:border-box;margin-top:2px;padding:4px 0;font-size:.82rem;font-weight:650;color:var(--brand-ink);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
+.sum-t:hover{text-decoration-color:currentColor}
+.sum-t:focus-visible{outline:2px solid var(--brand-ink);outline-offset:2px}
 .card .acts{display:flex;gap:2px;justify-content:flex-end}
 /* INFO: hidden only for a fine pointer that can hover; always visible on touch, in forced colours (Windows high
  *       contrast), with "more contrast" and with Settings → Card actions → Always. opacity keeps the buttons in the
  *       accessibility tree and in the tab order; focus inside the card shows them (WCAG 2.1.1, 2.4.7). */
 @media (hover:hover) and (pointer:fine) and (not (forced-colors:active)) and (not (prefers-contrast:more)){
-  :root:not([data-acts="always"]) .card .acts{opacity:0;transition:opacity .12s}
-  :root:not([data-acts="always"]) .card:is(:hover,:focus-within,.kb) .acts{opacity:1}
+  :root:not([data-acts="always"]) .card .act:not(.main){opacity:0;transition:opacity .12s}
+  :root:not([data-acts="always"]) .card:is(:hover,:focus-within,.kb) .act{opacity:1}
 }
 .card.has-img{grid-template-rows:auto auto 1fr;column-gap:16px}
-.card.has-img>h3,.card.has-img>.sum{grid-column:1}
+.card.has-img>h3,.card.has-img>.sum,.card.has-img>.sum-t{grid-column:1}
 .card .thumb{grid-column:2;grid-row:2/4;align-self:start;justify-self:end;width:120px;height:80px;margin-top:4px;border-radius:calc(var(--radius) * .6);object-fit:cover;background:var(--line);pointer-events:none;user-select:none;-webkit-user-drag:none}
 .card .thumb.fit{object-fit:contain;background:var(--card2);padding:6px}
 @media (max-width:560px){
@@ -155,7 +161,7 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 
 /* INFO: compact – one line of meta, the title, nothing else */
 [data-density="compact"] .card{padding:6px 12px 8px}
-[data-density="compact"] .card .sum,[data-density="compact"] .card .thumb{display:none}
+[data-density="compact"] .card :is(.sum,.sum-t,.thumb){display:none}
 [data-density="compact"] .card>:is(h3,.sum){grid-column:1/-1}
 [data-density="compact"] .card h3{font-size:1.02rem;margin:0}
 [data-density="compact"] .card .meta{min-height:28px}
@@ -174,7 +180,8 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 .card[data-swipe="left"]::after{content:attr(data-left);right:14px}
 
 .more{display:flex;justify-content:center;margin-top:16px}
-.empty{text-align:center;color:var(--muted);padding:56px 16px;border:1px dashed var(--line);border-radius:var(--radius)}
+.empty{text-align:center;color:var(--muted);padding:56px 16px}
+.empty>svg{width:44px;height:44px;margin:0 auto 16px;fill:none;stroke:var(--faint);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .empty strong{display:block;color:var(--fg);font:600 1.35rem/1.3 var(--serif);margin-bottom:6px}
 .empty .btn{margin-top:18px}
 

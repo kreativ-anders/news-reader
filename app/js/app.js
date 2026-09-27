@@ -391,6 +391,30 @@ function swipeFor(view) {
 
 // INFO: actions sit in the meta line – shown on hover, focus and for the keyboard selection (always on touch).
 //       Only the main action keeps its label; the key is in the tooltip and in the "?" overview.
+// INFO: the teaser is clamped to two lines; the toggle is unhidden by markClamped() only when text is cut off
+const openSums = new Set();
+function sumHtml(id, text) {
+  const open = openSums.has(id);
+  return `<p class="sum${open ? ' open' : ''}" id="s-${esc(id)}">${esc(text)}</p><button type="button" class="sum-t" data-sum aria-expanded="${open}" aria-controls="s-${esc(id)}"${open ? '' : ' hidden'}>${t(open ? 'act.sum_less' : 'act.sum_more')}</button>`;
+}
+
+function markClamped() {
+  $$('#view .sum:not(.open)').forEach((p) => { p.nextElementSibling.hidden = p.scrollHeight <= p.clientHeight + 1; });
+}
+
+function toggleSum(btn) {
+  const p = $('#' + CSS.escape(btn.getAttribute('aria-controls')));
+  const id = btn.closest('.card').dataset.id;
+  const open = !p.classList.contains('open');
+  p.classList.toggle('open', open);
+  if (open) openSums.add(id); else openSums.delete(id);
+  btn.setAttribute('aria-expanded', String(open));
+  btn.textContent = t(open ? 'act.sum_less' : 'act.sum_more');
+}
+
+let clampTimer = null;
+window.addEventListener('resize', () => { clearTimeout(clampTimer); clampTimer = setTimeout(markClamped, 150); });
+
 function card(it, view) {
   const feed = S.feeds.get(it.feedId);
   const [right, left] = swipeFor(view);
@@ -407,7 +431,7 @@ function card(it, view) {
   return `<li class="card${img ? ' has-img' : ''}${lingering.has(it.id) ? ' opened' : ''}" data-id="${esc(it.id)}" tabindex="-1" aria-labelledby="t-${esc(it.id)}" aria-describedby="m-${esc(it.id)}"${right ? ` data-right="${esc(t('act.' + right))} →" data-right-act="${right}"` : ''}${left ? ` data-left="← ${esc(t('act.' + left))}" data-left-act="${left}"` : ''}>
     <h3><a id="t-${esc(it.id)}" href="${esc(httpUrl(it.url) || '#')}" target="_blank" rel="noopener noreferrer" data-open>${esc(it.title)}</a></h3>
     <div class="meta" id="m-${esc(it.id)}"><span class="src">${feedIcon(it.feedId, it.url)}<span>${esc(feed ? feedTitle(it.feedId) : host(it.url))}</span></span>${it.author ? `${dot}<span class="by">${esc(it.author)}</span>` : ''}${when ? `${dot}<time datetime="${new Date(when).toISOString()}">${ago(when)}</time>` : ''}${saved}</div>
-    ${img}${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
+    ${img}${it.summary ? sumHtml(it.id, it.summary) : ''}
     <div class="acts">${acts}</div>
   </li>`;
 }
@@ -468,6 +492,7 @@ function render() {
   const scroll = window.scrollY;
   const refocus = !!document.activeElement?.closest?.('#view .card');
   views[S.view]();
+  markClamped();
   window.scrollTo(0, scroll);
   const i = applyKb();
   // INFO: the focused card (or its button) was replaced – without this, focus would fall back to <body>
@@ -614,7 +639,7 @@ function renderInbox() {
   const feeds = liveFeeds();
   if (!feeds.length) {
     viewEl.innerHTML = `<div class="vh"><div><h1>${t('inbox.title')}</h1></div></div>
-      <div class="empty"><strong>${t('inbox.empty_title')}</strong>${t('inbox.empty_text')}<br>
+      <div class="empty">${ICON.view.inbox}<strong>${t('inbox.empty_title')}</strong>${t('inbox.empty_text')}<br>
       <button class="btn btn-primary" data-view="feeds" type="button">${t('inbox.add_first')}</button></div>`;
     return;
   }
@@ -627,7 +652,7 @@ function renderInbox() {
         ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>` : ''}
       </div></div>
     ${context()}
-    ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : `<div class="empty"><strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${t('inbox.check')}</button></div>`}
+    ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : `<div class="empty">${ICON.view.inbox}<strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${t('inbox.check')}</button></div>`}
     ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button></div>` : ''}`;
 }
 
@@ -643,7 +668,7 @@ function renderItems() {
   const tools = hasFolders || clear ? `<div class="tools">${hasFolders ? filterSelect() : ''}${clear}</div>` : '';
   viewEl.innerHTML = `<div class="vh"><div><h1>${t(v + '.title')}${crumb()}</h1><p>${t(v + '.text')}</p></div>${tools}</div>
     ${context()}
-    ${list.length ? dayGroups(list, S.view, (it) => it.changed) : `<div class="empty"><strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}`;
+    ${list.length ? dayGroups(list, S.view, (it) => it.changed) : `<div class="empty">${ICON.view[S.view] || ''}<strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}`;
 }
 
 function renderFeeds() {
@@ -874,9 +899,21 @@ function statusText(st, long = false) {
   }
 }
 
+const cloud = (extra) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5a4.25 4.25 0 0 1-.5 8.5z"/>${extra}</svg>`;
+const SYNC_ICON = {
+  local: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>',
+  ok: cloud('<path d="m9.5 13 2 2 3.5-3.5"/>'),
+  syncing: ICON.refresh,
+  pending: cloud('<path d="M12 15.5v-5M9.8 12.5 12 10.3l2.2 2.2"/>'),
+  offline: cloud('<path d="M3 3l18 18"/>'),
+  error: cloud('<path d="M12 10.5v3M12 15.8v.1"/>'),
+};
+SYNC_ICON.idle = SYNC_ICON.pending; SYNC_ICON.unreachable = SYNC_ICON.offline;
+
 function paintStatus(st) {
   const pill = $('#syncPill');
   pill.dataset.state = st.state === 'ok' && st.pending ? 'pending' : st.state;
+  $('.ico', pill).innerHTML = SYNC_ICON[pill.dataset.state] || SYNC_ICON.ok;
   $('.txt', pill).textContent = statusText(st);
   const detail = [statusText(st, true)];
   if (st.lastSync) detail.push(t('sync.last', { when: new Date(st.lastSync).toLocaleString(t.lang) }));
@@ -953,6 +990,8 @@ document.addEventListener('click', async (ev) => {
   if (cardEl) {
     const id = cardEl.dataset.id;
     selectCard(cardEl, false);
+    const sumBtn = el.closest('[data-sum]');
+    if (sumBtn) return toggleSum(sumBtn);
     const act = el.closest('[data-act]');
     if (act) {
       const s = act.dataset.act;

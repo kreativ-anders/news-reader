@@ -12,7 +12,7 @@
   "nav": { "inbox": "Inbox", "reading": "Read now", "later": "Later", "done": "Done", "feeds": "Feeds", "toggle_feeds": "Show/hide sources", "sources": "Sources", "toggle_folder": "Open/close folder {name}", "more_one": "+ {n} more", "more_other": "+ {n} more", "less": "Show less" },
   "act": {
     "reading": "Read now", "later": "Later", "dismissed": "Not interested", "done": "Done",
-    "drop": "Drop", "remove": "Remove", "again": "Read again", "none": "Nothing"
+    "drop": "Drop", "remove": "Remove", "again": "Read again", "none": "Nothing", "sum_more": "Show full teaser", "sum_less": "Show less"
   },
   "toast": {
     "cleared": "Done list cleared",
