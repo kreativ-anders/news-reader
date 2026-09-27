@@ -1,6 +1,6 @@
 {
-  "app": { "tagline": "News Reader", "skip": "Aller au contenu", "noscript": "News a besoin de JavaScript pour fonctionner.", "refresh": "Actualiser les flux (r)", "settings": "Réglages", "views": "Vues" },
-  "nav": { "inbox": "Réception", "reading": "À lire", "later": "Plus tard", "done": "Terminé", "feeds": "Flux", "toggle_feeds": "Afficher/masquer les flux" },
+  "app": { "tagline": "News Reader", "skip": "Aller au contenu", "noscript": "News a besoin de JavaScript pour fonctionner.", "refresh": "Actualiser les flux (r)", "settings": "Réglages", "views": "Vues", "search": "Rechercher et aller à (/)", "search_label": "Rechercher et aller à" },
+  "nav": { "inbox": "Réception", "reading": "À lire", "later": "Plus tard", "done": "Terminé", "feeds": "Flux", "toggle_feeds": "Afficher/masquer les sources", "sources": "Sources", "toggle_folder": "Ouvrir/fermer le dossier {name}", "more_one": "+ {n} autre", "more_other": "+ {n} autres", "less": "Afficher moins" },
   "act": { "reading": "Lire maintenant", "later": "Plus tard", "dismissed": "Pas intéressé", "done": "Terminé", "drop": "Abandonner", "remove": "Retirer", "again": "Relire", "none": "Rien" },
   "toast": {
     "cleared": "Liste « Terminé » vidée",
@@ -37,7 +37,12 @@
     "empty_title": "Votre une est vide.",
     "empty_text": "Suivez n’importe quel site – avec ou sans RSS – et les nouveaux articles arrivent ici.",
     "add_first": "Ajouter votre premier flux",
-    "more": "Afficher plus ({n})"
+    "more": "Afficher plus ({n})",
+    "count_short_one": "{n} nouvel article",
+    "count_short_other": "{n} nouveaux articles",
+    "today_one": "{n} trié aujourd’hui",
+    "today_other": "{n} triés aujourd’hui",
+    "folder_all": "Tout dans {name}"
   },
   "views": {
     "reading": { "title": "À lire", "text": "Ce que vous lisez en ce moment. Marquez-le comme terminé une fois lu.", "empty": "Rien en cours.", "hint": "Choisissez quelque chose dans votre réception ou votre liste « Plus tard »." },
@@ -74,7 +79,11 @@
     "importing_other": "Import de {n} flux…",
     "importing_progress": "Import… {done}/{n}",
     "imported_one": "{ok} flux sur {n} importé.",
-    "imported_other": "{ok} flux sur {n} importés."
+    "imported_other": "{ok} flux sur {n} importés.",
+    "folder": "Dossier",
+    "folder_text": "Rangez <strong>{title}</strong> dans un dossier : choisissez-en un ou saisissez un nouveau nom. Laissez le champ vide pour l’en retirer.",
+    "folder_placeholder": "p. ex. Tech",
+    "no_folder": "Sans dossier"
   },
   "settings": {
     "title": "Réglages",
@@ -113,7 +122,13 @@
     "key_x": "pas intéressé", "key_d": "terminé", "key_u": "annuler", "key_r": "actualiser les flux", "key_num": "changer de vue",
     "local_title": "Sur cet appareil",
     "local_text": "{feeds} flux, {items} états de lecture et {entries} articles enregistrés.",
-    "reset": "Réinitialiser cet appareil"
+    "reset": "Réinitialiser cet appareil",
+    "density": "Mise en page",
+    "density_comfortable": "Confortable – résumés et images",
+    "density_compact": "Compacte – titres seulement",
+    "key_search": "rechercher et aller à",
+    "key_v": "changer de mise en page",
+    "key_help": "afficher tous les raccourcis"
   },
   "dlg": {
     "clear_done_title": "Vider la liste « Terminé » ?", "clear_done_ok": "Vider", "clear_done_body_one": "<p>{n} article terminé sera retiré. Il ne reviendra pas dans votre réception.</p>", "clear_done_body_other": "<p>{n} articles terminés seront retirés. Ils ne reviendront pas dans votre réception.</p>",
@@ -176,5 +191,23 @@
     "saved": "Enregistré pour la lecture hors ligne", "read_done": "Lu jusqu’au bout – marqué comme terminé",
     "unavailable": "Vous êtes hors ligne, et cet article n’a pas été enregistré pour la lecture hors ligne.",
     "partial": "Seule une partie de cet article a pu être enregistrée – la page est derrière un paywall ou générée en JavaScript."
+  },
+  "day": {
+    "undated": "Sans date"
+  },
+  "ctx": {
+    "per_week_one": "≈ {n} article par semaine",
+    "per_week_other": "≈ {n} articles par semaine",
+    "rarely": "moins d’un article par semaine",
+    "read_rate": "vous en lisez {p} %",
+    "folder_one": "Dossier de {n} flux",
+    "folder_other": "Dossier de {n} flux"
+  },
+  "pal": {
+    "placeholder": "Rechercher des articles, flux et vues…",
+    "results": "Résultats",
+    "hint": "<kbd>↑</kbd><kbd>↓</kbd> choisir · <kbd>Entrée</kbd> ouvrir · <kbd>Échap</kbd> fermer",
+    "folder": "Dossier",
+    "empty": "Aucun résultat."
   }
 }

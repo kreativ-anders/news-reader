@@ -30,12 +30,13 @@ export function servers(profile = 'lab', overrides = {}) {
 /** Response shape documented in the README ("Response"). Breaking it breaks every client. */
 export function assertCollectorShape(json) {
   assert.equal(typeof json, 'object');
-  for (const k of ['inputUrl', 'url', 'type', 'strategy', 'rule', 'feedUrl', 'title']) assert.ok(k in json.source, `source.${k}`);
+  for (const k of ['inputUrl', 'url', 'type', 'strategy', 'rule', 'feedUrl', 'title', 'siteUrl', 'icon']) assert.ok(k in json.source, `source.${k}`);
   assert.match(json.source.type, /^(rss|rdf|atom|html|sitemap)$/);
+  for (const k of ['siteUrl', 'icon']) if (json.source[k] !== null) assert.match(json.source[k], /^https?:\/\//, `source.${k}`);
   assert.match(json.source.strategy, /^(rule|direct|discovered|guessed|sitemap|html-jsonld|html-article|html-links)$/);
   assert.ok(Array.isArray(json.entries));
   for (const e of json.entries) {
-    assert.deepEqual(Object.keys(e).sort(), ['id', 'image', 'publishedAt', 'summary', 'title', 'updatedAt', 'url'], 'entry keys (content must be stripped)');
+    assert.deepEqual(Object.keys(e).sort(), ['author', 'id', 'image', 'publishedAt', 'summary', 'title', 'updatedAt', 'url'], 'entry keys (content must be stripped)');
     assert.match(e.id, /^[0-9a-f]{64}$/);
     assert.match(e.url, /^https?:\/\//);
     assert.equal(typeof e.title, 'string');

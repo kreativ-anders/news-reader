@@ -1,6 +1,6 @@
 {
-  "app": { "tagline": "News Reader", "skip": "Vai al contenuto", "noscript": "News ha bisogno di JavaScript per funzionare.", "refresh": "Aggiorna i feed (r)", "settings": "Impostazioni", "views": "Viste" },
-  "nav": { "inbox": "In arrivo", "reading": "Da leggere", "later": "Più tardi", "done": "Fatto", "feeds": "Feed", "toggle_feeds": "Mostra/nascondi feed" },
+  "app": { "tagline": "News Reader", "skip": "Vai al contenuto", "noscript": "News ha bisogno di JavaScript per funzionare.", "refresh": "Aggiorna i feed (r)", "settings": "Impostazioni", "views": "Viste", "search": "Cerca e vai a (/)", "search_label": "Cerca e vai a" },
+  "nav": { "inbox": "In arrivo", "reading": "Da leggere", "later": "Più tardi", "done": "Fatto", "feeds": "Feed", "toggle_feeds": "Mostra/nascondi fonti", "sources": "Fonti", "toggle_folder": "Apri/chiudi la cartella {name}", "more_one": "+ {n} altro", "more_other": "+ {n} altri", "less": "Mostra meno" },
   "act": { "reading": "Leggi ora", "later": "Più tardi", "dismissed": "Non mi interessa", "done": "Fatto", "drop": "Scarta", "remove": "Rimuovi", "again": "Rileggi", "none": "Niente" },
   "toast": {
     "cleared": "Elenco «Fatto» svuotato",
@@ -37,7 +37,12 @@
     "empty_title": "La tua prima pagina è vuota.",
     "empty_text": "Segui qualsiasi sito – con o senza RSS – e i nuovi articoli arrivano proprio qui.",
     "add_first": "Aggiungi il tuo primo feed",
-    "more": "Mostra altri ({n})"
+    "more": "Mostra altri ({n})",
+    "count_short_one": "{n} nuovo",
+    "count_short_other": "{n} nuovi",
+    "today_one": "{n} smistato oggi",
+    "today_other": "{n} smistati oggi",
+    "folder_all": "Tutto in {name}"
   },
   "views": {
     "reading": { "title": "Da leggere", "text": "Quello che stai leggendo adesso. Segnalalo come fatto quando hai finito.", "empty": "Niente in corso.", "hint": "Scegli qualcosa da In arrivo o dalla lista Più tardi." },
@@ -74,7 +79,11 @@
     "importing_other": "Importazione di {n} feed…",
     "importing_progress": "Importazione… {done}/{n}",
     "imported_one": "{ok} feed su {n} importato.",
-    "imported_other": "{ok} feed su {n} importati."
+    "imported_other": "{ok} feed su {n} importati.",
+    "folder": "Cartella",
+    "folder_text": "Metti <strong>{title}</strong> in una cartella: scegline una o scrivi un nuovo nome. Lascia il campo vuoto per toglierlo.",
+    "folder_placeholder": "es. Tech",
+    "no_folder": "Senza cartella"
   },
   "settings": {
     "title": "Impostazioni",
@@ -113,7 +122,13 @@
     "key_x": "non mi interessa", "key_d": "fatto", "key_u": "annulla", "key_r": "aggiorna i feed", "key_num": "cambia vista",
     "local_title": "Su questo dispositivo",
     "local_text": "{feeds} feed, {items} stati di lettura e {entries} articoli salvati.",
-    "reset": "Reimposta questo dispositivo"
+    "reset": "Reimposta questo dispositivo",
+    "density": "Layout",
+    "density_comfortable": "Comodo – anteprime e immagini",
+    "density_compact": "Compatto – solo titoli",
+    "key_search": "cerca e vai a",
+    "key_v": "cambia layout",
+    "key_help": "mostra tutte le scorciatoie"
   },
   "dlg": {
     "clear_done_title": "Svuotare l’elenco «Fatto»?", "clear_done_ok": "Svuota", "clear_done_body_one": "<p>{n} articolo concluso verrà rimosso. Non tornerà in arrivo.</p>", "clear_done_body_other": "<p>{n} articoli conclusi verranno rimossi. Non torneranno in arrivo.</p>",
@@ -176,5 +191,23 @@
     "saved": "Salvato per la lettura offline", "read_done": "Letto fino in fondo – segnato come fatto",
     "unavailable": "Sei offline e questo articolo non è stato salvato per la lettura offline.",
     "partial": "È stato possibile salvare solo una parte dell’articolo – la pagina è dietro un paywall o generata con JavaScript."
+  },
+  "day": {
+    "undated": "Senza data"
+  },
+  "ctx": {
+    "per_week_one": "≈ {n} articolo a settimana",
+    "per_week_other": "≈ {n} articoli a settimana",
+    "rarely": "meno di un articolo a settimana",
+    "read_rate": "ne leggi il {p}%",
+    "folder_one": "Cartella con {n} feed",
+    "folder_other": "Cartella con {n} feed"
+  },
+  "pal": {
+    "placeholder": "Cerca articoli, feed e viste…",
+    "results": "Risultati",
+    "hint": "<kbd>↑</kbd><kbd>↓</kbd> scegli · <kbd>Invio</kbd> apri · <kbd>Esc</kbd> chiudi",
+    "folder": "Cartella",
+    "empty": "Nessun risultato."
   }
 }

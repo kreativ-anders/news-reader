@@ -29,6 +29,8 @@ export class OfflineStore extends EventTarget {
 
   has(id) { return !!this.meta.get(id)?.ok; }
 
+  words(id) { const m = this.meta.get(id); return m?.ok && !m.partial ? m.words : 0; }
+
   get(id) { return db.get('articles', id); }
 
   async savePosition(id, pos) {

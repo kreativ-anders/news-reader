@@ -6,11 +6,11 @@
 import * as db from './db.js';
 import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable } from './sync.js';
 import { esc, httpUrl, hostOf as host } from './util.js';
-import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml } from './feeds.js';
+import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml, cleanTitle } from './feeds.js';
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.5.6';
+const VERSION = '0.6.0';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -35,6 +35,8 @@ const S = {
   lastRefresh: 0,
   share: '',
   swipe: { ...SWIPE_DEFAULT },
+  quiet: new Set(),
+  dupImg: new Set(),
 };
 
 let t = (k) => k;
@@ -46,6 +48,19 @@ const viewEl = $('#view');
 
 applyTheme();
 
+// INFO: per-device layout preference – "compact" hides teasers and thumbnails
+const DENSITIES = ['comfortable', 'compact'];
+const store = {
+  get(k, d = null) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, // INFO: storage blocked (private mode)
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* INFO: storage blocked */ } },
+};
+const getDensity = () => (DENSITIES.includes(store.get('news.density')) ? store.get('news.density') : 'comfortable');
+function setDensity(d) {
+  store.set('news.density', d);
+  document.documentElement.dataset.density = d;
+}
+document.documentElement.dataset.density = getDensity();
+
 const ICON = {
   now: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
   later: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
@@ -56,7 +71,12 @@ const ICON = {
   refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
   trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+  folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+  view: { inbox: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg>', feeds: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg>', settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>' },
+  doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
 };
+ICON.view.reading = ICON.now; ICON.view.later = ICON.later; ICON.view.done = ICON.done;
 
 function strategyVar(strategy) {
   if (!strategy) return 'var(--brand)';
@@ -80,7 +100,30 @@ const clock = (ts) => new Date(ts).toLocaleTimeString(t.lang, { hour: '2-digit',
 const entryTime = (e) => Date.parse(e.publishedAt || '') || e.firstSeen || 0;
 const liveFeeds = () => [...S.feeds.values()].filter((f) => !f.data.d).sort((a, b) => (a.data.title || a.data.url).localeCompare(b.data.title || b.data.url));
 const stateOf = (id) => S.items.get(id)?.data?.s || 'new';
-const feedTitle = (id) => { const f = S.feeds.get(id); return f ? (f.data.title || host(f.data.url)) : ''; };
+const feedTitle = (id) => { const f = S.feeds.get(id); return f ? (cleanTitle(f.data.title) || host(f.data.url)) : ''; };
+
+// INFO: S.filter is '' (all), a feed id ("f…") or a folder ("g:<name>")
+const folderOf = (id) => S.feeds.get(id)?.data?.g || '';
+const inFilter = (fid, filter = S.filter) => !filter || (filter.startsWith('g:') ? folderOf(fid) === filter.slice(2) : fid === filter);
+const filterName = (filter) => (filter.startsWith('g:') ? filter.slice(2) : feedTitle(filter));
+const folders = () => [...new Set(liveFeeds().map((f) => f.data.g).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+// INFO: favicon from the Collector (source.icon), else /favicon.ico of the site; on error a monogram stays visible
+const iconFailed = new Set();
+function feedIcon(id, fallbackUrl = '') {
+  const f = S.feeds.get(id);
+  const st = S.fetch.get(id) || {};
+  const name = f ? feedTitle(id) : host(fallbackUrl);
+  let hue = 0;
+  for (const ch of id || name) hue = (hue * 31 + ch.charCodeAt(0)) % 360;
+  let src = httpUrl(st.icon);
+  if (!src) {
+    try { src = new URL('/favicon.ico', httpUrl(st.site) || httpUrl(f?.data?.url) || httpUrl(fallbackUrl)).href; } catch { src = ''; }
+  }
+  const img = src && !iconFailed.has(src) ? `<img class="fi-img" src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="16" height="16">` : '';
+  const letter = (name.match(/[\p{L}\p{N}]/u)?.[0] || '·').toLocaleUpperCase(t.lang);
+  return `<span class="fi" style="--fi-h:${hue}" aria-hidden="true">${esc(letter)}${img}</span>`;
+}
 
 async function loadAll() {
   S.feeds.clear(); S.items.clear(); S.entries.clear();
@@ -214,7 +257,7 @@ async function refreshFeed(feed, force = false) {
   await db.putEntries(fresh, remove);
   fresh.forEach((e) => S.entries.set(e.id, e));
   remove.forEach((id) => S.entries.delete(id));
-  S.fetch.set(feed.id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, stale: !!res.meta?.stale });
+  S.fetch.set(feed.id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, stale: !!res.meta?.stale, ...sourceMeta(res) });
   return res;
 }
 
@@ -243,14 +286,18 @@ async function refreshAll(force = false) {
 
 function toEntry(e, feedId, firstSeen) {
   const url = httpUrl(e.url);
-  return { id: e.id, feedId, url, title: e.title || url, summary: e.summary || '', image: httpUrl(e.image), publishedAt: e.publishedAt || e.updatedAt || null, firstSeen };
+  const author = typeof e.author === 'string' ? e.author.slice(0, 80) : '';
+  return { id: e.id, feedId, url, title: e.title || url, summary: e.summary || '', image: httpUrl(e.image), author, publishedAt: e.publishedAt || e.updatedAt || null, firstSeen };
 }
+
+// INFO: per device (fetchState), not synced – icon and site only decorate the feed list
+const sourceMeta = (res) => ({ icon: httpUrl(res.source?.icon) || '', site: httpUrl(res.source?.siteUrl) || '' });
 
 const toEntries = (list, feedId, firstSeenOf) => (Array.isArray(list) ? list : [])
   .filter((e) => e && typeof e.id === 'string' && httpUrl(e.url))
   .map((e) => toEntry(e, feedId, firstSeenOf(e.id)));
 
-async function addFeed(input, { quiet = false, title = '' } = {}) {
+async function addFeed(input, { quiet = false, title = '', folder = '' } = {}) {
   const url = normalizeUrl(input);
   if (!url) throw new Error(t('err.invalid_url'));
   const id = feedId(url);
@@ -262,12 +309,13 @@ async function addFeed(input, { quiet = false, title = '' } = {}) {
   const since = Math.min(now - INITIAL_WINDOW_MS, times[Math.min(INITIAL_MIN_ENTRIES, times.length) - 1] ?? Infinity);
   const rec = {
     kind: 'feed', id, updatedAt: now,
-    data: { url, title: title || res.source?.title || host(url), since, added: now },
+    data: { url, title: cleanTitle(title || res.source?.title) || host(url), since, added: now },
   };
+  if (folder.trim()) rec.data.g = folder.trim().slice(0, 60);
   await commit([rec]);
   await db.putEntries(fresh);
   fresh.forEach((e) => S.entries.set(e.id, e));
-  S.fetch.set(id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length });
+  S.fetch.set(id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, ...sourceMeta(res) });
   await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   if (!quiet) render();
   return { rec, res };
@@ -285,7 +333,7 @@ async function removeFeed(id) {
 function inboxEntries(filter = S.filter) {
   const since = new Map(liveFeeds().map((f) => [f.id, f.data.since || 0]));
   return [...S.entries.values()]
-    .filter((e) => since.has(e.feedId) && (stateOf(e.id) === 'new' || lingersIn(e.id, 'inbox')) && (!filter || e.feedId === filter) && entryTime(e) >= since.get(e.feedId))
+    .filter((e) => since.has(e.feedId) && (stateOf(e.id) === 'new' || lingersIn(e.id, 'inbox')) && inFilter(e.feedId, filter) && entryTime(e) >= since.get(e.feedId))
     .sort((a, b) => entryTime(b) - entryTime(a));
 }
 
@@ -301,6 +349,7 @@ function itemsIn(s) {
         title: e?.title || r.data.t || r.data.u || t('untitled'),
         summary: e?.summary || '',
         image: e?.image || r.data.i || '',
+        author: e?.author || '',
         feedId: e?.feedId || r.data.f,
         time: e ? entryTime(e) : Date.parse(r.data.p || '') || 0,
         changed: r.updatedAt,
@@ -329,34 +378,74 @@ function swipeFor(view) {
   return [ok(S.swipe.right), ok(S.swipe.left)];
 }
 
+// INFO: actions sit in the meta line – shown on hover, focus and for the keyboard selection (always on touch).
+//       Only the main action keeps its label; the key is in the tooltip and in the "?" overview.
 function card(it, view) {
   const feed = S.feeds.get(it.feedId);
-  const strat = S.fetch.get(it.feedId)?.strategy;
   const [right, left] = swipeFor(view);
   const when = view === 'inbox' ? it.time : it.changed;
   const acts = ACTIONS[view].map(([s, label, icon, cls, key]) =>
-    `<button type="button" class="act ${cls}" data-act="${s}">${icon}<span>${t(label)}</span><kbd>${key}</kbd></button>`).join('');
-  const saved = offline.has(it.id) ? `<span class="offline" title="${esc(t('reader.saved'))}" aria-label="${esc(t('reader.saved'))}">${ICON.offline}</span>` : '';
-  const image = httpUrl(it.image);
-  const img = image ? `<img class="thumb" src="${esc(image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="112" height="76">` : '';
+    `<button type="button" class="act ${cls}" data-act="${s}" title="${esc(t(label))} (${key})" aria-label="${esc(t(label))}" aria-keyshortcuts="${key}">${icon}${cls === 'main' ? `<span>${t(label)}</span>` : ''}</button>`).join('');
+  const words = offline.words(it.id);
+  const saved = offline.has(it.id) ? `<span class="offline" title="${esc(t('reader.saved'))}">${ICON.offline}${words ? `<span>${t('reader.minutes', { n: Math.max(1, Math.round(words / 220)) })}</span>` : `<span class="sr">${t('reader.saved')}</span>`}</span>` : '';
+  const image = S.dupImg.has(it.image) ? '' : httpUrl(it.image);
+  const img = image ? `<img class="thumb" src="${esc(image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="120" height="80">` : '';
+  const dot = '<span class="sep" aria-hidden="true">·</span>';
   return `<li class="card${img ? ' has-img' : ''}${lingering.has(it.id) ? ' opened' : ''}" data-id="${esc(it.id)}" tabindex="-1"${right ? ` data-right="${esc(t('act.' + right))} →" data-right-act="${right}"` : ''}${left ? ` data-left="← ${esc(t('act.' + left))}" data-left-act="${left}"` : ''}>
-    <div class="meta"><span class="src" style="--v:${strategyVar(strat)}">${esc(feed ? feedTitle(it.feedId) : host(it.url))}</span>${when ? `<span aria-hidden="true">·</span><time datetime="${new Date(when).toISOString()}">${ago(when)}</time>` : ''}${saved}</div>
+    <div class="meta"><span class="src">${feedIcon(it.feedId, it.url)}<span>${esc(feed ? feedTitle(it.feedId) : host(it.url))}</span></span>${it.author ? `${dot}<span class="by">${esc(it.author)}</span>` : ''}${when ? `${dot}<time datetime="${new Date(when).toISOString()}">${ago(when)}</time>` : ''}${saved}<div class="acts">${acts}</div></div>
     ${img}<h3><a href="${esc(httpUrl(it.url) || '#')}" target="_blank" rel="noopener noreferrer" data-open>${esc(it.title)}</a></h3>
     ${it.summary ? `<p class="sum">${esc(it.summary)}</p>` : ''}
-    <div class="acts">${acts}</div>
   </li>`;
+}
+
+// INFO: an image that a feed repeats on several posts is a logo or placeholder, not a picture of the post
+function repeatedImages() {
+  const seen = new Set(), dup = new Set();
+  for (const e of S.entries.values()) {
+    if (!e.image) continue;
+    const k = e.feedId + ' ' + e.image;
+    if (seen.has(k)) dup.add(e.image); else seen.add(k);
+  }
+  return dup;
+}
+
+const dayKey = (ts) => { const d = new Date(ts); return ts ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : ''; };
+function dayLabel(ts) {
+  if (!ts) return t('day.undated');
+  const d = new Date(ts); d.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.max(0, Math.round((today - d) / 864e5));
+  if (diff < 2) { const s = rtf.format(-diff, 'day'); return s[0].toLocaleUpperCase(t.lang) + s.slice(1); }
+  const opts = { day: 'numeric', month: 'long' };
+  if (diff < 7) opts.weekday = 'long';
+  if (d.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString(t.lang, opts);
+}
+
+// INFO: lists are sorted newest first, so every day is one run; the sticky day header carries the count
+function dayGroups(list, view, whenOf) {
+  const groups = [];
+  for (const it of list) {
+    const w = whenOf(it), k = dayKey(w);
+    let g = groups.at(-1);
+    if (!g || g.k !== k) groups.push(g = { k, w, items: [] });
+    g.items.push(it);
+  }
+  return groups.map((g) => `<section class="day"><h2 class="day-h"><span>${esc(dayLabel(g.w))}</span><b>${g.items.length}</b></h2>
+    <ol class="list">${g.items.map((it) => card(it, view)).join('')}</ol></section>`).join('');
 }
 
 const badge = (n) => (n ? (n > 999 ? '999+' : String(n)) : '');
 
 function render() {
-  if (S.filter && !folderFeeds(S.view).some((f) => f.id === S.filter)) S.filter = '';
+  if (S.filter && !folderFeeds(S.view).some((f) => inFilter(f.id))) S.filter = '';
   const c = counts();
   $$('[data-count]').forEach((b) => { b.textContent = badge(c[b.dataset.count]); });
   $$('.nav [data-view], .top [data-view]').forEach((b) => {
     if (b.dataset.view === S.view && !(S.view === 'inbox' && S.filter)) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
+  S.dupImg = repeatedImages();
   renderFeedNav();
   document.title = c.inbox ? `(${c.inbox}) News` : 'News';
   if (navigator.setAppBadge) navigator.setAppBadge(c.inbox).catch(() => {});
@@ -369,8 +458,9 @@ function render() {
 }
 
 const FOLDER_VIEWS = ['inbox', 'reading', 'later', 'done'];
-let feedNavOpen = true;
-try { feedNavOpen = localStorage.getItem('news.feedNav') !== '0'; } catch { /* INFO: storage blocked (private mode) */ }
+let feedNavOpen = store.get('news.feedNav') !== '0';
+let closedFolders = new Set();
+try { closedFolders = new Set(JSON.parse(store.get('news.folders.closed', '[]'))); } catch { /* INFO: broken value */ }
 
 function perFeed(view) {
   const m = new Map();
@@ -379,7 +469,7 @@ function perFeed(view) {
   return m;
 }
 
-// INFO: outside the inbox, unfollowed feeds with saved items keep their folder
+// INFO: outside the inbox, unfollowed feeds with saved items keep their entry
 function folderFeeds(view, n = perFeed(view)) {
   const live = liveFeeds();
   if (view === 'inbox' || !FOLDER_VIEWS.includes(view)) return live;
@@ -391,35 +481,117 @@ function folderFeeds(view, n = perFeed(view)) {
   return [...live, ...gone];
 }
 
+// INFO: sources of the current view as a tree: folders first, then feeds without folder. Feeds with nothing in
+//       this view fold away behind "+ n more" per group – with one feed there is nothing to filter.
 function renderFeedNav() {
-  const box = $('#feedNav'), toggle = $('#feedNavToggle');
-  if (!box || !toggle) return;
-  const n = FOLDER_VIEWS.includes(S.view) ? perFeed(S.view) : new Map();
-  const feeds = folderFeeds(S.view, n);
-  const group = FOLDER_VIEWS.includes(S.view) && feeds.length ? $(`.nav [data-view="${S.view}"]`)?.closest('.nav-group') : null;
-  toggle.hidden = !group;
-  box.hidden = !group || !feedNavOpen;
-  if (!group) return;
-  if (toggle.parentElement !== group) group.append(toggle);
-  if (box.previousElementSibling !== group) group.after(box);
+  const sec = $('#srcSec'), box = $('#feedNav'), toggle = $('#feedNavToggle');
+  if (!sec) return;
+  const on = FOLDER_VIEWS.includes(S.view);
+  const n = on ? perFeed(S.view) : new Map();
+  const feeds = on ? folderFeeds(S.view, n) : [];
+  sec.hidden = feeds.length < 2;
+  if (sec.hidden) return;
   toggle.setAttribute('aria-expanded', String(feedNavOpen));
+  box.hidden = !feedNavOpen;
   if (box.hidden) return;
-  box.innerHTML = feeds.map((f) => {
+
+  const feedBtn = (f) => {
     const c = n.get(f.id) || 0;
     const cur = S.filter === f.id ? ' aria-current="page"' : '';
-    const cls = [c ? '' : 'zero', f.data.d ? 'gone' : ''].filter(Boolean).join(' ');
+    const cls = ['feed', c ? '' : 'zero', f.data.d ? 'gone' : ''].filter(Boolean).join(' ');
     const tip = feedTitle(f.id) + (f.data.d ? ` – ${t('feeds.unfollowed')}` : '');
-    return `<button type="button" data-filter="${esc(f.id)}"${cur}${cls ? ` class="${cls}"` : ''} title="${esc(tip)}"><span>${esc(feedTitle(f.id))}</span><b class="badge">${badge(c)}</b></button>`;
-  }).join('');
+    return `<button type="button" data-filter="${esc(f.id)}"${cur} class="${cls}" title="${esc(tip)}">${feedIcon(f.id)}<span class="nm">${esc(feedTitle(f.id))}</span><b class="badge">${badge(c)}</b></button>`;
+  };
+  const list = (key, group) => {
+    const shown = group.filter((f) => n.get(f.id) || S.filter === f.id);
+    const quiet = group.length - shown.length;
+    // INFO: hiding a single feed behind a button saves nothing
+    const hide = quiet >= 2 && !S.quiet.has(key);
+    const body = (hide ? shown : group).map(feedBtn).join('');
+    const more = quiet >= 2
+      ? `<button type="button" class="quiet" data-quiet="${esc(key)}" aria-expanded="${!hide}">${hide ? t('nav.more', { n: quiet }) : t('nav.less')}</button>` : '';
+    return body + more;
+  };
+
+  const byFolder = new Map();
+  const loose = [];
+  for (const f of feeds) {
+    if (f.data.g && !f.data.d) byFolder.set(f.data.g, [...(byFolder.get(f.data.g) || []), f]);
+    else loose.push(f);
+  }
+  const html = [...byFolder].sort(([a], [b]) => a.localeCompare(b)).map(([g, group]) => {
+    const total = group.reduce((sum, f) => sum + (n.get(f.id) || 0), 0);
+    const closed = closedFolders.has(g);
+    const cur = S.filter === 'g:' + g ? ' aria-current="page"' : '';
+    return `<div class="fold${closed ? ' closed' : ''}">
+      <div class="fold-h"><button type="button" class="fold-t" data-fold="${esc(g)}" aria-expanded="${!closed}" aria-label="${esc(t('nav.toggle_folder', { name: g }))}">${ICON.chev}</button><button type="button" data-filter="${esc('g:' + g)}"${cur} class="${total ? '' : 'zero'}" title="${esc(g)}">${ICON.folder}<span class="nm">${esc(g)}</span><b class="badge">${badge(total)}</b></button></div>
+      ${closed ? '' : `<div class="fold-b">${list('g:' + g, group)}</div>`}
+    </div>`;
+  }).join('') + list('', loose);
+  box.innerHTML = html;
 }
 
-// INFO: feed filter for narrow screens, where the sidebar folders are hidden
+// INFO: feed filter for narrow screens, where the sidebar is hidden – folders as option groups
 function filterSelect() {
-  const opts = folderFeeds(S.view).map((f) => `<option value="${esc(f.id)}"${S.filter === f.id ? ' selected' : ''}>${esc(feedTitle(f.id))}</option>`).join('');
+  const feeds = folderFeeds(S.view);
+  const opt = (value, label) => `<option value="${esc(value)}"${S.filter === value ? ' selected' : ''}>${esc(label)}</option>`;
+  const groups = [...new Set(feeds.map((f) => f.data.g).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const opts = groups.map((g) => `<optgroup label="${esc(g)}">${opt('g:' + g, t('inbox.folder_all', { name: g }))}${feeds.filter((f) => f.data.g === g).map((f) => opt(f.id, feedTitle(f.id))).join('')}</optgroup>`).join('')
+    + feeds.filter((f) => !f.data.g).map((f) => opt(f.id, feedTitle(f.id))).join('');
   return `<select id="filter" aria-label="${esc(t('inbox.filter'))}"><option value="">${t('inbox.all_feeds')}</option>${opts}</select>`;
 }
 
-const crumb = () => (S.filter ? `<small class="crumb"> · ${esc(feedTitle(S.filter))}</small>` : '');
+const crumb = () => (S.filter ? `<small class="crumb"> · ${esc(filterName(S.filter))}</small>` : '');
+
+// INFO: posting rhythm and how much of a feed you actually read – a basis for unfollowing, instead of follower counts
+function feedStats(id) {
+  const now = Date.now();
+  const times = [...S.entries.values()].filter((e) => e.feedId === id).map(entryTime).filter((x) => x && now - x < 28 * 864e5);
+  const span = times.length ? Math.max(864e5, now - Math.min(...times)) : 0;
+  const perWeek = span ? times.length / span * 7 * 864e5 : 0;
+  let read = 0, dropped = 0;
+  for (const r of S.items.values()) {
+    if (r.data.f !== id) continue;
+    if (r.data.s === 'dismissed') dropped++;
+    else if (r.data.s !== 'new') read++;
+  }
+  return { perWeek, read, dropped, rate: read + dropped >= 5 ? Math.round(read / (read + dropped) * 100) : null };
+}
+
+function statsText(id) {
+  const st = feedStats(id);
+  const parts = [st.perWeek >= 1 ? t('ctx.per_week', { n: Math.round(st.perWeek) }) : t('ctx.rarely')];
+  if (st.rate !== null) parts.push(`<span${st.rate < 10 && st.read + st.dropped >= 20 ? ' class="low"' : ''}>${t('ctx.read_rate', { p: st.rate })}</span>`);
+  return parts.join(' · ');
+}
+
+// INFO: filtered to one feed: its rhythm and read rate plus rename / folder / unfollow; filtered to a folder: its size
+function context() {
+  if (!S.filter) return '';
+  if (S.filter.startsWith('g:')) {
+    const n = liveFeeds().filter((f) => inFilter(f.id)).length;
+    return `<p class="ctx">${ICON.folder}<span>${t('ctx.folder', { n })}</span></p>`;
+  }
+  const f = S.feeds.get(S.filter);
+  if (!f || f.data.d) return '';
+  const name = esc(feedTitle(f.id));
+  return `<div class="ctx" data-feed="${esc(f.id)}">${feedIcon(f.id)}<span>${statsText(f.id)}</span>
+    <span class="ctx-ops">
+      <button class="icon-btn" type="button" data-feed-act="folder" title="${esc(t('feeds.folder'))}" aria-label="${esc(t('feeds.folder'))}: ${name}">${ICON.folder}</button>
+      <button class="icon-btn" type="button" data-feed-act="rename" title="${esc(t('feeds.rename'))}" aria-label="${esc(t('feeds.rename'))}: ${name}">${ICON.edit}</button>
+      <button class="icon-btn" type="button" data-feed-act="remove" title="${esc(t('feeds.unfollow'))}" aria-label="${esc(t('feeds.unfollow'))}: ${name}">${ICON.trash}</button>
+    </span></div>`;
+}
+
+// INFO: first run explains the three choices; afterwards the line shows today's progress instead
+function inboxLine(n) {
+  if (!n) return t('inbox.nothing_new');
+  const d0 = new Date().setHours(0, 0, 0, 0);
+  let today = 0;
+  for (const r of S.items.values()) if (r.updatedAt >= d0 && r.data.s !== 'new') today++;
+  if (!S.items.size) return t('inbox.count', { n });
+  return t('inbox.count_short', { n }) + (today ? ' · ' + t('inbox.today', { n: today }) : '');
+}
 
 function renderInbox() {
   const feeds = liveFeeds();
@@ -432,18 +604,19 @@ function renderInbox() {
   const all = inboxEntries();
   const list = all.slice(0, S.shown);
   viewEl.innerHTML = `<div class="vh">
-      <div><h1>${t('inbox.title')}${crumb()}</h1><p>${all.length ? t('inbox.count', { n: all.length }) : t('inbox.nothing_new')}</p></div>
+      <div><h1>${t('inbox.title')}${crumb()}</h1><p>${inboxLine(all.length)}</p></div>
       <div class="tools">
         ${filterSelect()}
         ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>` : ''}
       </div></div>
-    ${list.length ? `<ol class="list">${list.map((e) => card({ ...e, time: entryTime(e) }, 'inbox')).join('')}</ol>` : `<div class="empty"><strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${t('inbox.check')}</button></div>`}
+    ${context()}
+    ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : `<div class="empty"><strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${t('inbox.check')}</button></div>`}
     ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button></div>` : ''}`;
 }
 
 function renderItems() {
   const v = `views.${S.view}`;
-  let list = itemsIn(S.view).filter((it) => !S.filter || it.feedId === S.filter);
+  let list = itemsIn(S.view).filter((it) => inFilter(it.feedId));
   if (S.view === 'done') list = list.slice(0, 300);
   const clear = S.view === 'done' && list.length
     ? `<button class="btn btn-danger" type="button" id="clearDone">${ICON.trash}<span>${t('views.done.clear')}</span></button>`
@@ -452,28 +625,34 @@ function renderItems() {
   const hasFolders = folderFeeds(S.view).length > 0;
   const tools = hasFolders || clear ? `<div class="tools">${hasFolders ? filterSelect() : ''}${clear}</div>` : '';
   viewEl.innerHTML = `<div class="vh"><div><h1>${t(v + '.title')}${crumb()}</h1><p>${t(v + '.text')}</p></div>${tools}</div>
-    ${list.length ? `<ol class="list">${list.map((it) => card(it, S.view)).join('')}</ol>` : `<div class="empty"><strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}`;
+    ${context()}
+    ${list.length ? dayGroups(list, S.view, (it) => it.changed) : `<div class="empty"><strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}`;
 }
 
 function renderFeeds() {
   const feeds = liveFeeds();
   const app = location.href.split(/[?#]/)[0];
   const bookmarklet = `javascript:location.href=${JSON.stringify(app + '?add=')}+encodeURIComponent(location.href)`;
-  const rows = feeds.map((f) => {
+  const row = (f) => {
     const st = S.fetch.get(f.id) || {};
     const unread = [...S.entries.values()].filter((e) => e.feedId === f.id && stateOf(e.id) === 'new' && entryTime(e) >= (f.data.since || 0)).length;
-    const name = esc(f.data.title);
-    return `<div class="feedrow" data-feed="${esc(f.id)}">
-      <div class="t">${esc(f.data.title || f.data.url)}</div>
+    const name = esc(feedTitle(f.id));
+    return `<div class="feedrow has-fi" data-feed="${esc(f.id)}">${feedIcon(f.id)}
+      <div class="t">${esc(feedTitle(f.id) || f.data.url)}</div>
       <div class="u">${esc(f.data.url)}</div>
       <div class="st">${st.strategy ? `<span class="pill" style="--v:${strategyVar(st.strategy)}">${esc(st.strategy)}</span>` : ''}
-        <span>${t('feeds.new', { n: unread })}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err">· ${esc(st.error)}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
+        <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err">· ${esc(st.error)}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
       <div class="ops">
+        <button class="icon-btn" type="button" data-feed-act="folder" title="${esc(t('feeds.folder'))}" aria-label="${esc(t('feeds.folder'))}: ${name}">${ICON.folder}</button>
         <button class="icon-btn" type="button" data-feed-act="refresh" title="${esc(t('feeds.refresh'))}" aria-label="${esc(t('feeds.refresh'))}: ${name}">${ICON.refresh}</button>
         <button class="icon-btn" type="button" data-feed-act="rename" title="${esc(t('feeds.rename'))}" aria-label="${esc(t('feeds.rename'))}: ${name}">${ICON.edit}</button>
         <button class="icon-btn" type="button" data-feed-act="remove" title="${esc(t('feeds.unfollow'))}" aria-label="${esc(t('feeds.unfollow'))}: ${name}">${ICON.trash}</button>
       </div></div>`;
-  }).join('');
+  };
+  const groups = folders();
+  const rows = groups.map((g) => `<h3 class="fold-title">${ICON.folder}<span>${esc(g)}</span></h3>${feeds.filter((f) => f.data.g === g).map(row).join('')}`).join('')
+    + (groups.length && feeds.some((f) => !f.data.g) ? `<h3 class="fold-title">${t('feeds.no_folder')}</h3>` : '')
+    + feeds.filter((f) => !f.data.g).map(row).join('');
   viewEl.innerHTML = `<div class="vh"><div><h1>${t('feeds.title')}</h1><p>${t('feeds.count', { n: feeds.length })}</p></div></div>
     <section class="panel">
       <h2>${t('feeds.follow_title')}</h2>
@@ -513,6 +692,7 @@ async function renderSettings() {
       <div class="grid2">
         <label class="field"><span>${t('settings.language')}</span><select id="langSel">${Object.entries(LANGS).map(([k, v]) => opt(k, v, t.lang)).join('')}</select></label>
         <label class="field"><span>${t('settings.theme')}</span><select id="themeSel">${['auto', 'light', 'dark'].map((m) => opt(m, t('settings.theme_' + m), getTheme())).join('')}</select></label>
+        <label class="field"><span>${t('settings.density')}</span><select id="densitySel">${DENSITIES.map((d) => opt(d, t('settings.density_' + d), getDensity())).join('')}</select></label>
       </div>
     </section>
     <section class="panel">
@@ -557,16 +737,7 @@ async function renderSettings() {
     </section>` : ''}
     <section class="panel">
       <h2>${t('settings.keyboard')}</h2>
-      <ul class="keys">
-        <li><kbd>j</kbd><kbd>k</kbd>${t('settings.key_jk')}</li>
-        <li><kbd>o</kbd>${t('settings.key_o')}</li>
-        <li><kbd>l</kbd>${t('settings.key_l')}</li>
-        <li><kbd>x</kbd>${t('settings.key_x')}</li>
-        <li><kbd>d</kbd>${t('settings.key_d')}</li>
-        <li><kbd>u</kbd>${t('settings.key_u')}</li>
-        <li><kbd>r</kbd>${t('settings.key_r')}</li>
-        <li><kbd>1</kbd>–<kbd>5</kbd>${t('settings.key_num')}</li>
-      </ul>
+      ${keysHtml()}
     </section>
     <section class="panel">
       <h2>${t('settings.local_title')}</h2>
@@ -578,6 +749,9 @@ async function renderSettings() {
     renderDevices();
   }
 }
+
+const KEYS = [['j k', 'key_jk'], ['o', 'key_o'], ['l', 'key_l'], ['x', 'key_x'], ['d', 'key_d'], ['u', 'key_u'], ['r', 'key_r'], ['1–5', 'key_num'], ['/', 'key_search'], ['v', 'key_v'], ['?', 'key_help']];
+const keysHtml = () => `<ul class="keys">${KEYS.map(([k, label]) => `<li>${k.split(' ').map((x) => x.split('–').map((y) => `<kbd>${esc(y)}</kbd>`).join('–')).join('')}${t('settings.' + label)}</li>`).join('')}</ul>`;
 
 async function renderDevices() {
   const box = $('#devices');
@@ -734,9 +908,23 @@ document.addEventListener('click', async (ev) => {
   if (filterBtn) return go(S.view, filterBtn.dataset.filter);
   if (el.closest('#feedNavToggle')) {
     feedNavOpen = !feedNavOpen;
-    try { localStorage.setItem('news.feedNav', feedNavOpen ? '1' : '0'); } catch { /* INFO: storage blocked */ }
-    return render();
+    store.set('news.feedNav', feedNavOpen ? '1' : '0');
+    return renderFeedNav();
   }
+  const fold = el.closest('[data-fold]');
+  if (fold) {
+    const g = fold.dataset.fold;
+    if (closedFolders.has(g)) closedFolders.delete(g); else closedFolders.add(g);
+    store.set('news.folders.closed', JSON.stringify([...closedFolders]));
+    return renderFeedNav();
+  }
+  const quiet = el.closest('[data-quiet]');
+  if (quiet) {
+    const k = quiet.dataset.quiet;
+    if (S.quiet.has(k)) S.quiet.delete(k); else S.quiet.add(k);
+    return renderFeedNav();
+  }
+  if (el.closest('#searchBtn')) return openPalette();
   const viewBtn = el.closest('[data-view]');
   if (viewBtn) return go(viewBtn.dataset.view);
 
@@ -769,7 +957,7 @@ document.addEventListener('click', async (ev) => {
 
   switch (el.closest('button')?.id) {
     case 'laterAllDone': {
-      const ids = itemsIn('later').filter((it) => !S.filter || it.feedId === S.filter).map((it) => it.id);
+      const ids = itemsIn('later').filter((it) => inFilter(it.feedId)).map((it) => it.id);
       if (!ids.length) return;
       return setState(ids, 'done', { animate: ids.length <= 20, label: t('toast.all_done', { n: ids.length }) });
     }
@@ -778,7 +966,7 @@ document.addEventListener('click', async (ev) => {
       return setState(ids, 'dismissed', { animate: false });
     }
     case 'clearDone': {
-      const ids = itemsIn('done').filter((it) => !S.filter || it.feedId === S.filter).map((it) => it.id);
+      const ids = itemsIn('done').filter((it) => inFilter(it.feedId)).map((it) => it.id);
       if (!ids.length || !await dialog({ title: t('dlg.clear_done_title'), body: t('dlg.clear_done_body', { n: ids.length }), ok: t('dlg.clear_done_ok'), danger: true })) return;
       return setState(ids, 'dismissed', { animate: false, label: t('toast.cleared', { n: ids.length }) });
     }
@@ -831,6 +1019,7 @@ document.addEventListener('change', async (ev) => {
   if (id === 'opmlIn' && ev.target.files[0]) importOpml(ev.target.files[0]);
   if (id === 'langSel') { setLang(ev.target.value); await useLanguage(ev.target.value); render(); }
   if (id === 'themeSel') setTheme(ev.target.value);
+  if (id === 'densitySel') setDensity(ev.target.value);
   if (id === 'swipeRight' || id === 'swipeLeft') {
     S.swipe = { right: $('#swipeRight').value, left: $('#swipeLeft').value };
     await db.kvSet('swipe', S.swipe);
@@ -886,8 +1075,9 @@ async function feedAction(act, id) {
     await db.kvSet('fetchState', Object.fromEntries(S.fetch));
     return render();
   }
+  if (act === 'folder') return askFolder(f);
   if (act === 'rename') {
-    const name = prompt(t('feeds.rename_prompt'), f.data.title || '');
+    const name = prompt(t('feeds.rename_prompt'), feedTitle(id));
     if (name === null) return;
     await commit([{ ...f, data: { ...f.data, title: name.trim() || f.data.title }, updatedAt: Date.now() }]);
     return render();
@@ -896,6 +1086,24 @@ async function feedAction(act, id) {
     await removeFeed(id);
     showToast(t('toast.feed_removed'));
   }
+}
+
+// INFO: free text with the existing folders as suggestions; empty = no folder
+async function askFolder(f) {
+  const list = folders().map((g) => `<option value="${esc(g)}"></option>`).join('');
+  const body = `<p>${t('feeds.folder_text', { title: esc(feedTitle(f.id)) })}</p>
+    <input type="text" id="folderIn" list="folderList" maxlength="60" autocomplete="off" value="${esc(f.data.g || '')}" placeholder="${esc(t('feeds.folder_placeholder'))}" aria-label="${esc(t('feeds.folder'))}"><datalist id="folderList">${list}</datalist>`;
+  const answer = dialog({ title: t('feeds.folder'), body, ok: t('settings.save') });
+  const input = $('#folderIn');
+  input.focus();
+  input.select();
+  input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#dlgOk').click(); } };
+  if (!await answer) return;
+  const g = input.value.trim().slice(0, 60);
+  const { g: _old, ...data } = f.data;
+  if (g) data.g = g;
+  await commit([{ ...f, data, updatedAt: Date.now() }]);
+  render();
 }
 
 async function testServer() {
@@ -921,7 +1129,7 @@ async function importOpml(file) {
   let done = 0;
   out.textContent = t('feeds.importing', { n: todo.length });
   const results = await pool(todo, 3, async (f) => {
-    const r = await addFeed(f.url, { quiet: true, title: f.title });
+    const r = await addFeed(f.url, { quiet: true, title: f.title, folder: f.folder });
     out.textContent = t('feeds.importing_progress', { done: ++done, n: todo.length });
     return r;
   });
@@ -932,7 +1140,7 @@ async function importOpml(file) {
 }
 
 function exportOpml() {
-  const blob = new Blob([buildOpml(liveFeeds().map((f) => f.data))], { type: 'text/x-opml' });
+  const blob = new Blob([buildOpml(liveFeeds().map((f) => ({ ...f.data, title: feedTitle(f.id) })))], { type: 'text/x-opml' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `news-${new Date().toISOString().slice(0, 10)}.opml`;
@@ -994,9 +1202,22 @@ function selectCard(card, scroll = true) {
 }
 
 document.addEventListener('keydown', (ev) => {
+  if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && ev.key.toLowerCase() === 'k' && !readerOpen() && !$('#dlg').open) {
+    ev.preventDefault();
+    openPalette();
+    return;
+  }
   if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing || readerOpen()) return;
-  if (ev.target.closest('input, textarea, select, dialog, [contenteditable]') || $('#dlg')?.open) return;
+  if (ev.target.closest('input, textarea, select, dialog, [contenteditable]') || $('#dlg')?.open || $('#palette')?.open) return;
   const k = ev.key;
+  if (k === '/') { ev.preventDefault(); openPalette(); return; }
+  if (k === '?') { dialog({ title: t('settings.keyboard'), body: keysHtml(), cancel: '' }); return; }
+  if (k === 'v') {
+    setDensity(getDensity() === 'compact' ? 'comfortable' : 'compact');
+    showToast(t('settings.density_' + getDensity()));
+    if (S.view === 'settings') render();
+    return;
+  }
   if (k === 'Enter' && ev.target.closest('button, a')) return;
   const views = ['inbox', 'reading', 'later', 'done', 'feeds'];
   if (k >= '1' && k <= '5') { go(views[+k - 1]); return; }
@@ -1016,6 +1237,94 @@ document.addEventListener('keydown', (ev) => {
   card.querySelector(`[data-act="${s}"]`)?.click();
 });
 
+// INFO: search and go to – views, folders and feeds without a query, plus every known post title with one.
+//       A post jumps to the view it is in and gets the keyboard selection; dismissed posts open the original.
+const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const STATE_VIEW = { new: 'inbox', reading: 'reading', later: 'later', done: 'done' };
+let pal = { results: [], sel: 0 };
+
+function paletteResults(q) {
+  const words = norm(q).split(/\s+/).filter(Boolean);
+  const hit = (...xs) => words.every((w) => xs.some((x) => norm(x).includes(w)));
+  const out = [];
+  for (const v of ['inbox', 'reading', 'later', 'done', 'feeds', 'settings']) {
+    const label = t(v === 'settings' ? 'app.settings' : 'nav.' + v);
+    if (hit(label)) out.push({ kind: 'view', id: v, label, icon: ICON.view[v] });
+  }
+  for (const g of folders()) if (hit(g)) out.push({ kind: 'filter', id: 'g:' + g, label: g, sub: t('pal.folder'), icon: ICON.folder });
+  for (const f of liveFeeds()) if (hit(feedTitle(f.id), f.data.url)) out.push({ kind: 'filter', id: f.id, label: feedTitle(f.id), sub: host(f.data.url), icon: feedIcon(f.id) });
+  if (!words.length) return out;
+  const posts = new Map();
+  for (const e of inboxEntries('')) posts.set(e.id, { id: e.id, title: e.title, summary: e.summary, feedId: e.feedId, url: e.url, time: entryTime(e), s: 'new' });
+  for (const r of S.items.values()) {
+    if (r.data.s === 'new' || posts.has(r.id)) continue;
+    const e = S.entries.get(r.id);
+    posts.set(r.id, { id: r.id, title: e?.title || r.data.t || '', summary: e?.summary || '', feedId: e?.feedId || r.data.f, url: e?.url || r.data.u, time: r.updatedAt, s: r.data.s });
+  }
+  const found = [...posts.values()].filter((p) => p.title && hit(p.title, p.summary)).sort((a, b) => b.time - a.time).slice(0, 40);
+  for (const p of found) {
+    const where = STATE_VIEW[p.s] ? t('nav.' + STATE_VIEW[p.s]) : t('act.dismissed');
+    out.push({ kind: 'post', id: p.id, s: p.s, url: p.url, label: p.title, sub: `${feedTitle(p.feedId) || host(p.url)} · ${where}`, icon: ICON.doc });
+  }
+  return out;
+}
+
+function paintPalette() {
+  const q = $('#palIn').value;
+  pal = { results: paletteResults(q), sel: 0 };
+  const list = $('#palList');
+  list.innerHTML = pal.results.length
+    ? pal.results.map((r, i) => `<li role="option" id="pal-${i}" data-i="${i}" class="k-${r.kind}" aria-selected="${i === 0}">${r.icon}<span class="pl">${esc(r.label)}</span>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</li>`).join('')
+    : `<li class="none" role="presentation">${t('pal.empty')}</li>`;
+  $('#palIn').setAttribute('aria-activedescendant', pal.results.length ? 'pal-0' : '');
+}
+
+function movePalette(d) {
+  if (!pal.results.length) return;
+  pal.sel = (pal.sel + d + pal.results.length) % pal.results.length;
+  $$('#palList [role="option"]').forEach((li, i) => li.setAttribute('aria-selected', String(i === pal.sel)));
+  $(`#pal-${pal.sel}`)?.scrollIntoView({ block: 'nearest' });
+  $('#palIn').setAttribute('aria-activedescendant', `pal-${pal.sel}`);
+}
+
+function openPalette() {
+  const d = $('#palette');
+  if (d.open) return;
+  $('#palIn').value = '';
+  paintPalette();
+  d.showModal();
+  $('#palIn').focus();
+}
+
+function pickPalette(r) {
+  $('#palette').close();
+  if (!r) return;
+  if (r.kind === 'view') return go(r.id);
+  if (r.kind === 'filter') return go('inbox', r.id);
+  const view = STATE_VIEW[r.s];
+  if (!view) { openUrl(r.url); return; }
+  go(view);
+  if (view === 'inbox') {
+    const i = inboxEntries().findIndex((e) => e.id === r.id);
+    if (i >= S.shown) S.shown = i + 1;
+  }
+  S.kbId = r.id;
+  render();
+  const c = viewEl.querySelector(`.card[data-id="${CSS.escape(r.id)}"]`);
+  if (c) selectCard(c); else openUrl(r.url);
+}
+
+$('#palIn').addEventListener('input', paintPalette);
+$('#palIn').addEventListener('keydown', (ev) => {
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); movePalette(ev.key === 'ArrowDown' ? 1 : -1); }
+  if (ev.key === 'Enter') { ev.preventDefault(); pickPalette(pal.results[pal.sel]); }
+});
+$('#palList').addEventListener('click', (ev) => {
+  const li = ev.target.closest('[data-i]');
+  if (li) pickPalette(pal.results[+li.dataset.i]);
+});
+$('#palette').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) ev.currentTarget.close(); });
+
 let sw = null;
 // INFO: logos and portraits are shown whole instead of cropped to 16:9
 viewEl.addEventListener('load', (ev) => {
@@ -1023,6 +1332,15 @@ viewEl.addEventListener('load', (ev) => {
   if (img instanceof HTMLImageElement && img.classList.contains('thumb') && img.naturalHeight) {
     const r = img.naturalWidth / img.naturalHeight;
     if (r > 2.2 || r < 1.1) img.classList.add('fit');
+  }
+}, true);
+
+// INFO: a favicon that fails is not requested again this session – the monogram below it stays
+document.addEventListener('error', (ev) => {
+  const img = ev.target;
+  if (img instanceof HTMLImageElement && img.classList.contains('fi-img')) {
+    iconFailed.add(img.src);
+    img.remove();
   }
 }, true);
 

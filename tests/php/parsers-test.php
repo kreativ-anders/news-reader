@@ -18,11 +18,51 @@ test('RSS 2.0: entries, order, dedupe, relative links, ids', function () use ($B
     foreach ($feed['entries'] as $e) {
         assert_matches('/^[0-9a-f]{64}$/', $e['id']);
         assert_matches('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/', (string)$e['publishedAt'], 'ISO date');
-        foreach (['id', 'url', 'title', 'publishedAt', 'updatedAt', 'summary', 'image'] as $k) {
+        foreach (['id', 'url', 'title', 'publishedAt', 'updatedAt', 'summary', 'image', 'author'] as $k) {
             if (!array_key_exists($k, $e)) fail("entry misses key $k");
         }
     }
     assert_same('Teaser of the second post.', $feed['entries'][1]['summary'], 'summary is plain text');
+    assert_same('Jane Doe', $feed['entries'][1]['author'], 'dc:creator');
+    assert_null($feed['entries'][0]['author']);
+    assert_same("$B/blog/", $feed['siteUrl']);
+    assert_same("$B/blog/icon.png", $feed['icon'], 'channel <image>');
+});
+
+test('authors: RSS e-mail form, Atom person, feed-level fallback, junk', function () use ($B) {
+    assert_same('Jane Doe', nr_author('jane@example.com (Jane Doe)'));
+    assert_same('', nr_author('jane@example.com'));
+    assert_same('', nr_author('https://example.com/about'));
+    assert_same('Ada &', nr_author(' Ada  &amp; '));
+    $feed = nr_parse_feed(fixture('feeds/atom.xml'), "$B/feeds/atom.xml");
+    assert_same('Max Mustermann', $feed['entries'][0]['author'], 'entry <author><name>');
+    assert_same('Atom Desk', $feed['entries'][1]['author'], 'feed <author> as fallback');
+    assert_same("$B/favicon.svg", $feed['icon'], 'Atom <icon>, SVG allowed');
+    assert_same('Kim', nr_jsonld_author([['@type' => 'Person', 'name' => 'Kim'], 'Lee']));
+    assert_null(nr_jsonld_author(['@type' => 'Person']));
+});
+
+test('summaries: feed boilerplate is removed', function () {
+    $cases = [
+        ['Laut einer Prognose sollen die...Zum Beitrag: Foldable-Markt soll sich verdoppeln', 'Laut einer Prognose sollen die…'],
+        ['A great teaser. The post Great title appeared first on Example Blog.', 'A great teaser.'],
+        ['Some teaser text [&#8230;]', 'Some teaser text…'],
+        ['Some teaser text […] Continue reading →', 'Some teaser text…'],
+        ['Ein Teaser. Weiterlesen', 'Ein Teaser.'],
+        ['Thread more pages here', 'Thread more pages here'],
+        ['Read more about it: this stays because it is the whole teaser and not at the end of anything else.', 'Read more about it: this stays because it is the whole teaser and not at the end of anything else.'],
+    ];
+    foreach ($cases as [$in, $out]) assert_same($out, nr_summary($in), $in);
+    assert_same('The actual teaser starts here and goes on.', nr_summary('My Title: The actual teaser starts here and goes on.', 'My Title'), 'repeated title');
+    assert_same('My Title', nr_summary('My Title', 'My Title'), 'a teaser that is only the title stays');
+});
+
+test('page icon: rel=icon first, apple-touch-icon as fallback, only http(s)', function () use ($B) {
+    $dom = nr_load_html('<html><head><link rel="apple-touch-icon" href="/touch.png"><link rel="shortcut icon" href="/fav.ico"></head></html>');
+    assert_same("$B/fav.ico", nr_page_icon($dom, "$B/blog/"));
+    $dom = nr_load_html('<html><head><link rel="apple-touch-icon" href="/touch.png"><link rel="icon" href="javascript:alert(1)"></head></html>');
+    assert_same("$B/touch.png", nr_page_icon($dom, "$B/blog/"));
+    assert_null(nr_page_icon(nr_load_html('<html><head><link rel="mask-icon" href="/m.svg"></head></html>'), $B));
 });
 
 test('RSS 2.0: full text kept (sanitized), teasers are not', function () use ($B) {

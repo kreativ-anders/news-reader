@@ -75,6 +75,7 @@ export async function pool(items, limit, fn) {
   return out;
 }
 
+// INFO: the folder of a feed is the title of the nearest enclosing outline without xmlUrl (OPML categories)
 export function parseOpml(text) {
   const doc = new DOMParser().parseFromString(text, 'text/xml');
   if (doc.querySelector('parsererror')) throw new Error('This is not a valid OPML file.');
@@ -82,14 +83,24 @@ export function parseOpml(text) {
   for (const o of doc.querySelectorAll('outline')) {
     const url = o.getAttribute('xmlUrl') || o.getAttribute('xmlurl') || o.getAttribute('url');
     if (!url) continue;
-    feeds.push({ url, title: o.getAttribute('title') || o.getAttribute('text') || '' });
+    const parent = o.parentElement?.closest('outline');
+    const folder = parent ? (parent.getAttribute('title') || parent.getAttribute('text') || '').trim() : '';
+    feeds.push({ url, title: o.getAttribute('title') || o.getAttribute('text') || '', folder });
   }
   return feeds;
 }
 
+// INFO: feeds with a folder (data.g) are nested in an outline of that name, the others stay at the top level
 export function buildOpml(feeds) {
   const esc = (s) => String(s ?? '').replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
-  const lines = feeds.map((f) => `    <outline type="rss" text="${esc(f.title || f.url)}" title="${esc(f.title || f.url)}" xmlUrl="${esc(f.url)}"/>`);
+  const line = (f, pad) => `${pad}<outline type="rss" text="${esc(f.title || f.url)}" title="${esc(f.title || f.url)}" xmlUrl="${esc(f.url)}"/>`;
+  const folders = new Map();
+  for (const f of feeds.filter((f) => f.g)) folders.set(f.g, [...(folders.get(f.g) || []), f]);
+  const lines = [
+    ...[...folders].sort(([a], [b]) => a.localeCompare(b)).map(([g, list]) =>
+      `    <outline text="${esc(g)}" title="${esc(g)}">\n${list.map((f) => line(f, '      ')).join('\n')}\n    </outline>`),
+    ...feeds.filter((f) => !f.g).map((f) => line(f, '    ')),
+  ];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <opml version="2.0">
   <head>
@@ -101,4 +112,21 @@ ${lines.join('\n')}
   </body>
 </opml>
 `;
+}
+
+// INFO: platform wording around the real name, e.g. "Stories by Jane Doe on Medium" → "Jane Doe", "Heise – RSS Feed" → "Heise"
+const TITLE_NOISE = [
+  /^stories by (.+?) on medium$/i,
+  /^(.+?) (?:on|[-–|]) medium$/i,
+  /^(?:rss|atom)(?: feed)?\s*[-–|:»]\s*(.+)$/i,
+  /^(.+?)\s*[-–|:»]\s*(?:(?:rss|atom)(?: ?feed)?|feed|news ?feed)$/i,
+  /^(.+?) (?:rss|atom) feed$/i,
+];
+export function cleanTitle(title) {
+  const s = String(title || '').trim();
+  for (const re of TITLE_NOISE) {
+    const m = s.match(re);
+    if (m && m[1].trim().length >= 2) return m[1].trim();
+  }
+  return s;
 }

@@ -5,12 +5,15 @@
   <link href="{{base}}/feeds/atom.xml" rel="self"/>
   <id>urn:fixture:atom</id>
   <updated>{{iso:1}}</updated>
+  <author><name>Atom Desk</name></author>
+  <icon>/favicon.svg</icon>
   <entry>
     <title>Atom entry one</title>
     <link href="{{base}}/article/atom-1.html" rel="alternate"/>
     <id>urn:fixture:atom:1</id>
     <published>{{iso:1}}</published>
     <updated>{{iso:1}}</updated>
+    <author><name>Max Mustermann</name><email>max@example.org</email></author>
     <summary>First Atom summary</summary>
   </entry>
   <entry>

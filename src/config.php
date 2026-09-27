@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const NR_VERSION = '0.4.1';
+const NR_VERSION = '0.5.0';
 const NR_VAR_DIR = __DIR__ . '/../var';
 
 // INFO: Collector (/api/collect)

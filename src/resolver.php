@@ -25,7 +25,7 @@ function nr_resolve(string $url): array
 
     $feed = nr_parse_feed($page['body'], $finalUrl);
     if ($feed !== null) {
-        return nr_success($url, $finalUrl, $feed['type'], 'direct', $feed['title'], $finalUrl, $feed['entries']);
+        return nr_success($url, $finalUrl, $feed['type'], 'direct', $feed['title'], $finalUrl, $feed['entries'], null, $feed['siteUrl'], $feed['icon']);
     }
 
     if (!nr_is_html($page['contentType'], $page['body'])) {
@@ -34,6 +34,7 @@ function nr_resolve(string $url): array
 
     $dom = nr_load_html($page['body']);
     $pageTitle = nr_page_title($dom);
+    $pageIcon = nr_page_icon($dom, $finalUrl);
 
     $declared = nr_discover_feed_links($dom, $finalUrl);
     $candidates = array_slice(array_values(array_unique(array_merge($declared, nr_guess_feed_urls($finalUrl)))), 0, NR_MAX_FEED_PROBES);
@@ -45,7 +46,7 @@ function nr_resolve(string $url): array
         $feed = nr_parse_feed($res['body'], $res['finalUrl']);
         if ($feed !== null && $feed['entries'] !== []) {
             $strategy = in_array($feedUrl, $declared, true) ? 'discovered' : 'guessed';
-            return nr_success($url, $finalUrl, $feed['type'], $strategy, $feed['title'] ?? $pageTitle, $res['finalUrl'], $feed['entries']);
+            return nr_success($url, $finalUrl, $feed['type'], $strategy, $feed['title'] ?? $pageTitle, $res['finalUrl'], $feed['entries'], null, $feed['siteUrl'] ?? $finalUrl, $pageIcon ?? $feed['icon']);
         }
     }
 
@@ -62,7 +63,7 @@ function nr_resolve(string $url): array
         $dated = count(array_filter($entries, fn($e) => ($e['publishedAt'] ?? $e['updatedAt']) !== null));
         if (count($entries) >= 3 && $dated >= count($entries) / 2) {
             $entries = nr_titles_from_page($entries, $dom, $finalUrl);
-            return nr_success($url, $finalUrl, 'sitemap', 'sitemap', $pageTitle, $res['finalUrl'], $entries);
+            return nr_success($url, $finalUrl, 'sitemap', 'sitemap', $pageTitle, $res['finalUrl'], $entries, null, $finalUrl, $pageIcon);
         }
     }
 
@@ -73,7 +74,7 @@ function nr_resolve(string $url): array
         if ($sitemap !== null && $dated < count($entries) / 2) {
             $entries = nr_enrich_with_sitemap($entries, $sitemap);
         }
-        return nr_success($url, $finalUrl, 'html', $listing['strategy'], $pageTitle, null, $entries);
+        return nr_success($url, $finalUrl, 'html', $listing['strategy'], $pageTitle, null, $entries, null, $finalUrl, $pageIcon);
     }
 
     return nr_err('NO_FEED_DETECTED', 'No RSS/Atom feed, article listing or matching sitemap entries were found.', ['tried' => $tried]);
@@ -96,7 +97,7 @@ function nr_resolve_rule(string $url, array $rule, array &$tried): ?array
         if (!$res['ok']) continue;
         $feed = nr_parse_feed($res['body'], $res['finalUrl']);
         if ($feed === null) continue;
-        $hit = nr_success($url, $url, $feed['type'], 'rule', $feed['title'], $res['finalUrl'], $feed['entries'], $rule['id']);
+        $hit = nr_success($url, $url, $feed['type'], 'rule', $feed['title'], $res['finalUrl'], $feed['entries'], $rule['id'], $feed['siteUrl'], $feed['icon']);
         if ($feed['entries'] !== []) return $hit;
         $empty ??= $hit;
     }
@@ -135,7 +136,7 @@ function nr_titles_from_page(array $entries, DOMDocument $dom, string $baseUrl):
     return $entries;
 }
 
-function nr_success(string $inputUrl, string $finalUrl, string $type, string $strategy, ?string $title, ?string $feedUrl, array $entries, ?string $rule = null): array
+function nr_success(string $inputUrl, string $finalUrl, string $type, string $strategy, ?string $title, ?string $feedUrl, array $entries, ?string $rule = null, ?string $siteUrl = null, ?string $icon = null): array
 {
     $entries = array_slice($entries, 0, NR_MAX_ENTRIES);
     return [
@@ -149,6 +150,8 @@ function nr_success(string $inputUrl, string $finalUrl, string $type, string $st
                 'rule'     => $rule,
                 'feedUrl'  => $feedUrl,
                 'title'    => $title,
+                'siteUrl'  => $siteUrl !== null && nr_is_http_url($siteUrl) ? $siteUrl : null,
+                'icon'     => $icon,
             ],
             'entries' => $entries,
             'meta' => [

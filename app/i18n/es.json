@@ -1,6 +1,6 @@
 {
-  "app": { "tagline": "News Reader", "skip": "Ir al contenido", "noscript": "News necesita JavaScript para funcionar.", "refresh": "Actualizar feeds (r)", "settings": "Ajustes", "views": "Vistas" },
-  "nav": { "inbox": "Bandeja", "reading": "Leyendo", "later": "Más tarde", "done": "Hecho", "feeds": "Feeds", "toggle_feeds": "Mostrar/ocultar feeds" },
+  "app": { "tagline": "News Reader", "skip": "Ir al contenido", "noscript": "News necesita JavaScript para funcionar.", "refresh": "Actualizar feeds (r)", "settings": "Ajustes", "views": "Vistas", "search": "Buscar e ir a (/)", "search_label": "Buscar e ir a" },
+  "nav": { "inbox": "Bandeja", "reading": "Leyendo", "later": "Más tarde", "done": "Hecho", "feeds": "Feeds", "toggle_feeds": "Mostrar/ocultar fuentes", "sources": "Fuentes", "toggle_folder": "Abrir/cerrar la carpeta {name}", "more_one": "+ {n} más", "more_other": "+ {n} más", "less": "Mostrar menos" },
   "act": { "reading": "Leer ahora", "later": "Más tarde", "dismissed": "No me interesa", "done": "Hecho", "drop": "Descartar", "remove": "Quitar", "again": "Volver a leer", "none": "Nada" },
   "toast": {
     "cleared": "Lista «Hecho» vaciada",
@@ -37,7 +37,12 @@
     "empty_title": "Tu portada está vacía.",
     "empty_text": "Sigue cualquier web – con o sin RSS – y las entradas nuevas aparecerán justo aquí.",
     "add_first": "Añade tu primer feed",
-    "more": "Mostrar más ({n})"
+    "more": "Mostrar más ({n})",
+    "count_short_one": "{n} nueva",
+    "count_short_other": "{n} nuevas",
+    "today_one": "{n} ordenada hoy",
+    "today_other": "{n} ordenadas hoy",
+    "folder_all": "Todo en {name}"
   },
   "views": {
     "reading": { "title": "Leyendo", "text": "Lo que estás leyendo ahora mismo. Márcalo como hecho cuando termines.", "empty": "Nada en curso.", "hint": "Elige algo de tu bandeja o de tu lista «Más tarde»." },
@@ -74,7 +79,11 @@
     "importing_other": "Importando {n} feeds…",
     "importing_progress": "Importando… {done}/{n}",
     "imported_one": "{ok} de {n} feed importado.",
-    "imported_other": "{ok} de {n} feeds importados."
+    "imported_other": "{ok} de {n} feeds importados.",
+    "folder": "Carpeta",
+    "folder_text": "Pon <strong>{title}</strong> en una carpeta: elige una o escribe un nombre nuevo. Déjalo vacío para sacarlo.",
+    "folder_placeholder": "p. ej. Tecnología",
+    "no_folder": "Sin carpeta"
   },
   "settings": {
     "title": "Ajustes",
@@ -113,7 +122,13 @@
     "key_x": "no me interesa", "key_d": "hecho", "key_u": "deshacer", "key_r": "actualizar feeds", "key_num": "cambiar de vista",
     "local_title": "En este dispositivo",
     "local_text": "{feeds} feeds, {items} estados de lectura y {entries} entradas guardadas.",
-    "reset": "Restablecer este dispositivo"
+    "reset": "Restablecer este dispositivo",
+    "density": "Diseño",
+    "density_comfortable": "Cómodo – resúmenes e imágenes",
+    "density_compact": "Compacto – solo titulares",
+    "key_search": "buscar e ir a",
+    "key_v": "cambiar diseño",
+    "key_help": "mostrar todos los atajos"
   },
   "dlg": {
     "clear_done_title": "¿Vaciar la lista «Hecho»?", "clear_done_ok": "Vaciar", "clear_done_body_one": "<p>Se quitará {n} entrada terminada. No volverá a tu bandeja.</p>", "clear_done_body_other": "<p>Se quitarán {n} entradas terminadas. No volverán a tu bandeja.</p>",
@@ -176,5 +191,23 @@
     "saved": "Guardado para leer sin conexión", "read_done": "Leído hasta el final – marcado como hecho",
     "unavailable": "Estás sin conexión y este artículo no se guardó para leer sin conexión.",
     "partial": "Solo se pudo guardar una parte del artículo – la página está tras un muro de pago o se genera con JavaScript."
+  },
+  "day": {
+    "undated": "Sin fecha"
+  },
+  "ctx": {
+    "per_week_one": "≈ {n} entrada por semana",
+    "per_week_other": "≈ {n} entradas por semana",
+    "rarely": "menos de una entrada por semana",
+    "read_rate": "lees el {p} %",
+    "folder_one": "Carpeta con {n} feed",
+    "folder_other": "Carpeta con {n} feeds"
+  },
+  "pal": {
+    "placeholder": "Buscar entradas, feeds y vistas…",
+    "results": "Resultados",
+    "hint": "<kbd>↑</kbd><kbd>↓</kbd> elegir · <kbd>Intro</kbd> abrir · <kbd>Esc</kbd> cerrar",
+    "folder": "Carpeta",
+    "empty": "No se ha encontrado nada."
   }
 }

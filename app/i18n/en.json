@@ -5,9 +5,11 @@
     "noscript": "News needs JavaScript to run.",
     "refresh": "Refresh feeds (r)",
     "settings": "Settings",
-    "views": "Views"
+    "views": "Views",
+    "search": "Search and go to (/)",
+    "search_label": "Search and go to"
   },
-  "nav": { "inbox": "Inbox", "reading": "Read now", "later": "Later", "done": "Done", "feeds": "Feeds", "toggle_feeds": "Show/hide feeds" },
+  "nav": { "inbox": "Inbox", "reading": "Read now", "later": "Later", "done": "Done", "feeds": "Feeds", "toggle_feeds": "Show/hide sources", "sources": "Sources", "toggle_folder": "Open/close folder {name}", "more_one": "+ {n} more", "more_other": "+ {n} more", "less": "Show less" },
   "act": {
     "reading": "Read now", "later": "Later", "dismissed": "Not interested", "done": "Done",
     "drop": "Drop", "remove": "Remove", "again": "Read again", "none": "Nothing"
@@ -47,7 +49,12 @@
     "empty_title": "Your front page is empty.",
     "empty_text": "Follow any website – with or without RSS – and the new posts show up right here.",
     "add_first": "Add your first feed",
-    "more": "Show more ({n})"
+    "more": "Show more ({n})",
+    "count_short_one": "{n} new",
+    "count_short_other": "{n} new",
+    "today_one": "{n} sorted today",
+    "today_other": "{n} sorted today",
+    "folder_all": "All in {name}"
   },
   "views": {
     "reading": { "title": "Read now", "text": "What you’re reading right now. Mark it done when you’re through.", "empty": "Nothing on the go.", "hint": "Pick something from your inbox or your Later list." },
@@ -84,7 +91,11 @@
     "importing_other": "Importing {n} feeds…",
     "importing_progress": "Importing… {done}/{n}",
     "imported_one": "{ok} of {n} feed imported.",
-    "imported_other": "{ok} of {n} feeds imported."
+    "imported_other": "{ok} of {n} feeds imported.",
+    "folder": "Folder",
+    "folder_text": "Put <strong>{title}</strong> in a folder: pick one or type a new name. Leave it empty to take it out again.",
+    "folder_placeholder": "e.g. Tech",
+    "no_folder": "Not in a folder"
   },
   "settings": {
     "title": "Settings",
@@ -123,7 +134,13 @@
     "key_x": "not interested", "key_d": "done", "key_u": "undo", "key_r": "refresh feeds", "key_num": "switch view",
     "local_title": "On this device",
     "local_text": "{feeds} feeds, {items} reading states and {entries} saved posts.",
-    "reset": "Reset this device"
+    "reset": "Reset this device",
+    "density": "Layout",
+    "density_comfortable": "Comfortable – teasers and images",
+    "density_compact": "Compact – headlines only",
+    "key_search": "search and go to",
+    "key_v": "switch layout",
+    "key_help": "show all shortcuts"
   },
   "dlg": {
     "clear_done_title": "Clear the Done list?", "clear_done_ok": "Clear", "clear_done_body_one": "<p>{n} finished post will be removed. It won’t come back to your inbox.</p>", "clear_done_body_other": "<p>{n} finished posts will be removed. They won’t come back to your inbox.</p>",
@@ -186,5 +203,23 @@
     "saved": "Saved for offline reading", "read_done": "Finished – marked as done",
     "unavailable": "You’re offline, and this article wasn’t saved for offline reading.",
     "partial": "Only part of this article could be saved – the page is behind a paywall or built with JavaScript."
+  },
+  "day": {
+    "undated": "No date"
+  },
+  "ctx": {
+    "per_week_one": "≈ {n} post a week",
+    "per_week_other": "≈ {n} posts a week",
+    "rarely": "less than one post a week",
+    "read_rate": "you read {p}%",
+    "folder_one": "Folder with {n} feed",
+    "folder_other": "Folder with {n} feeds"
+  },
+  "pal": {
+    "placeholder": "Search posts, feeds and views…",
+    "results": "Results",
+    "hint": "<kbd>↑</kbd><kbd>↓</kbd> choose · <kbd>Enter</kbd> open · <kbd>Esc</kbd> close",
+    "folder": "Folder",
+    "empty": "Nothing found."
   }
 }

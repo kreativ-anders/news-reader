@@ -1,16 +1,20 @@
 <?php
 declare(strict_types=1);
 
-function nr_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = '', ?string $image = null, ?string $content = null): array
+function nr_entry(string $url, string $title, ?string $publishedAt, ?string $updatedAt = null, ?string $summary = null, string $guid = '', ?string $image = null, ?string $content = null, ?string $author = null): array
 {
+    $title = nr_clean_text($title);
+    $summary = $summary !== null && $summary !== '' ? nr_summary($summary, $title) : '';
+    $author = nr_author((string)$author);
     $entry = [
         'id'          => hash('sha256', $guid !== '' ? $guid : nr_normalize_url($url)),
         'url'         => $url,
-        'title'       => nr_clean_text($title),
+        'title'       => $title,
         'publishedAt' => $publishedAt,
         'updatedAt'   => $updatedAt,
-        'summary'     => $summary !== null && $summary !== '' ? nr_summary($summary) : null,
+        'summary'     => $summary !== '' ? $summary : null,
         'image'       => $image,
+        'author'      => $author !== '' ? $author : null,
     ];
     // INFO: raw feed HTML, turned into sanitized full text by nr_with_fulltext() after the entry list is final
     if ($content !== null && $content !== '') $entry['content'] = $content;
@@ -61,16 +65,80 @@ function nr_clean_text(string $s): string
     return trim(preg_replace('/\s+/u', ' ', $s) ?? '');
 }
 
-function nr_summary(string $html): string
+function nr_summary(string $html, string $title = ''): string
 {
     $html = preg_replace('/<(script|style|figcaption)\b.*?<\/\1>/is', '', $html) ?? '';
     // INFO: block boundaries become spaces, otherwise "Uses</h3><p>From" turns into "UsesFrom"
     $html = preg_replace('/<(?:br|hr|img)\b[^>]*>|<\/(?:p|div|h[1-6]|li|ul|ol|blockquote|figure|pre|tr|td|th|section|article)>/i', ' ', $html) ?? $html;
-    $text = nr_clean_text(strip_tags($html));
+    $text = nr_summary_boilerplate(nr_clean_text(strip_tags($html)), $title);
     if (mb_strlen($text) > NR_SUMMARY_LENGTH) {
         $text = rtrim(mb_substr($text, 0, NR_SUMMARY_LENGTH - 1)) . '…';
     }
     return $text;
+}
+
+// INFO: feed furniture that is no teaser: "The post … appeared first on …" (WordPress/Yoast), "… Zum Beitrag: <title>",
+//       "Continue reading →", "[…]", and a teaser that starts by repeating the title. Cut text ends with "…".
+function nr_summary_boilerplate(string $text, string $title = ''): string
+{
+    $cut = false;
+    $more = 'Zum Beitrag|Zum Artikel|Weiterlesen|Mehr lesen|Continue reading|Read more|Read the full (?:article|story|post)|Keep reading|Lire la suite|Leggi tutto|Leggi di più|Continua a leggere|Leer más|Seguir leyendo|\\(more…\\)|\\(more\\.\\.\\.\\)';
+    $patterns = [
+        '/\\s*The post .{1,300}? appeared first on .{1,200}$/u',
+        '/(?:\\s+|\\s*(?:\\[(?:…|\\.\\.\\.)\\]|…|\\.\\.\\.)\\s*)(?:' . $more . ')(?:\\s*[:»›→–-]|\\s|$).{0,200}$/iu',
+        '/\\s*\\[(?:…|\\.\\.\\.)\\]$/u',
+    ];
+    foreach ($patterns as $re) {
+        $next = preg_replace($re, '', $text) ?? $text;
+        if ($next !== $text) { $text = rtrim($next); $cut = true; }
+    }
+    if ($title !== '' && mb_stripos($text, $title) === 0 && mb_strlen($text) > mb_strlen($title) + 20) {
+        $text = preg_replace('/^[\\s:.|–-]+/u', '', mb_substr($text, mb_strlen($title))) ?? $text;
+    }
+    if ($cut && $text !== '' && !preg_match('/[.!?…"“”»]$/u', $text)) $text .= '…';
+    return $text;
+}
+
+// INFO: "jane@example.com (Jane Doe)" (RSS <author>) → "Jane Doe"; bare e-mail addresses and URLs are no names
+function nr_author(string $s): string
+{
+    $s = nr_clean_text(strip_tags($s));
+    if (preg_match('/^\\S+@\\S+\\s*\\((.+)\\)$/u', $s, $m)) $s = trim($m[1]);
+    if ($s === '' || str_contains($s, '@') || preg_match('#^https?://#i', $s)) return '';
+    return mb_strlen($s) > 80 ? '' : $s;
+}
+
+// INFO: Atom <author><name>, else the text of <dc:creator> / <author> / <itunes:author>
+function nr_item_author(DOMElement $item): string
+{
+    foreach (nr_child_elements($item, 'author') as $a) {
+        $name = nr_child_text($a, ['name']);
+        if ($name !== '') return $name;
+    }
+    return nr_child_text($item, ['creator', 'author']);
+}
+
+// INFO: site icon for the feed list – <link rel="icon"> of an HTML page (apple-touch-icon as fallback)
+function nr_page_icon(DOMDocument $dom, string $baseUrl): ?string
+{
+    $best = null;
+    foreach ($dom->getElementsByTagName('link') as $l) {
+        $rel = ' ' . strtolower(trim($l->getAttribute('rel'))) . ' ';
+        if (!str_contains($rel, ' icon ') && !str_contains($rel, 'apple-touch-icon')) continue;
+        $url = nr_icon_url($l->getAttribute('href'), $baseUrl);
+        if ($url === null) continue;
+        if (str_contains($rel, ' icon ')) return $url;
+        $best ??= $url;
+    }
+    return $best;
+}
+
+function nr_icon_url(string $src, string $baseUrl): ?string
+{
+    $src = trim(html_entity_decode($src, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($src === '' || str_starts_with($src, 'data:')) return null;
+    $url = nr_absolute_url($src, $baseUrl);
+    return nr_is_http_url($url) ? $url : null;
 }
 
 // INFO: media:thumbnail / media:content, image enclosure, itunes:image, then the first real <img> of the item HTML
@@ -254,14 +322,20 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
                 nr_child_text($item, ['description', 'encoded', 'summary']),
                 $guid,
                 nr_item_image($xp, $item, nr_children_text($item, ['description', 'encoded']), $url),
-                nr_child_text($item, ['encoded', 'description'])
+                nr_child_text($item, ['encoded', 'description']),
+                nr_item_author($item)
             );
         }
+
+        $image = $channel instanceof DOMElement ? (nr_child_elements($channel, 'image')[0] ?? null) : null;
+        $image ??= $xp->query('/*/*[local-name()="image"]')->item(0);
+        $icon = $image instanceof DOMElement ? nr_icon_url(nr_child_text($image, ['url']) ?: $image->getAttribute('rdf:resource'), $baseUrl) : null;
 
         return [
             'type'    => $rootName === 'rss' ? 'rss' : 'rdf',
             'title'   => $title !== '' ? nr_clean_text($title) : null,
-            'siteUrl' => $site !== '' ? $site : null,
+            'siteUrl' => $site !== '' ? nr_absolute_url($site, $baseUrl) : null,
+            'icon'    => $icon,
             'entries' => nr_with_fulltext(nr_finalize_entries($entries, true)),
         ];
     }
@@ -274,6 +348,7 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
             if ($rel === 'alternate') { $site = $l->getAttribute('href'); break; }
         }
 
+        $feedAuthor = nr_item_author($root);
         foreach (array_slice(nr_child_elements($root, 'entry'), 0, NR_MAX_PARSE_ITEMS) as $item) {
             $link = '';
             foreach (nr_child_elements($item, 'link') as $l) {
@@ -299,14 +374,17 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
                 nr_child_text($item, ['summary', 'content']),
                 $id,
                 nr_item_image($xp, $item, nr_children_text($item, ['summary', 'content']), $url),
-                nr_child_text($item, ['content', 'summary'])
+                nr_child_text($item, ['content', 'summary']),
+                nr_item_author($item) ?: $feedAuthor
             );
         }
 
+        $icon = nr_child_text($root, ['icon']);
         return [
             'type'    => 'atom',
             'title'   => $title !== '' ? nr_clean_text($title) : null,
             'siteUrl' => $site ? nr_absolute_url($site, $baseUrl) : null,
+            'icon'    => $icon !== '' ? nr_icon_url($icon, $baseUrl) : null,
             'entries' => nr_with_fulltext(nr_finalize_entries($entries, true)),
         ];
     }
@@ -433,7 +511,9 @@ function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
                             nr_parse_date(is_string($node['dateModified'] ?? null) ? $node['dateModified'] : null),
                             is_string($node['description'] ?? null) ? $node['description'] : null,
                             '',
-                            nr_jsonld_image($node['image'] ?? null, $absolute)
+                            nr_jsonld_image($node['image'] ?? null, $absolute),
+                            null,
+                            nr_jsonld_author($node['author'] ?? null)
                         );
                     }
                 }
@@ -453,6 +533,14 @@ function nr_listing_jsonld(DOMDocument $dom, string $baseUrl): array
     }
 
     return nr_finalize_entries($entries, false);
+}
+
+// INFO: JSON-LD "author" is a string, a Person/Organization or a list of either – the first name wins
+function nr_jsonld_author(mixed $a): ?string
+{
+    if (is_array($a) && array_is_list($a)) $a = $a[0] ?? null;
+    if (is_array($a)) $a = $a['name'] ?? null;
+    return is_string($a) ? $a : null;
 }
 
 // INFO: JSON-LD "image" is a string, an ImageObject or a list of either

@@ -1,7 +1,7 @@
 // app/js/feeds.js – pure helpers. feedId() is part of the sync format: changing it orphans every synced feed.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { normalizeUrl, extractUrl, feedId, pool, buildOpml } from '../../app/js/feeds.js';
+import { normalizeUrl, extractUrl, feedId, pool, buildOpml, cleanTitle } from '../../app/js/feeds.js';
 
 test('normalizeUrl', () => {
   assert.equal(normalizeUrl('example.com/blog'), 'https://example.com/blog');
@@ -50,4 +50,21 @@ test('buildOpml escapes and lists every feed', () => {
   assert.ok(xml.includes('title="A &lt;b&gt;&quot;quoted&quot;&lt;/b&gt;"'));
   assert.ok(xml.includes('title="https://b.test/rss"'), 'URL as fallback title');
   assert.equal((xml.match(/<outline /g) || []).length, 2);
+});
+
+test('buildOpml nests feeds in folders', () => {
+  const xml = buildOpml([{ url: 'https://a.test/feed', title: 'A', g: 'Tech & Co' }, { url: 'https://b.test/feed', title: 'B' }, { url: 'https://c.test/feed', title: 'C', g: 'Tech & Co' }]);
+  assert.match(xml, /<outline text="Tech &amp; Co" title="Tech &amp; Co">\s*<outline [^>]*xmlUrl="https:\/\/a\.test\/feed"\/>\s*<outline [^>]*xmlUrl="https:\/\/c\.test\/feed"\/>\s*<\/outline>/);
+  assert.equal((xml.match(/xmlUrl=/g) || []).length, 3);
+});
+
+test('cleanTitle strips platform wording, keeps real names', () => {
+  assert.equal(cleanTitle('Stories by Vignaraj Ravi on Medium'), 'Vignaraj Ravi');
+  assert.equal(cleanTitle('UX Collective on Medium'), 'UX Collective');
+  assert.equal(cleanTitle('heise online – RSS Feed'), 'heise online');
+  assert.equal(cleanTitle('RSS Feed: tagesschau.de'), 'tagesschau.de');
+  assert.equal(cleanTitle('Caschys Blog'), 'Caschys Blog');
+  assert.equal(cleanTitle('The Feed'), 'The Feed');
+  assert.equal(cleanTitle('Medium'), 'Medium');
+  assert.equal(cleanTitle(''), '');
 });
