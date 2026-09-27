@@ -4,7 +4,7 @@ Local-first RSS reader: PWA in `app/`, PHP front controller `api/index.php` + `s
 
 ## Principles
 
-- **Local-first, private by default.** Reading data lives on the device; the server only fetches sources and stores sealed sync blobs. Never send feed contents, reading states, keys or shared URLs anywhere else (analytics included). Every new data flow must be reflected in `privacy.*` texts.
+- **Local-first, private by default.** Reading data lives on the device; the server only fetches sources and stores sealed sync blobs. Never send feed contents, reading states, keys or shared URLs anywhere else. The app loads no analytics or other third-party scripts; the site counts visits and a few named events with Pirsch (`track.js`, fixed values only, no visitor input). Every new data flow or event must be reflected in `privacy.*` texts.
 - **Small and dependency-free.** Plain ES modules, plain PHP 8.5, no build step, no framework, no runtime dependencies, no database. Tooling (`package.json`) is for tests only.
 - **Simple rules, no algorithm.** Posts arrive newest first and move only by the user's decision. No ranking, no AI, no tracking of behaviour.
 - **Stay backward compatible with data on devices.** Sync format `v:1`, record shapes, `feedId()` and IndexedDB stores are shared by devices running different versions. Extend with optional fields, never repurpose or remove them; old clients must still read new blobs.

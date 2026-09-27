@@ -83,6 +83,7 @@
     <h3 id="pirsch" data-i18n="privacy.pirsch_h">Visitor statistics with Pirsch Analytics</h3>
     <p data-i18n="privacy.pirsch_1">All pages of this website and the News app hosted here use Pirsch Analytics, a cookie-free web analytics service built on privacy by design. To count visitors, Pirsch derives a visitor ID from the IP address, the user agent, the date and a salt using a one-way hash function when a page view arrives.</p>
     <p data-i18n="privacy.pirsch_2">The IP address is stored neither in full nor in part and is irreversibly anonymised by the hash. Because the date and a per-website salt are included, visitors cannot be recognised for longer than 24 hours and cannot be tracked across websites. A rough location (country, city) is derived from a locally hosted database. Pirsch sets no cookies and stores nothing on your device. Only the page viewed is recorded, without query parameters or anchors – never the content of your feeds, your reading list, pairing links or addresses you share with the app.</p>
+    <p data-i18n="privacy.pirsch_events">We also count a few clicks as anonymous events, to see which information helps: opening the app, the links to GitHub, the API documentation and the payment page, opening an FAQ question, choosing a Collector example, switching language, theme or animations, and visits to missing pages. Each event only carries fixed values such as the event name, its position on the page, the page language or the chosen option – never text you enter and nothing that identifies you. It is counted with the same anonymous visitor ID as page views. Legal basis: Art. 6(1)(f) GDPR.</p>
     <p data-i18n="privacy.pirsch_3">Provider: Emvi Software GmbH, Nickelstraße 1b, 33378 Rheda-Wiedenbrück, Germany. Processing takes place on servers in Germany; no data is transferred to third countries. Legal basis: Art. 6(1)(f) GDPR – our legitimate interest in understanding which content is found and used. More: <a href="https://docs.pirsch.io/privacy" rel="noopener">privacy at Pirsch Analytics</a>.</p>
     <h3 id="storage" data-i18n="privacy.storage_h">Local settings instead of cookies</h3>
     <p data-i18n="privacy.storage_text">This website sets no cookies. If you choose a language or a colour theme, that choice is saved in your browser’s local storage (<code>nr.lang</code>, <code>nr.theme</code>) and never transmitted. The News app also keeps its display settings (<code>news.*</code>) there and stores your feeds, entries, offline copies and sync key in your browser’s database (IndexedDB). None of this is transmitted except as described below – for sync only in encrypted form. This is strictly necessary to provide the functions you asked for (§ 25(2) no. 2 TDDDG). You can delete it at any time in your browser settings.</p>
@@ -122,5 +123,6 @@
   </footer>
 
   <script type="module" src="site.js"></script>
+  <script type="module" src="track.js"></script>
 </body>
 </html>

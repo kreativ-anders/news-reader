@@ -208,7 +208,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - Forward after a key change: `"NRF1"` · flags · IV · ciphertext under the old key (AAD `newsreader-sync-v1 forward`), plaintext `{v:1, at, envelopes:[{id,epk,iv,ct}]}`.
 - Client: GET → decrypt (decompression capped at 32 MB) → validate every record (shape per kind, `updatedAt` at most 1 day in the future – invalid records are dropped) → merge (last write wins per record) → PUT full snapshot if newer; retry on `412` (max. 5). On `413` the oldest finished items are pruned and the upload is retried once.
 - Server receives: the bearer token (stored only as its SHA-256 file name), the encrypted blob and its size, timestamps; the client IP in the web-server log and as a salted hash for rate limiting.
-- A pairing link is the key: joining a foreign link merges your data into that vault (and may switch the server). Only confirm links you created yourself. The app moves `#pair=…` out of the address bar before any other script runs.
+- A pairing link is the key: joining a foreign link merges your data into that vault (and may switch the server). Only confirm links you created yourself. The app moves `#pair=…` out of the address bar before anything else runs.
 - Paired devices (*Settings → Paired devices*): every device keeps one encrypted `device` record (random id, editable name, platform, paired since, last active – refreshed at most hourly) with its ECDH P-256 public key; the private key is non-extractable. Public keys are pinned on first sight (`pubPins`); a device whose key changes is flagged and gets no new key.
 - Removing a device (or *Change key*) rotates the vault key: full snapshot to the new location, then the old location is replaced (`If-Match`) by an `NRF1` forward holding the new key wrapped for every remaining device (ephemeral ECDH → HKDF-SHA256 → AES-GCM, device id bound in info and AAD). Removed devices (`revoked`) and their public keys are excluded, whatever a merge says. Remaining devices follow automatically; the removed device and stale pairing links find no envelope and unpair. A forward is final: the server refuses to replace or delete it (`410`). Forwards expire with the old vault (180 days after the last read).
 - *Unpair this device* announces itself (`r:1`) before leaving.
@@ -222,7 +222,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - XML: `LIBXML_NONET`, no `LIBXML_NOENT` / `LIBXML_PARSEHUGE` (entity-expansion protection stays on).
 - Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 per /64 and additionally per /48), `429` + `Retry-After`.
 - Entries: only `http(s)` links and images leave the Collector; the app re-checks every URL before `href`, `src` or `window.open` and sanitizes article HTML again.
-- App: Content Security Policy (`app/index.html`), `no-referrer`, external links `noopener noreferrer`. Site pages: CSP header from the nginx config (hashed inline scripts). API: `Content-Security-Policy: default-src 'none'`, `nosniff`, no cookies (CORS `*` is intentional).
+- App: no third-party scripts (no analytics), Content Security Policy (`app/index.html`), `no-referrer`, external links `noopener noreferrer`. Site pages: CSP header from the nginx config (hashed inline scripts). API: `Content-Security-Policy: default-src 'none'`, `nosniff`, no cookies (CORS `*` is intentional).
 - Logs: the example configs log `/api/` requests without the query string – feed and article URLs are never stored next to an IP.
 - Files in `var/` are never served (nginx `location` rules).
 
@@ -235,6 +235,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - Markup: `data-i18n="key"` (innerHTML), `data-i18n-attr="aria-label:key;title:key"`.
 - Site: one static URL per language (`/` = `en`, `x-default`), no redirects – except `thanks.html` (Stripe return URL): saved choice → browser language, in the page script and in nginx (`Accept-Language` map; `?lang=en` = explicit English). *Open News* on a language page carries that language into the app. App (`/app/`, one URL for all languages): saved choice (`localStorage` `nr.lang`) → browser languages → English.
 - The site header shows all section links (second, scrollable row on narrow screens); animations stop by themselves and can be paused (footer).
+- Site events (`track.js`, one delegated listener; values are fixed and language-neutral, never visitor input): *Open app*, *Self-host*, *GitHub*, *Support*, *API docs* `{position, lang}` · *FAQ* `{question}` · *Collector strategy* `{strategy}` · *Language* `{from, to}` · *Theme* `{mode}` · *Animations* `{state}` · *Not found* (404 page, via `<body data-track-view>`).
 - Voice: app and site user sections are friendly and plain (informal *du/tu*; French *vous*), no jargon; *Collector*/*Self-host* sections and this README are technical.
 - New language: copy both `en.json` files to `xx.json`; add `xx` to `LANGS` in `app/js/i18n.js`, `LANGS`/`LOCALES` in `tools/build-i18n.php`, the inline list in `thanks.html`, the language map in `nginx.conf.example` / `wharf.conf.example` and `LANGS` in `tests/e2e/site.spec.mjs`; add an `<option>` to the site switcher; run the build.
 
@@ -246,7 +247,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - Favicons: `favicon.svg` follows the OS colour scheme; PNG fallbacks `favicon-32.png` (light) / `favicon-32-dark.png` (dark) via `media` (root and `app/icons/`).
 - Fonts (self-hosted, `app/fonts/`): Newsreader (titles), Source Sans 3 (text).
 - Operator-specific parts of news-reader.app – remove or replace them on your own instance:
-  - Pirsch Analytics: `<script id="pianjs" … data-disable-query data-strip-anchor data-disable-outbound-links>` in every HTML page and `https://api.pirsch.io` in the CSPs (`app/index.html`, nginx configs). Keep those attributes if you keep Pirsch – pairing links carry the key in the URL.
+  - Pirsch Analytics – site pages only, the app loads no analytics: `<script id="pianjs" … data-disable-query data-strip-anchor data-disable-outbound-links>` in every site page, `https://api.pirsch.io` in the nginx CSP, and `track.js` (site events, see below). Keep those attributes if you keep Pirsch.
   - The Stripe *pay what you want* link (`buy.stripe.com`, site footer + `final.support`).
   - `privacy.html` / `imprint.html` / `thanks.html` (legal texts of kreativ-anders; `privacy.*`, `imprint.*`, `thanks.*` in `i18n/*.json`).
   - Domain references: `--site` of the build, `robots.txt` (sitemap URL), `llms.txt`, og:image / JSON-LD URLs in `index.html`, `NR_USER_AGENT`.
