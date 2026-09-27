@@ -4,7 +4,8 @@ declare(strict_types=1);
 // INFO: file-based fixed-window rate limiter – one file per (bucket, client), named
 //       sha256(salt|bucket|client). The client address itself is never written to disk.
 //       Returns 0 if allowed, otherwise the seconds until the window resets. $client defaults to nr_rate_client().
-function nr_rate_hit(string $bucket, array $rule, ?string $client = null): int
+//       $peek only checks the limit without counting.
+function nr_rate_hit(string $bucket, array $rule, ?string $client = null, bool $peek = false): int
 {
     [$max, $window] = $rule;
     if ($max <= 0) return 0;
@@ -28,6 +29,7 @@ function nr_rate_hit(string $bucket, array $rule, ?string $client = null): int
         if ($n >= $max) {
             return max(1, $start + $window - $now);
         }
+        if ($peek) return 0;
         ftruncate($fh, 0);
         rewind($fh);
         fwrite($fh, $start . ' ' . ($n + 1));
@@ -53,11 +55,11 @@ function nr_rate_client(int $prefixBytes = 8): string
 }
 
 // INFO: per /64 first, then per /48 for IPv6 clients – one /48 holds 65536 /64s
-function nr_rate_hit_wide(string $bucket, array $rule, array $rule48): int
+function nr_rate_hit_wide(string $bucket, array $rule, array $rule48, bool $peek = false): int
 {
-    if ($wait = nr_rate_hit($bucket, $rule)) return $wait;
+    if ($wait = nr_rate_hit($bucket, $rule, null, $peek)) return $wait;
     $wide = nr_rate_client(6);
-    return str_ends_with($wide, '/48') ? nr_rate_hit($bucket . '/48', $rule48, $wide) : 0;
+    return str_ends_with($wide, '/48') ? nr_rate_hit($bucket . '/48', $rule48, $wide, $peek) : 0;
 }
 
 function nr_rate_salt(): string

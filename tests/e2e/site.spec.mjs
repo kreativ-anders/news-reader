@@ -155,6 +155,15 @@ test('theme toggle is named by its action and says the current mode', async ({ p
   await expect(btn).toHaveAccessibleName('Design wechseln – aktuell hell');
 });
 
+test('FAQ explains updates and points to the version in the app settings', async ({ page }) => {
+  await page.goto(API() + '/de/');
+  const q = page.locator('#faq details', { has: page.locator('summary', { hasText: 'Wie aktualisiere ich News?' }) });
+  await q.locator('summary').click();
+  await expect(q.locator('p')).toContainText('Einstellungen');
+  const settings = await (await page.request.get(API() + '/app/i18n/de.json')).json();
+  expect(settings.settings.title).toBe('Einstellungen');
+});
+
 test('site events carry fixed values only', async ({ page }) => {
   await page.addInitScript(() => {
     window.__events = [];

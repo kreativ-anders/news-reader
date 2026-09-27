@@ -99,8 +99,9 @@ if ($cached !== null) {
     }
 }
 
-// INFO: only upstream fetches count against the rate limit
-if ($wait = nr_rate_hit_wide('collect', NR_RATE_COLLECT_MISS, NR_RATE_COLLECT_MISS_48)) {
+// INFO: only upstream fetches count against the rate limit – checked here, counted once a slot is held,
+//       so BUSY answers and waiting for another request's result cost nothing
+if ($wait = nr_rate_hit_wide('collect', NR_RATE_COLLECT_MISS, NR_RATE_COLLECT_MISS_48, true)) {
     if ($usable) nr_serve_cached($cached, 'STALE', $limit);
     nr_rate_reject($wait);
 }
@@ -122,6 +123,11 @@ if (!nr_upstream_slot()) {
     nr_unlock($lock);
     if ($usable) nr_serve_cached($cached, 'STALE', $limit);
     nr_busy('Too many upstream fetches are running – try again shortly.');
+}
+if ($wait = nr_rate_hit_wide('collect', NR_RATE_COLLECT_MISS, NR_RATE_COLLECT_MISS_48)) {
+    nr_unlock($lock);
+    if ($usable) nr_serve_cached($cached, 'STALE', $limit);
+    nr_rate_reject($wait);
 }
 
 // INFO: conditional refresh of a known feed – 304 keeps the entries, anything else goes through nr_resolve()

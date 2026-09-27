@@ -65,6 +65,25 @@ test('refresh all (r) keeps entries and states', async ({ app, page }) => {
   await expect(app.badge('later')).toHaveText('1');
 });
 
+test('refresh: at most two fetches at once; a feed turned away with BUSY is fetched again after Retry-After', async ({ app, page }) => {
+  await app.open();
+  for (const f of ['rdf.xml', 'atom.xml', 'rss.xml']) await app.follow(`${FX()}/feeds/${f}`);
+  let open = 0, most = 0, atom = 0;
+  await page.route('**/api/collect?**', async (route) => {
+    if (decodeURIComponent(route.request().url()).includes('/feeds/atom.xml') && !atom++) {
+      return route.fulfill({ status: 503, headers: { 'Retry-After': '1' }, contentType: 'application/json', body: JSON.stringify({ error: { code: 'BUSY', message: 'Too many upstream fetches are running – try again shortly.' } }) });
+    }
+    most = Math.max(most, ++open);
+    await new Promise((r) => setTimeout(r, 200));
+    try { await route.continue(); } finally { open--; }
+  });
+  await page.keyboard.press('r');
+  await expect(app.toast()).toContainText('1 feed will be checked again');
+  await expect.poll(() => atom, { timeout: 10_000 }).toBe(2);
+  await expect.poll(async () => Object.values(await app.kv('fetchState')).every((st) => st.ok && !st.retry)).toBe(true);
+  expect(most).toBeLessThanOrEqual(2);
+});
+
 test('OPML export and import', async ({ app, page, browser }) => {
   await app.open();
   await app.follow(`${FX()}/feeds/rdf.xml`);

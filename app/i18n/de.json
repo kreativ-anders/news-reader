@@ -49,6 +49,8 @@
     "details": "Details",
     "refresh_failed_one": "{n} Feed ließ sich nicht aktualisieren",
     "refresh_failed_other": "{n} Feeds ließen sich nicht aktualisieren",
+    "retry_later_one": "{n} Feed wird in ein paar Minuten noch mal geprüft",
+    "retry_later_other": "{n} Feeds werden in ein paar Minuten noch mal geprüft",
     "link_copied": "Kopplungslink kopiert",
     "server_deleted": "Serverkopie gelöscht",
     "server_saved": "Server gespeichert",

@@ -164,6 +164,8 @@
     "news_is_a_calm": "Ein ruhiger Feed-Reader für Smartphone und Desktop-Browser. Jeder neue Beitrag landet im Eingang und bekommt eine Entscheidung: jetzt lesen, später oder nicht interessiert. News lässt sich wie eine App installieren, funktioniert offline und ist kostenlos und Open Source.",
     "how_install": "Wie installiere ich News?",
     "how_install_text": "Direkt aus dem Browser – kein App Store, kein Konto. In Chrome, Edge oder Samsung Internet nutzt du den Button „News installieren“ auf dieser Seite. Auf iPhone und iPad öffnest du News in Safari, tippst auf Teilen und wählst Zum Home-Bildschirm. Auf dem Mac öffnest du News in Safari und wählst Ablage › Zum Dock hinzufügen. Installiert bekommt News ein eigenes Symbol und Fenster und funktioniert offline.",
+    "how_update": "Wie aktualisiere ich News?",
+    "how_update_text": "Gar nicht – News ist eine Web-App und aktualisiert sich selbst. Bei jedem Öffnen sucht sie im Hintergrund nach einer neuen Version und nutzt sie ab dem nächsten Start. Du willst sie sofort? Schließ News ganz und öffne es neu. In den Einstellungen siehst du direkt unter der Überschrift, welche Version du hast.",
     "how_is_it_different": "Was unterscheidet News von anderen Feed-Readern?",
     "no_account_no_ads": "Kein Konto, keine Werbung, kein Tracking und kein Algorithmus, der entscheidet, was du siehst. Dein Lesestand liegt auf deinen Geräten, der Sync ist Ende-zu-Ende-verschlüsselt, und du kannst das Ganze auf deinem eigenen Server betreiben.",
     "does_news_use_ai": "Steckt in News eine KI?",

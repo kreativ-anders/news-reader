@@ -10,10 +10,13 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.4';
+const VERSION = '0.7.5';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
+// INFO: matches the Collector's NR_UPSTREAM_PER_CLIENT – more parallel fetches only earn BUSY answers
+const FETCH_PARALLEL = 2;
+const RETRY_MAX_MS = 15 * 60 * 1000;
 // INFO: a new subscription shows the last 14 days, but at least the newest 3 entries
 const INITIAL_WINDOW_MS = 14 * 864e5;
 const INITIAL_MIN_ENTRIES = 3;
@@ -290,32 +293,55 @@ async function refreshFeed(feed, force = false) {
 }
 
 // INFO: the Collector caches a source for hours – an automatic refresh skips feeds whose copy cannot have changed yet
-const due = (f, now) => { const st = S.fetch.get(f.id); return !st?.ok || !st.next || st.next <= now; };
+//       and feeds it turned away until their retry time
+const waiting = (f, now) => S.fetch.get(f.id)?.retry > now;
+const due = (f, now) => { const st = S.fetch.get(f.id); return !st?.ok ? !waiting(f, now) : !st.next || st.next <= now; };
+
+// INFO: BUSY / RATE_LIMITED mean "not now" – the feed is fetched again after Retry-After, backing off on repeats.
+//       retry and tries live in fetchState (per device, not synced)
+const NOT_NOW = ['RATE_LIMITED', 'BUSY'];
+function failState(id, e, now = Date.now()) {
+  const { retry, tries, ...prev } = S.fetch.get(id) || {};
+  const st = { ...prev, at: now, ok: false, error: e.message, code: e.code, next: 0 };
+  if (!NOT_NOW.includes(e.code)) return st;
+  const n = retry ? (tries || 0) + 1 : 0;
+  return { ...st, tries: n, retry: now + Math.min(RETRY_MAX_MS, Math.max(1, e.retryAfter || 60) * 1000 * 2 ** n) };
+}
+
+let retryTimer = 0;
+function scheduleRetry() {
+  clearTimeout(retryTimer);
+  const at = Math.min(...liveFeeds().map((f) => (S.fetch.get(f.id)?.ok === false && S.fetch.get(f.id).retry) || Infinity));
+  if (at !== Infinity) retryTimer = setTimeout(() => refreshAll(), Math.max(0, at - Date.now()) + 1000);
+}
 
 async function refreshAll(force = false) {
   const all = liveFeeds(), now = Date.now();
   if (!all.length) { if (force) showToast(t('toast.no_feeds')); return; }
-  const feeds = force ? all : all.filter((f) => due(f, now));
+  const feeds = all.filter((f) => (force ? !waiting(f, now) : due(f, now)));
   if (S.refreshing) return;
   const before = inboxEntries('').length;
   S.refreshing = true;
   $('#refreshBtn').setAttribute('aria-busy', 'true');
-  const results = await pool(feeds, 4, (f) => refreshFeed(f, force));
+  const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force));
   let failed = 0;
   results.forEach((r, i) => {
     if (!r.ok) {
-      failed++;
-      S.fetch.set(feeds[i].id, { ...(S.fetch.get(feeds[i].id) || {}), at: Date.now(), ok: false, error: r.error.message, code: r.error.code, next: 0 });
+      S.fetch.set(feeds[i].id, failState(feeds[i].id, r.error));
+      if (!NOT_NOW.includes(r.error.code)) failed++;
     }
   });
+  const later = all.filter((f) => waiting(f, Date.now())).length;
   S.lastRefresh = Date.now();
   await db.kvSet('lastRefresh', S.lastRefresh);
   await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   S.refreshing = false;
   $('#refreshBtn').removeAttribute('aria-busy');
-  render();
+  if (force) render(); else renderSoft();
+  scheduleRetry();
   if (feeds.length && failed === feeds.length && results[0]?.error?.code === 'UNREACHABLE') showToast(results[0].error.message);
   else if (failed) showToast(t('toast.refresh_failed', { n: failed }), () => go('feeds'), t('toast.details'));
+  else if (force && later) showToast(t('toast.retry_later', { n: later }));
   else if (force) { const n = Math.max(0, inboxEntries('').length - before); showToast(n ? t('toast.checked', { n }) : t('toast.checked_none')); }
 }
 
@@ -365,7 +391,7 @@ async function addFeed(input, { quiet = false, title = '', folder = '', later = 
   await db.putEntries(fresh);
   fresh.forEach((e) => S.entries.set(e.id, e));
   S.fetch.set(id, res.pending
-    ? { at: now, ok: false, error: res.pending.message, code: res.pending.code, next: 0 }
+    ? failState(id, res.pending, now)
     : { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, ...sourceMeta(res) });
   if (persist) await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   if (!quiet) render();
@@ -1312,8 +1338,9 @@ async function feedAction(act, id) {
   const f = S.feeds.get(id);
   if (!f) return;
   if (act === 'refresh') {
-    try { await refreshFeed(f, true); } catch (e) { S.fetch.set(id, { ...(S.fetch.get(id) || {}), at: Date.now(), ok: false, error: e.message, code: e.code, next: 0 }); }
+    try { await refreshFeed(f, true); } catch (e) { S.fetch.set(id, failState(id, e)); }
     await db.kvSet('fetchState', Object.fromEntries(S.fetch));
+    scheduleRetry();
     return render();
   }
   if (act === 'folder') return askFolder(f);
@@ -1369,12 +1396,13 @@ async function importOpml(file) {
   if (!todo.length) { out.textContent = t('feeds.import_nothing', { n: list.length }); return; }
   let done = 0;
   out.textContent = t('feeds.importing', { n: todo.length });
-  const results = await pool(todo, 3, async (f) => {
+  const results = await pool(todo, FETCH_PARALLEL, async (f) => {
     const r = await addFeed(f.url, { quiet: true, title: f.title, folder: f.folder, later: true, persist: false });
     out.textContent = t('feeds.importing_progress', { done: ++done, n: todo.length });
     return r;
   });
   await db.kvSet('fetchState', Object.fromEntries(S.fetch));
+  scheduleRetry();
   const failed = results.map((r, i) => (r.ok ? null : `${todo[i].url}: ${errText(r.error.code, r.error.message)}`)).filter(Boolean);
   render();
   const o = $('#opmlResult');
@@ -1700,9 +1728,11 @@ sync.addEventListener('remote', async (e) => {
   renderSoft();
   if (e.detail.some((r) => r.kind === 'item')) scheduleOffline();
   if (newFeeds.length) {
-    await pool(newFeeds, 4, (r) => refreshFeed(S.feeds.get(r.id)));
+    const results = await pool(newFeeds, FETCH_PARALLEL, (r) => refreshFeed(S.feeds.get(r.id)));
+    results.forEach((r, i) => { if (!r.ok) S.fetch.set(newFeeds[i].id, failState(newFeeds[i].id, r.error)); });
     await db.kvSet('fetchState', Object.fromEntries(S.fetch));
     renderSoft();
+    scheduleRetry();
   }
 });
 
@@ -1756,5 +1786,6 @@ function swipeTip() {
   offline.load().then(() => { renderSoft(); scheduleOffline(3000); }, () => {});
   sync.run();
   if (Date.now() - S.lastRefresh > AUTO_REFRESH_MS) refreshAll();
+  else scheduleRetry();
   swipeTip();
 })();

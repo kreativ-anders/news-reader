@@ -45,7 +45,7 @@ index.html …    project site (+ generated de/ fr/ it/ es/), docs/api/, i18n/
 | `NR_LOW_SPEED_LIMIT` / `NR_LOW_SPEED_TIME` (slow sources are aborted) | 1 KB/s / 10 s |
 | `NR_TIME_BUDGET` (wall clock for all upstream requests of one API call) | 60 s |
 | `NR_UPSTREAM_SLOTS` (all clients) / `NR_UPSTREAM_PER_CLIENT` – upstream fetches at once, more → `503 BUSY` | 8 / 2 |
-| `NR_RATE_COLLECT_MISS` / `NR_RATE_ARTICLE_MISS` (upstream fetches; cache hits are free) | 60 / 30 per 10 min |
+| `NR_RATE_COLLECT_MISS` / `NR_RATE_ARTICLE_MISS` (upstream fetches; cache hits and `503 BUSY` answers are free) | 60 / 30 per 10 min |
 | `NR_RATE_*_48` (IPv6 only, per /48) | collect 240 · article 120 per 10 min · sync create 20 per day |
 | `NR_RATE_SYNC` / `NR_RATE_SYNC_CREATE` / `NR_RATE_SYNC_CREATE_ALL` (all clients) | 300 per 10 min / 5 per day / 500 per day |
 | `NR_SYNC_MAX_BYTES` / `NR_SYNC_EXPIRE_DAYS` / `NR_SYNC_MAX_VAULTS` | 1 MB / 180 / 10 000 |
@@ -100,6 +100,7 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 **Feeds**
 - Adding: address field (`https://` optional), Web Share Target (installed app on Android), bookmarklet (`?add=<url>`), OPML import/export. A page and its feed resolve to the same feed – following both is refused.
 - OPML import adds feeds even when the server is busy or unreachable; the next refresh fills them.
+- The app fetches at most 2 feeds at once (`NR_UPSTREAM_PER_CLIENT`). A feed answered with `BUSY` / `RATE_LIMITED` is fetched again automatically after `Retry-After` (doubling on repeats, at most 15 min; `retry`/`tries` in `fetchState`); *Refresh* skips it until then and says so.
 - The Collector strategy is shown in plain words (*feed*, *sitemap*, *from the page*); the technical name is in the tooltip. Server errors are shown as friendly text in the app language (raw message in the tooltip).
 
 **Refresh and sync timers** – feeds refresh automatically every 30 min while visible, skipping feeds whose server copy cannot have changed yet (`meta.nextRefreshAfter`); *Refresh* / `r` forces all and reports the number of new posts. Sync runs every 5 min while visible and 20 s after a local change (immediately when the tab is hidden or closed).
@@ -156,7 +157,7 @@ Resolution order (`strategy`):
 |---|---|
 | 400 | `INVALID_URL`, `UNSUPPORTED_URL`, `FORBIDDEN_HOST`, `DNS_FAILED` |
 | 422 | `NO_FEED_DETECTED`, `PLATFORM_NO_FEED` (+ `rule`), `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR` (+ `upstreamStatus`), `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS` – body may carry `tried[]` |
-| 429 | `RATE_LIMITED` + `Retry-After` (a stale copy is served instead if one exists) |
+| 429 | `RATE_LIMITED` + `Retry-After` (a stale copy is served instead if one exists); only fetches that actually reach the source count |
 | 503 | `BUSY` + `Retry-After` – another request fetches the same URL for longer than `NR_LOCK_WAIT`, or all upstream slots are taken |
 | 404 / 405 / 500 | `NOT_FOUND` (unknown endpoint) / `METHOD_NOT_ALLOWED` / `SERVER_MISCONFIGURED` |
 

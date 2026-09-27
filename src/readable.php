@@ -379,7 +379,8 @@ function nr_article_handle(): never
     $usable = $cached !== null && !isset($cached['data']['error']);
     $stale = $usable ? $cached : null;
 
-    if ($wait = nr_rate_hit_wide('article', NR_RATE_ARTICLE_MISS, NR_RATE_ARTICLE_MISS_48)) {
+    // INFO: like the Collector – checked here, counted once a slot is held
+    if ($wait = nr_rate_hit_wide('article', NR_RATE_ARTICLE_MISS, NR_RATE_ARTICLE_MISS_48, true)) {
         if ($usable) nr_article_serve($cached, 'STALE');
         nr_rate_reject($wait);
     }
@@ -400,6 +401,11 @@ function nr_article_handle(): never
         nr_unlock($lock);
         if ($stale) nr_article_serve($stale, 'STALE');
         nr_busy('Too many upstream fetches are running – try again shortly.');
+    }
+    if ($wait = nr_rate_hit_wide('article', NR_RATE_ARTICLE_MISS, NR_RATE_ARTICLE_MISS_48)) {
+        nr_unlock($lock);
+        if ($stale) nr_article_serve($stale, 'STALE');
+        nr_rate_reject($wait);
     }
 
     $page = nr_fetch($url, NR_ACCEPT_HTML);

@@ -49,7 +49,7 @@ export async function fetchFeed(url, { refresh = false, timeout = 60000, t = (k)
     try { body = await res.json(); } catch { /* INFO: not JSON – handled below */ }
     if (!res.ok || !body || body.error) {
       const e = body?.error;
-      throw Object.assign(new Error(e?.message || t('err.http', { status: res.status })), { code: e?.code || 'HTTP_' + res.status });
+      throw Object.assign(new Error(e?.message || t('err.http', { status: res.status })), { code: e?.code || 'HTTP_' + res.status, retryAfter: Number(res.headers.get('retry-after')) || 0 });
     }
     return body;
   } catch (err) {

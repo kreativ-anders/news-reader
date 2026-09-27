@@ -49,6 +49,8 @@
     "details": "Détails",
     "refresh_failed_one": "{n} flux n’a pas pu être actualisé",
     "refresh_failed_other": "{n} flux n’ont pas pu être actualisés",
+    "retry_later_one": "{n} flux sera vérifié à nouveau dans quelques minutes",
+    "retry_later_other": "{n} flux seront vérifiés à nouveau dans quelques minutes",
     "link_copied": "Lien d’association copié",
     "server_deleted": "Copie serveur supprimée",
     "server_saved": "Serveur enregistré",
