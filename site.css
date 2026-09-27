@@ -17,7 +17,8 @@ h3,h4{font-family:var(--serif);font-weight:600}
 h1{font-size:clamp(2.6rem,6vw,4.4rem);line-height:1.02}
 h2{font-size:clamp(1.9rem,3.6vw,2.8rem);line-height:1.1;margin-bottom:14px}
 h3{font-size:1.28rem;line-height:1.25;margin-bottom:8px}
-.accent{color:var(--brand-ink);font-style:normal}
+/* INFO: the accent is marked by an orange underline in both themes – in light the text itself stays ink (orange text fails 4.5:1 on white) */
+.accent{color:var(--brand-ink);font-style:normal;text-decoration:underline var(--brand);text-decoration-thickness:.09em;text-underline-offset:.13em}
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--brand-ink);margin-bottom:16px}
 .eyebrow::before{content:"";width:8px;height:8px;border-radius:var(--radius);background:var(--brand)}
 .lead{font-size:1.22rem;color:var(--muted);margin:22px 0 34px;max-width:33em}

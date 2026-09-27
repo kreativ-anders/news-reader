@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.1';
+const VERSION = '0.7.2';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -88,12 +88,6 @@ const ICON = {
   doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
 };
 ICON.view.reading = ICON.now; ICON.view.later = ICON.later; ICON.view.done = ICON.done;
-
-function strategyVar(strategy) {
-  if (!strategy) return 'var(--brand)';
-  const k = strategy.startsWith('html') ? 'html' : strategy;
-  return ['rule', 'direct', 'discovered', 'guessed', 'html', 'sitemap'].includes(k) ? `var(--v-${k})` : 'var(--brand)';
-}
 
 let rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'short' });
 function ago(ts) {
@@ -779,7 +773,7 @@ function renderItems() {
 }
 
 // INFO: how the Collector found the posts, in plain words – the technical strategy name stays in the tooltip
-const strategyPill = (s) => `<span class="pill" style="--v:${strategyVar(s)}" title="${esc(s)}">${t('feeds.strategy_' + (s === 'sitemap' ? 'sitemap' : s.startsWith('html') ? 'page' : 'feed'))}</span>`;
+const strategyPill = (s) => `<span class="pill" title="${esc(s)}">${t('feeds.strategy_' + (s === 'sitemap' ? 'sitemap' : s.startsWith('html') ? 'page' : 'feed'))}</span>`;
 
 function renderFeeds() {
   const feeds = liveFeeds();
@@ -928,7 +922,7 @@ async function renderDevices() {
     const name = esc(d.data.name);
     const since = d.data.since ? new Date(d.data.since).toLocaleDateString(t.lang, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
     return `<div class="feedrow device" data-device="${esc(d.id)}">
-      <div class="t">${name}${self ? ` <span class="pill" style="--v:var(--v-direct)">${t('devices.this')}</span>` : ''}</div>
+      <div class="t">${name}${self ? ` <span class="pill">${t('devices.this')}</span>` : ''}</div>
       ${d.data.platform !== d.data.name ? `<div class="u">${esc(d.data.platform)}</div>` : ''}
       <div class="st"><span>${self ? t('devices.active_now') : t('devices.seen', { when: ago(d.data.seen) })}</span>${since ? `<span>· ${t('devices.since', { date: since })}</span>` : ''}${d.pubChanged ? `<span class="err">· ${t('devices.key_changed')}</span>` : ''}</div>
       <div class="ops">

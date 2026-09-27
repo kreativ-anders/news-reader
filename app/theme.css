@@ -1,6 +1,8 @@
 /* INFO: white-label – the one file to change for your own brand (plus app/icons/*, app/manifest.webmanifest
  *       and the name in app/index.html). Shared by the landing page and the app; html[data-theme] overrides the OS.
  *       Palette "3b.1 – kreativ-anders": brand #FFA500 · ink #000000 · paper #FFFFFF · graphite #292929.
+ *       One accent only: --brand is a surface (with --on-brand text) in both themes. As text or icon it reaches
+ *       4.5:1 only on dark ground, so --brand-ink is the brand in dark and plain ink in light – no second orange.
  *       --line / --line-strong: dividers / control borders (≥ 3:1, WCAG 1.4.11); --faint is still text (≥ 4.5:1 on --card) */
 
 @font-face{font-family:"Newsreader";src:url("fonts/newsreader.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap}
@@ -14,10 +16,7 @@
   --bg:#292929; --bg2:#222222; --card:#323232; --card2:#3A3A3A; --line:#454545; --line-strong:#858585;
   --fg:#FFFFFF; --muted:#BDBDBD; --faint:#A3A3A3; --logo:#FFFFFF;
   --brand-ink:#FFA500; --glow:rgba(255,165,0,.12);
-  --ok:#7cc88a; --warn:#FFC04B; --err:#ff7a66;
-
-  /* INFO: Collector strategy colours – derivations of the brand colour */
-  --v-direct:#FFA500; --v-discovered:#FFC54D; --v-guessed:#FFE196; --v-html:#FA7C20; --v-sitemap:#EAB084; --v-rule:#FFB020; --on-v:#000000;
+  --ok:#7cc88a; --warn:#FFA500; --err:#ff7a66;
 
   /* INFO: 0 = straight editorial lines; e.g. 8px for a rounder white-label look */
   --radius:0;
@@ -31,18 +30,16 @@
   :root:not([data-theme="dark"]){
     --bg:#FFFFFF; --bg2:#F5F5F4; --card:#FFFFFF; --card2:#FAFAF9; --line:#E3E3E1; --line-strong:#858585;
     --fg:#000000; --muted:#5A5A5A; --faint:#6E6E6E; --logo:#000000;
-    --brand-ink:#A35A00; --glow:rgba(255,165,0,.10);
-    --ok:#2f7d3e; --warn:#A35A00; --err:#b23a22;
-    --v-direct:#A25C01; --v-discovered:#986603; --v-guessed:#8A6E1F; --v-html:#AF4803; --v-sitemap:#8C5C41; --v-rule:#9A5F00; --on-v:#fff;
+    --brand-ink:#000000; --glow:rgba(255,165,0,.10);
+    --ok:#2f7d3e; --warn:#000000; --err:#b23a22;
     color-scheme:light;
   }
 }
 :root[data-theme="light"]{
     --bg:#FFFFFF; --bg2:#F5F5F4; --card:#FFFFFF; --card2:#FAFAF9; --line:#E3E3E1; --line-strong:#858585;
     --fg:#000000; --muted:#5A5A5A; --faint:#6E6E6E; --logo:#000000;
-    --brand-ink:#A35A00; --glow:rgba(255,165,0,.10);
-    --ok:#2f7d3e; --warn:#A35A00; --err:#b23a22;
-    --v-direct:#A25C01; --v-discovered:#986603; --v-guessed:#8A6E1F; --v-html:#AF4803; --v-sitemap:#8C5C41; --v-rule:#9A5F00; --on-v:#fff;
+    --brand-ink:#000000; --glow:rgba(255,165,0,.10);
+    --ok:#2f7d3e; --warn:#000000; --err:#b23a22;
     color-scheme:light;
 }
 

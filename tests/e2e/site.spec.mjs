@@ -164,3 +164,42 @@ test('site events carry fixed values only', async ({ page }) => {
   await expect.poll(events).toContainEqual(['FAQ', { lang: 'de', question: 'what_is_news' }]);
   expect((await events()).find(([n]) => n === 'Theme')[1].mode).toMatch(/^(auto|light|dark)$/);
 });
+
+// INFO: one accent – orange is a surface (with dark text) in both themes, never text or icon on a light ground
+for (const scheme of ['light', 'dark']) {
+  test(`one accent colour, readable in ${scheme}`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto(API() + '/');
+    const found = await page.evaluate(() => {
+      const rgb = (c) => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+      const lum = ([r, g, b]) => [r, g, b].map((v) => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const bg = lum(rgb(getComputedStyle(document.body).backgroundColor));
+      const colours = new Set(), low = [];
+      for (const el of document.querySelectorAll('main *')) {
+        const cs = getComputedStyle(el);
+        const [r, g, b] = rgb(cs.color);
+        // warm, saturated text colours = the accent family
+        if (r - b > 90 && r >= g) colours.add(cs.color);
+        const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+        const onPage = cs.backgroundColor === 'rgba(0, 0, 0, 0)' && !el.closest('.vconsole,.terminal,.btn,.pill,.d-nav em,.vnum,.vtrack');
+        if (own && onPage && r - b > 90) {
+          const l = lum([r, g, b]), ratio = (Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05);
+          if (ratio < 4.5) low.push(`${el.className || el.tagName}: ${ratio.toFixed(2)}`);
+        }
+      }
+      return { colours: [...colours], low };
+    });
+    expect(found.colours.length).toBeLessThanOrEqual(1);
+    expect(found.low).toEqual([]);
+  });
+}
+
+test('the hero preview mirrors the app: day group, teasers, five tabs', async ({ page }) => {
+  await page.goto(API() + '/de/');
+  const d = page.locator('.device');
+  await expect(d.locator('.d-day')).toContainText('Heute');
+  await expect(d.locator('.d-card p')).toHaveCount(3);
+  await expect(d.locator('.d-nav > span')).toHaveCount(5);
+  await expect(d.locator('.d-sync')).toContainText('Synchron');
+});

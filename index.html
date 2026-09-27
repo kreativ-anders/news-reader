@@ -211,36 +211,44 @@
     .hero-note{margin-top:22px;font-size:.92rem;color:var(--muted)}
     @media (max-width:900px){.hero-grid{grid-template-columns:1fr}.hero{padding:56px 0 56px}}
 
-    /* app mockup */
-    .device{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:0 24px 60px rgba(0,0,0,.28);max-width:420px;justify-self:end;width:100%}
+    /* app mockup – the app's phone layout (app/app.css) at a smaller scale; neutral source icons, one accent */
+    .device{position:relative;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 24px 60px rgba(0,0,0,.28);max-width:400px;justify-self:end;width:100%;overflow:hidden}
     @media (max-width:900px){.device{justify-self:start}}
-    .d-top{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 14px;border-bottom:1px solid var(--line)}
+    .device .ic{flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .device i,.device em{font-style:normal}
+    .d-top{display:flex;align-items:center;justify-content:space-between;gap:8px;height:52px;padding:0 12px;border-bottom:1px solid var(--line)}
     .d-brand{display:flex;align-items:center;gap:8px;font:600 1.15rem var(--serif)}
     .d-brand svg{width:26px;height:26px}
-    .d-sync{display:inline-flex;align-items:center;gap:7px;font-size:.74rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:var(--radius);padding:4px 10px;background:var(--card)}
-    .d-sync i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
-    .d-sync svg{width:12px;height:12px}
-    .d-head{display:flex;align-items:baseline;justify-content:space-between;padding:16px 6px 10px}
-    .d-head b{font:600 1.45rem var(--serif)}
-    .d-head span{font-size:.78rem;color:var(--muted)}
-    .d-list{list-style:none;padding:0;display:grid;gap:10px}
-    .d-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px 8px}
-    .d-meta{display:flex;gap:7px;align-items:center;font-size:.72rem;color:var(--muted)}
-    .d-meta::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--v,var(--brand))}
-    .d-card h4{font:600 1.02rem/1.3 var(--serif);margin:5px 0 8px}
-    .d-acts{display:flex;gap:2px;font-size:.74rem;font-weight:700;color:var(--muted)}
-    .d-acts i,.d-nav i{font-style:normal}
-    .d-sync em{font-style:normal}
-    .d-acts span{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:var(--radius)}
-    .d-acts span:first-child{color:var(--brand-ink)}
-    .d-acts span:last-child{margin-left:auto}
-    .d-acts svg{width:13px;height:13px}
+    .d-tools{display:flex;align-items:center;gap:12px;min-width:0;color:var(--muted)}
+    .d-tools .ic{width:18px;height:18px}
+    .d-sync{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;font-weight:600;white-space:nowrap}
+    .d-sync .ic{color:var(--ok)}
+    .d-body{padding:14px 12px 6px}
+    .d-head b{display:block;font:600 1.5rem/1.15 var(--serif);letter-spacing:-.015em}
+    .d-head span{font-size:.8rem;color:var(--muted)}
+    .d-day{display:flex;align-items:baseline;gap:7px;margin-top:12px;padding:8px 6px 5px;border-bottom:1px solid var(--line-strong);font:700 .66rem var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .d-day b{font-weight:600;color:var(--faint)}
+    .d-list{list-style:none;padding:0}
+    .d-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;padding:8px 6px 10px;border-bottom:1px solid var(--line);background:var(--bg)}
+    .d-meta{display:flex;align-items:center;gap:5px;min-width:0;min-height:26px;font-size:.7rem;color:var(--muted);white-space:nowrap}
+    .d-meta b{font-weight:650;overflow:hidden;text-overflow:ellipsis}
+    .d-meta>i{color:var(--faint)}
+    .d-fi{flex:none;display:grid;place-items:center;width:14px;height:14px;border-radius:3px;background:var(--muted);color:var(--bg)}
+    .d-fi .ic{width:10px;height:10px;stroke-width:3}
+    .d-acts{display:flex;align-items:center;gap:2px;font-size:.72rem;font-weight:650;color:var(--muted)}
+    .d-acts>span{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 5px}
+    .d-acts>span:first-child{color:var(--brand-ink)}
+    .d-acts .ic{width:14px;height:14px}
+    .d-card h4{grid-column:1/-1;font:600 1rem/1.3 var(--serif);margin:1px 0 3px}
+    .d-card p{grid-column:1/-1;font-size:.78rem;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .d-card.go{animation:triage 9s ease-in-out 3}
     @keyframes triage{0%,62%{opacity:1;transform:none}70%{opacity:0;transform:translateX(46px)}72%,80%{opacity:0;transform:translateX(-10px)}90%,100%{opacity:1;transform:none}}
-    .d-nav{display:flex;justify-content:space-around;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:.68rem;font-weight:700;color:var(--muted)}
-    .d-nav span{display:flex;flex-direction:column;align-items:center;gap:3px}
-    .d-nav span.on{color:var(--brand-ink)}
-    .d-nav svg{width:17px;height:17px}
+    .d-nav{display:flex;margin-top:auto;padding:0 4px 8px;border-top:1px solid var(--line);font-size:.62rem;font-weight:600;color:var(--muted)}
+    .d-nav span{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:8px;text-align:center}
+    .d-nav .on{color:var(--brand-ink);box-shadow:inset 0 2px 0 var(--brand-ink)}
+    .d-nav .ic{width:18px;height:18px}
+    .d-nav em{position:absolute;top:5px;left:calc(50% + 6px);padding:0 5px;font:700 .58rem/1.5 var(--font);font-variant-numeric:tabular-nums;background:var(--brand);color:var(--on-brand)}
+    @media (max-width:480px){.d-acts>span:first-child i,.d-sync em{display:none}}
 
     /* triage flow */
     .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:s;list-style:none;padding:0}
@@ -277,19 +285,19 @@
     .vtabs{list-style:none;padding:0}
     .vtab button{all:unset;box-sizing:border-box;position:relative;overflow:hidden;display:grid;grid-template-columns:44px 1fr;gap:14px;width:100%;padding:14px 16px;border-radius:var(--radius);cursor:pointer;border:1px solid transparent;transition:background .25s,border-color .25s}
     .vtab button:hover{background:color-mix(in srgb,var(--card) 60%,transparent)}
-    .vtab button[aria-selected="true"]{background:var(--card);border-color:color-mix(in srgb,var(--v) 45%,var(--line))}
-    .vtab button:focus-visible{outline:2px solid var(--v)}
-    .vnum{width:44px;height:44px;border-radius:var(--radius);display:grid;place-items:center;color:var(--v);background:color-mix(in srgb,var(--v) 10%,transparent);transition:all .25s}
+    .vtab button[aria-selected="true"]{background:var(--card);border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}
+    .vtab button:focus-visible{outline:2px solid var(--brand-ink)}
+    .vnum{width:44px;height:44px;border-radius:var(--radius);display:grid;place-items:center;color:var(--brand-ink);background:color-mix(in srgb,var(--brand) 13%,transparent);transition:all .25s}
     .vnum svg{width:20px;height:20px}
-    [aria-selected="true"] .vnum{background:var(--v);color:var(--on-v)}
+    [aria-selected="true"] .vnum{background:var(--brand);color:var(--on-brand)}
     .vname{display:block;font:600 1.2rem/1.25 var(--serif)}
-    .vname small{font:600 .74rem var(--mono);color:var(--v);margin-left:6px}
+    .vname small{font:600 .74rem var(--mono);color:var(--muted);margin-left:6px}
     .vdesc{display:block;color:var(--muted);font-size:.93rem;margin-top:2px}
-    .vbar{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--v)}
+    .vbar{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--brand)}
     .vtab .run .vbar{animation:vbar var(--vdur,5.5s) linear forwards}
     @keyframes vbar{to{width:100%}}
     .vfall{font:12px var(--mono);color:var(--muted);padding:2px 0 2px 38px}
-    .vconsole{--v-rule:#FFB020;--v-direct:#FFA500;--v-discovered:#FFC54D;--v-guessed:#FFE196;--v-html:#FA7C20;--v-sitemap:#EAB084;--on-v:#000000;position:sticky;top:96px;background:#1C1C1C;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+    .vconsole{position:sticky;top:96px;background:#1C1C1C;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25)}
     .vhead{display:flex;align-items:center;gap:6px;padding:12px 16px;border-bottom:1px solid #333333;font:12px var(--mono);color:#8a8a8a}
     .vhead i{width:11px;height:11px;border-radius:50%;background:#4a4a4a}
     .vhead span{margin-left:auto}
@@ -297,18 +305,18 @@
     .vin{word-break:break-all}
     .vk{color:#8a8a8a;margin-right:4px}
     .vurl{color:#fff}
-    .caret{display:inline-block;width:8px;height:1.1em;vertical-align:-3px;background:var(--v);margin-left:2px;animation:blink 1s steps(1) 8}
+    .caret{display:inline-block;width:8px;height:1.1em;vertical-align:-3px;background:var(--brand);margin-left:2px;animation:blink 1s steps(1) 8}
     @keyframes blink{50%{opacity:0}}
     .vstat{margin:14px 0 12px;color:#bdbdbd;font-family:var(--font);font-size:.96rem}
-    .pill{display:inline-block;font:700 .74rem var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:3px 10px;border-radius:var(--radius);background:var(--v);color:var(--on-v);margin-right:8px}
+    .pill{display:inline-block;font:700 .74rem var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:3px 10px;border-radius:var(--radius);background:var(--brand);color:var(--on-brand);margin-right:8px}
     .vjson{font:inherit;overflow-x:auto;padding:0}
-    .jc{color:#8a8a8a;font-style:italic}.jk{color:#cfcfcf}.js{color:#9fd49f}.jn{color:#FFC04B}.jv{color:var(--v);font-weight:700}
+    .jc{color:#8a8a8a;font-style:italic}.jk{color:#bdbdbd}.js,.jn{color:#fff}.jv{color:var(--brand);font-weight:700}
     .js-on .vpanel .vstat,.js-on .vpanel .vjson{opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
     .js-on .vpanel.done .vstat{opacity:1;transform:none}
     .js-on .vpanel.done .vjson{opacity:1;transform:none;transition-delay:.12s}
     .vtrack{display:flex;gap:6px;padding:14px 22px 18px;border-top:1px solid #333333}
     .vtrack span{flex:1;text-align:center;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:#9a9a9a;padding:6px 0;border-radius:var(--radius);background:#262626;transition:all .25s}
-    .vtrack span.on{color:var(--on-v);background:var(--v)}
+    .vtrack span.on{color:var(--on-brand);background:var(--brand)}
     .vtrack span.tried{color:#9a9a9a;background:none;text-decoration:line-through}
     @media (max-width:880px){.variants-grid{grid-template-columns:1fr;gap:24px}.vconsole{position:relative;top:0;order:-1}.vpanel{min-height:250px}}
     @media (max-width:480px){.vpanel{padding:18px 16px 8px;font-size:13px}.vtrack{padding:12px 16px 16px}.vtrack span{font-size:9.5px}}
@@ -327,7 +335,7 @@
     .terminal .bar i{width:11px;height:11px;border-radius:50%;background:#4a4a4a}
     .terminal .bar span{margin-left:auto;font:12px var(--mono);color:#8a8a8a}
     .terminal pre{padding:20px;overflow-x:auto;font:13.5px/1.75 var(--mono);color:#ececec}
-    .terminal .p{color:#FFB733;user-select:none}
+    .terminal .p{color:var(--brand);user-select:none}
     .terminal .c{color:#8a8a8a}
     .req{margin-top:18px;color:var(--muted);font-size:.95rem}
     .sov{list-style:none;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:40px}
@@ -400,25 +408,29 @@
           <p class="hero-note" data-i18n="hero.free_amp_open_source">Free &amp; open source · installs like an app · works offline</p>
         </div>
 
-        <div class="device" role="img" data-i18n-attr="aria-label:hero.device_label" aria-label="The News app: an inbox with three posts, each with the buttons read now, later and not interested, and the sync status ‘Synced’">
+        <div class="device" role="img" data-i18n-attr="aria-label:hero.device_label" aria-label="The News app: the inbox with today’s posts – each with source, time, title and teaser, and the buttons read now, later and not interested – plus the sync status ‘Synced’">
           <div class="d-top" aria-hidden="true">
             <span class="d-brand"><svg class="nr-mark" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="i" x="8" y="8" width="48" height="48" rx="6" stroke-width="4"/><rect class="f" x="16" y="16" width="32" height="7" rx="1.5"/><path class="i" d="M40.5 30.5H46.5M40.5 38.5H46.5M40.5 46.5H43.5" stroke-width="3"/><path class="r" d="M19 37.5A7.5 7.5 0 0 1 26.5 45M19 31A14 14 0 0 1 33 45" stroke-width="4"/><circle class="d" cx="19" cy="45" r="3"/></svg>News</span>
-            <span class="d-sync"><i></i><em data-i18n="hero.synced">Synced</em> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+            <span class="d-tools"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="d-sync"><svg class="ic" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5a4.25 4.25 0 0 1-.5 8.5z"/><path d="m9.5 13 2 2 3.5-3.5"/></svg><em data-i18n="hero.synced">Synced 09:41</em></span><svg class="ic" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></span>
           </div>
-          <div class="d-head" aria-hidden="true"><b data-i18n="hero.inbox">Inbox</b><span data-i18n="hero.new_count">12 new</span></div>
-          <ol class="d-list" aria-hidden="true">
-            <li class="d-card go" style="--v:var(--v-direct)"><div class="d-meta" data-i18n="hero.the_verge_12_min">The Verge · 12 min</div><h4 data-i18n="hero.the_quiet_comeback_of">The quiet comeback of RSS in 2026</h4>
-              <div class="d-acts"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.read_now">Read now</i></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><i data-i18n="hero.later">Later</i></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg><i data-i18n="hero.not_interested">Not interested</i></span></div></li>
-            <li class="d-card" style="--v:var(--v-html)"><div class="d-meta" data-i18n="hero.city_council_1_h">City council · 1 h</div><h4 data-i18n="hero.new_cycle_lanes_along">New cycle lanes along the river from October</h4>
-              <div class="d-acts"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.read_now">Read now</i></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><i data-i18n="hero.later">Later</i></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg><i data-i18n="hero.not_interested">Not interested</i></span></div></li>
-            <li class="d-card" style="--v:var(--v-discovered)"><div class="d-meta" data-i18n="hero.research_blog_3_h">Research blog · 3 h</div><h4 data-i18n="hero.measuring_the_energy_cost">Measuring the energy cost of a single web request</h4>
-              <div class="d-acts"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.read_now">Read now</i></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><i data-i18n="hero.later">Later</i></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg><i data-i18n="hero.not_interested">Not interested</i></span></div></li>
-          </ol>
+          <div class="d-body" aria-hidden="true">
+            <div class="d-head"><b data-i18n="hero.inbox">Inbox</b><span data-i18n="hero.inbox_line">12 new · 3 sorted today</span></div>
+            <div class="d-day"><span data-i18n="hero.today">Today</span><b>3</b></div>
+            <ol class="d-list">
+            <li class="d-card go"><span class="d-meta"><span class="d-fi"><svg class="ic" viewBox="0 0 24 24"><path d="M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14"/><circle cx="6" cy="18" r="1"/></svg></span><b>The Verge</b><i>·</i><span data-i18n="hero.ago_1">12 min. ago</span></span><span class="d-acts"><span><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.read_now">Read now</i></span><span><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span><span><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span></span>
+              <h4 data-i18n="hero.the_quiet_comeback_of">The quiet comeback of RSS in 2026</h4><p data-i18n="hero.sum_1">More people are turning back to feeds: no algorithm, no lock-in – just the sources they chose themselves.</p></li>
+            <li class="d-card"><span class="d-meta"><span class="d-fi"><svg class="ic" viewBox="0 0 24 24"><path d="M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14"/><circle cx="6" cy="18" r="1"/></svg></span><b data-i18n="hero.src_2">City council</b><i>·</i><span data-i18n="hero.ago_2">1 hr. ago</span></span><span class="d-acts"><span><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.read_now">Read now</i></span><span><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span><span><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span></span>
+              <h4 data-i18n="hero.new_cycle_lanes_along">New cycle lanes along the river from October</h4><p data-i18n="hero.sum_2">The city is building a protected bike path along the whole riverbank. Work starts in October and should be done by spring.</p></li>
+            <li class="d-card"><span class="d-meta"><span class="d-fi"><svg class="ic" viewBox="0 0 24 24"><path d="M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14"/><circle cx="6" cy="18" r="1"/></svg></span><b data-i18n="hero.src_3">Research blog</b><i>·</i><span data-i18n="hero.ago_3">3 hr. ago</span></span><span class="d-acts"><span><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.read_now">Read now</i></span><span><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span><span><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></span></span>
+              <h4 data-i18n="hero.measuring_the_energy_cost">Measuring the energy cost of a single web request</h4><p data-i18n="hero.sum_3">We measured what one page view really costs – from the data centre to the phone – and where most of the energy goes.</p></li>
+            </ol>
+          </div>
           <div class="d-nav" aria-hidden="true">
-            <span class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><i data-i18n="hero.inbox">Inbox</i></span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.read_now">Read now</i></span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><i data-i18n="hero.later">Later</i></span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><i data-i18n="hero.done">Done</i></span>
+            <span class="on"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><i data-i18n="hero.inbox">Inbox</i><em>12</em></span>
+            <span><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><i data-i18n="hero.nav_read_now">Read now</i></span>
+            <span><svg class="ic" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><i data-i18n="hero.later">Later</i></span>
+            <span><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><i data-i18n="hero.done">Done</i></span>
+            <span><svg class="ic" viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg><i data-i18n="hero.feeds">Feeds</i></span>
           </div>
         </div>
       </div>
@@ -543,7 +555,7 @@
         </div>
         <div class="variants-grid">
           <ol class="vtabs" role="tablist" aria-label="Resolution variants" data-i18n-attr="aria-label:collector.variants_label" aria-orientation="vertical">
-            <li class="vtab" role="presentation" style="--v:var(--v-rule)">
+            <li class="vtab" role="presentation">
               <button role="tab" id="vt-rule" aria-controls="vp-rule" aria-selected="true" tabindex="0">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11M4 17h7"/><path d="M15 4l3 3-3 3M11 14l3 3-3 3"/><circle cx="19" cy="17" r="1.5"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.rule_platform_rules">Rule <small>known platforms</small></span><span class="vdesc" data-i18n="collector.rule_desc">Medium, YouTube, Reddit, GitHub, Mastodon &amp; co.: known page URLs map straight to the platform's native feed – without loading the (often bot-protected) page.</span></span>
@@ -551,7 +563,7 @@
               </button>
             </li>
             <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nothing? fall back ↓</li>
-            <li class="vtab" role="presentation" style="--v:var(--v-direct)">
+            <li class="vtab" role="presentation">
               <button role="tab" id="vt-direct" aria-controls="vp-direct" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.direct_rss_rdf_atom">Direct <small>RSS · RDF · Atom</small></span><span class="vdesc" data-i18n="collector.the_url_already_is">The URL already is a feed. Parsed as-is – the fastest and most precise path.</span></span>
@@ -559,7 +571,7 @@
               </button>
             </li>
             <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nothing? fall back ↓</li>
-            <li class="vtab" role="presentation" style="--v:var(--v-discovered)">
+            <li class="vtab" role="presentation">
               <button role="tab" id="vt-discovered" aria-controls="vp-discovered" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.discovered_lt_link_rel">Discovered <small>&lt;link rel&gt;</small></span><span class="vdesc" data-i18n="collector.the_page_declares_its">The page declares its feed – via &lt;link rel="alternate"&gt; or a visible …/rss.xml link. The Collector follows it.</span></span>
@@ -567,7 +579,7 @@
               </button>
             </li>
             <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nothing? fall back ↓</li>
-            <li class="vtab" role="presentation" style="--v:var(--v-guessed)">
+            <li class="vtab" role="presentation">
               <button role="tab" id="vt-guessed" aria-controls="vp-guessed" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".6"/><circle cx="12" cy="12" r="9"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.guessed_common_paths">Guessed <small>common paths</small></span><span class="vdesc" data-i18n="collector.nothing_declared_the_collector">Nothing declared? The Collector probes the usual suspects: /feed, /rss.xml, /feed.xml, /atom.xml, /index.xml …</span></span>
@@ -575,7 +587,7 @@
               </button>
             </li>
             <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nothing? fall back ↓</li>
-            <li class="vtab" role="presentation" style="--v:var(--v-sitemap)">
+            <li class="vtab" role="presentation">
               <button role="tab" id="vt-sitemap" aria-controls="vp-sitemap" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v8M6.5 12h11v4"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.sitemap_robots_txt_sitemap">Sitemap <small>robots.txt → sitemap.xml</small></span><span class="vdesc" data-i18n="collector.sitemap_desc">Still no feed? The sitemap, found via robots.txt and filtered to the requested path – used when its entries carry dates. Titles come from the page where possible.</span></span>
@@ -583,7 +595,7 @@
               </button>
             </li>
             <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nothing? fall back ↓</li>
-            <li class="vtab" role="presentation" style="--v:var(--v-html)">
+            <li class="vtab" role="presentation">
               <button role="tab" id="vt-html" aria-controls="vp-html" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6M14 4l-4 16"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.html_json_ld_article">HTML <small>JSON-LD · article · links</small></span><span class="vdesc" data-i18n="collector.html_desc">Last resort: entries are extracted from the page itself – JSON-LD, &lt;article&gt; elements or links below the requested path.</span></span>
@@ -593,7 +605,7 @@
           </ol>
           <div class="vconsole">
             <div class="vhead" aria-hidden="true"><i></i><i></i><i></i><span>collector · response</span></div>
-          <div class="vpanel" role="tabpanel" id="vp-rule" aria-labelledby="vt-rule" style="--v:var(--v-rule)">
+          <div class="vpanel" role="tabpanel" id="vp-rule" aria-labelledby="vt-rule">
             <p class="vin"><span class="vk">GET</span> /api/collect?url=<span class="vurl" data-url="https://medium.com/@someone">https://medium.com/@someone</span><span class="caret" aria-hidden="true"></span></p>
             <p class="vstat" data-i18n="collector.rule_feed_mapped"><span class="pill">rule</span> Page URL mapped to the native feed</p>
 <pre class="vjson"><code>{
@@ -606,7 +618,7 @@
   <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">10</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
 }</code></pre>
           </div>
-          <div class="vpanel" role="tabpanel" id="vp-direct" aria-labelledby="vt-direct" style="--v:var(--v-direct)" hidden>
+          <div class="vpanel" role="tabpanel" id="vp-direct" aria-labelledby="vt-direct" hidden>
             <p class="vin"><span class="vk">GET</span> /api/collect?url=<span class="vurl" data-url="https://example.com/feed.xml">https://example.com/feed.xml</span><span class="caret" aria-hidden="true"></span></p>
             <p class="vstat" data-i18n="collector.direct_url_is_a"><span class="pill">direct</span> URL is a native feed</p>
 <pre class="vjson"><code>{
@@ -619,7 +631,7 @@
   <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">30</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
 }</code></pre>
           </div>
-          <div class="vpanel" role="tabpanel" id="vp-discovered" aria-labelledby="vt-discovered" style="--v:var(--v-discovered)" hidden>
+          <div class="vpanel" role="tabpanel" id="vp-discovered" aria-labelledby="vt-discovered" hidden>
             <p class="vin"><span class="vk">GET</span> /api/collect?url=<span class="vurl" data-url="https://example.com/blog">https://example.com/blog</span><span class="caret" aria-hidden="true"></span></p>
             <p class="vstat" data-i18n="collector.discovered_feed_declared_in"><span class="pill">discovered</span> Feed declared in the HTML</p>
 <pre class="vjson"><code>{
@@ -632,7 +644,7 @@
   <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">24</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
 }</code></pre>
           </div>
-          <div class="vpanel" role="tabpanel" id="vp-guessed" aria-labelledby="vt-guessed" style="--v:var(--v-guessed)" hidden>
+          <div class="vpanel" role="tabpanel" id="vp-guessed" aria-labelledby="vt-guessed" hidden>
             <p class="vin"><span class="vk">GET</span> /api/collect?url=<span class="vurl" data-url="https://example.com/news">https://example.com/news</span><span class="caret" aria-hidden="true"></span></p>
             <p class="vstat" data-i18n="collector.guessed_feed_found_at"><span class="pill">guessed</span> Feed found at a common path</p>
 <pre class="vjson"><code>{
@@ -645,7 +657,7 @@
   <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">20</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
 }</code></pre>
           </div>
-          <div class="vpanel" role="tabpanel" id="vp-sitemap" aria-labelledby="vt-sitemap" style="--v:var(--v-sitemap)" hidden>
+          <div class="vpanel" role="tabpanel" id="vp-sitemap" aria-labelledby="vt-sitemap" hidden>
             <p class="vin"><span class="vk">GET</span> /api/collect?url=<span class="vurl" data-url="https://example.com/insights">https://example.com/insights</span><span class="caret" aria-hidden="true"></span></p>
             <p class="vstat" data-i18n="collector.sitemap_entries_built_from"><span class="pill">sitemap</span> Entries built from the sitemap</p>
 <pre class="vjson"><code>{
@@ -658,7 +670,7 @@
   <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">50</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
 }</code></pre>
           </div>
-          <div class="vpanel" role="tabpanel" id="vp-html" aria-labelledby="vt-html" style="--v:var(--v-html)" hidden>
+          <div class="vpanel" role="tabpanel" id="vp-html" aria-labelledby="vt-html" hidden>
             <p class="vin"><span class="vk">GET</span> /api/collect?url=<span class="vurl" data-url="https://example.com/press">https://example.com/press</span><span class="caret" aria-hidden="true"></span></p>
             <p class="vstat" data-i18n="collector.html_article_entries_extracted"><span class="pill">html-article</span> Entries extracted from the page</p>
 <pre class="vjson"><code>{
@@ -671,7 +683,7 @@
   <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">12</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
 }</code></pre>
           </div>
-            <div class="vtrack" aria-hidden="true"><span style="--v:var(--v-rule)">rule</span><span style="--v:var(--v-direct)">direct</span><span style="--v:var(--v-discovered)">discovered</span><span style="--v:var(--v-guessed)">guessed</span><span style="--v:var(--v-sitemap)">sitemap</span><span style="--v:var(--v-html)">html</span></div>
+            <div class="vtrack" aria-hidden="true"><span>rule</span><span>direct</span><span>discovered</span><span>guessed</span><span>sitemap</span><span>html</span></div>
           </div>
         </div>
         <p class="collector-facts"><span><b>GET</b> <code>/api/collect?url=…</code></span><span data-i18n="collector.fact_cache"><b>24 h</b> shared cache per source</span><span data-i18n="collector.fact_ssrf"><b>SSRF-safe</b> – private hosts blocked, every redirect re-checked</span><span data-i18n="collector.fact_rate"><b>Rate limited</b> per client</span></p>
