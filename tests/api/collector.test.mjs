@@ -94,6 +94,7 @@ describe('errors', () => {
   it('upstream errors', async () => {
     assertError(await s.collect(s.fx.url + '/missing'), 422, 'UPSTREAM_HTTP_ERROR');
     assert.equal((await s.collect(s.fx.url + '/server-error')).json.error.upstreamStatus, 500);
+    assert.equal((await s.collect(s.fx.url + '/forbidden')).json.error.upstreamStatus, 403);
     assertError(await s.collect(s.fx.url + '/loop'), 422, 'TOO_MANY_REDIRECTS');
     assertError(await s.collect(s.fx.url + '/too-large'), 422, 'UPSTREAM_TOO_LARGE');
     assertError(await s.collect(s.fx.url + '/slow'), 422, 'UPSTREAM_FETCH_FAILED');

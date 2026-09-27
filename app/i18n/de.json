@@ -384,6 +384,7 @@
     "platform": "Diese Plattform bietet keine Feeds an – News kann ihr deshalb nicht folgen.",
     "dns": "Diese Adresse gibt es nicht – prüf sie auf Tippfehler.",
     "upstream": "Die Website antwortet gerade nicht. Versuch es später noch einmal.",
+    "blocked": "Diese Website lässt News ihren Feed nicht abrufen. Frag beim Betreiber nach oder probier eine andere Quelle.",
     "too_large": "Diese Seite ist zu groß zum Einlesen.",
     "redirects": "Die Website leitet endlos weiter – probier eine genauere Adresse.",
     "invalid": "Diese Art von Adresse kann News nicht öffnen.",

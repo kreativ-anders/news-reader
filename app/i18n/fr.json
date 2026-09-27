@@ -384,6 +384,7 @@
     "platform": "Cette plateforme ne propose pas de flux : News ne peut pas la suivre.",
     "dns": "Cette adresse n’existe pas – vérifiez l’orthographe.",
     "upstream": "Le site ne répond pas pour le moment. Réessayez plus tard.",
+    "blocked": "Ce site ne laisse pas News récupérer son flux. Demandez à son responsable de l’autoriser ou essayez une autre source.",
     "too_large": "Cette page est trop volumineuse pour être lue.",
     "redirects": "Le site redirige sans fin – essayez une adresse plus précise.",
     "invalid": "News ne peut pas ouvrir ce type d’adresse.",

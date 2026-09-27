@@ -23,6 +23,7 @@ $special = [
     '/loop'         => fn() => redirect('/loop'),
     '/to-private'   => fn() => redirect('http://10.0.0.1/feed.xml'),
     '/missing'      => fn() => status(404, 'not found'),
+    '/forbidden'    => fn() => status(403, 'forbidden'),
     '/server-error' => fn() => status(500, 'boom'),
     '/too-large'    => fn() => send('text/html', '<!doctype html><html><body>' . str_repeat('<p>large</p>', 500_000) . '</body></html>'),
     '/text.txt'     => fn() => send('text/plain', "just some text\n"),

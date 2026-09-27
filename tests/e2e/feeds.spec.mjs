@@ -35,6 +35,15 @@ test('errors are shown, not thrown', async ({ app, page }) => {
   await expect(page.locator('.feedrow')).toHaveCount(1);
 });
 
+test('a source that turns the collector away says so, not "try again later"', async ({ app, page }) => {
+  await app.open();
+  const err = (await app.follow(`${FX()}/forbidden`)).locator('.err');
+  await expect(err).toHaveText(/doesn’t let News fetch its feed/);
+  await expect(err).toHaveAttribute('title', /403/);
+  await expect(page.locator('#addUrl')).toHaveAttribute('aria-invalid', 'true');
+  await expect((await app.follow(`${FX()}/server-error`)).locator('.err')).toHaveText(/isn’t answering/);
+});
+
 test('refresh, rename and unfollow a feed', async ({ app, page }) => {
   await app.open();
   await app.follow(`${FX()}/feeds/rdf.xml`);

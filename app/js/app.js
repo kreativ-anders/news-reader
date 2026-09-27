@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.6';
+const VERSION = '0.7.7';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -150,12 +150,14 @@ const ERRC = {
   PAYLOAD_TOO_LARGE: 'sync_too_big', SERVER_MISCONFIGURED: 'misconfigured', NOT_AN_ARTICLE: 'no_article', NO_CONTENT: 'no_article',
 };
 // INFO: errors without a code (or TIMEOUT / UNREACHABLE / HTTP_nnn from feeds.js) already carry translated text
-function errText(code, message = '') {
+//       401/403 from the source means it turns the collector away (often a bot wall), so "try later" would not help
+function errText(code, message = '', status = 0) {
+  if (code === 'UPSTREAM_HTTP_ERROR' && (status === 401 || status === 403)) return t('errc.blocked');
   if (ERRC[code]) return t('errc.' + ERRC[code]);
   if (!code || code === 'TIMEOUT' || code === 'UNREACHABLE' || /^HTTP_/.test(code)) return message || t('errc.generic');
   return t('errc.generic');
 }
-const errHtml = (e) => `<span class="err" title="${esc(e.message || '')}">${esc(errText(e.code, e.message))}</span>`;
+const errHtml = (e) => `<span class="err" title="${esc(e.message || '')}">${esc(errText(e.code, e.message, e.status))}</span>`;
 
 async function loadAll() {
   S.feeds.clear(); S.items.clear(); S.entries.clear();
@@ -302,7 +304,7 @@ const due = (f, now) => { const st = S.fetch.get(f.id); return !st?.ok ? !waitin
 const NOT_NOW = ['RATE_LIMITED', 'BUSY'];
 function failState(id, e, now = Date.now()) {
   const { retry, tries, ...prev } = S.fetch.get(id) || {};
-  const st = { ...prev, at: now, ok: false, error: e.message, code: e.code, next: 0 };
+  const st = { ...prev, at: now, ok: false, error: e.message, code: e.code, status: e.status || 0, next: 0 };
   if (!NOT_NOW.includes(e.code)) return st;
   const n = retry ? (tries || 0) + 1 : 0;
   return { ...st, tries: n, retry: now + Math.min(RETRY_MAX_MS, Math.max(1, e.retryAfter || 60) * 1000 * 2 ** n) };
@@ -813,7 +815,7 @@ function renderFeeds() {
       <div class="t">${esc(feedTitle(f.id) || f.data.url)}</div>
       <div class="u">${esc(f.data.url)}</div>
       <div class="st">${st.strategy ? strategyPill(st.strategy) : ''}
-        <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err" title="${esc(st.error || '')}">· ${esc(errText(st.code, st.error))}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
+        <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err" title="${esc(st.error || '')}">· ${esc(errText(st.code, st.error, st.status))}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
       <div class="ops">
         <button class="icon-btn" type="button" data-feed-act="folder" title="${esc(t('feeds.folder'))}" aria-label="${esc(t('feeds.folder'))}: ${name}">${ICON.folder}</button>
         <button class="icon-btn" type="button" data-feed-act="refresh" title="${esc(t('feeds.refresh'))}" aria-label="${esc(t('feeds.refresh'))}: ${name}">${ICON.refresh}</button>
@@ -1404,7 +1406,7 @@ async function importOpml(file) {
   });
   await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   scheduleRetry();
-  const failed = results.map((r, i) => (r.ok ? null : `${todo[i].url}: ${errText(r.error.code, r.error.message)}`)).filter(Boolean);
+  const failed = results.map((r, i) => (r.ok ? null : `${todo[i].url}: ${errText(r.error.code, r.error.message, r.error.status)}`)).filter(Boolean);
   render();
   const o = $('#opmlResult');
   if (o) o.innerHTML = `${t('feeds.imported', { ok: todo.length - failed.length, n: todo.length })}${failed.length ? `<br><span class="err">${failed.map(esc).join('<br>')}</span>` : ''}`;

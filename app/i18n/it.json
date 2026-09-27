@@ -384,6 +384,7 @@
     "platform": "Questa piattaforma non offre feed, quindi News non può seguirla.",
     "dns": "Questo indirizzo non esiste – controlla che non ci siano errori.",
     "upstream": "Il sito non risponde al momento. Riprova più tardi.",
+    "blocked": "Questo sito non permette a News di leggere il suo feed. Chiedi a chi lo gestisce di consentirlo o prova un’altra fonte.",
     "too_large": "Questa pagina è troppo grande da leggere.",
     "redirects": "Il sito continua a reindirizzare – prova un indirizzo più preciso.",
     "invalid": "News non può aprire questo tipo di indirizzo.",
