@@ -203,3 +203,11 @@ test('the hero preview mirrors the app: day group, teasers, five tabs', async ({
   await expect(d.locator('.d-nav > span')).toHaveCount(5);
   await expect(d.locator('.d-sync')).toContainText('Synchron');
 });
+
+test('the preview shows the sync time the way the app formats it', async ({ page }) => {
+  for (const lang of LANGS) {
+    await page.goto(API() + (lang === 'en' ? '/' : `/${lang}/`));
+    const time = await page.evaluate((l) => new Date(2026, 8, 27, 9, 41).toLocaleTimeString(l, { hour: '2-digit', minute: '2-digit' }), lang);
+    await expect(page.locator('.d-sync em')).toHaveText(new RegExp(` ${time.replace(/\s/g, '\\s')}$`));
+  }
+});
