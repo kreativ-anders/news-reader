@@ -77,7 +77,7 @@ server {
   # execute only the front controller
   location = /api/index.php {
     try_files $uri =404;
-    fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+    fastcgi_pass unix:/run/php/php8.5-fpm.sock;
     include fastcgi_params;
     fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
     fastcgi_param DOCUMENT_ROOT   $realpath_root;

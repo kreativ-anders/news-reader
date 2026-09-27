@@ -152,7 +152,8 @@ export class Sync extends EventTarget {
       body: blob,
       headers: { 'Content-Type': 'application/octet-stream', ...(remoteEtag ? { 'If-Match': remoteEtag } : { 'If-None-Match': '*' }) },
     });
-    if (put.status === 412) {
+    // INFO: 410 = the location became a forward meanwhile – the next round follows it
+    if (put.status === 412 || put.status === 410) {
       await db.kvDel('etag');
       return false;
     }
@@ -234,7 +235,7 @@ export class Sync extends EventTarget {
         body: await encrypt(old.aes, { v: 1, at: now, envelopes }, MAGIC_FORWARD, AAD_FORWARD),
         headers: { 'Content-Type': 'application/octet-stream', 'If-Match': await db.kvGet('etag') },
       });
-      if (moved.status === 412) continue;
+      if (moved.status === 412 || moved.status === 410) continue;
       if (!moved.ok) throw await httpError(moved);
 
       await db.kvSet('vaultKey', newKey);
@@ -256,6 +257,8 @@ export class Sync extends EventTarget {
     await db.kvDel('deviceId');
     await db.kvDel('deviceKey');
     await db.outboxAll();
+    // INFO: the vault key lives in IndexedDB – ask the browser not to evict it under storage pressure
+    navigator.storage?.persist?.().catch(() => {});
     return this.run();
   }
 

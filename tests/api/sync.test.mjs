@@ -107,4 +107,22 @@ describe('key change forward', () => {
     const other = Buffer.concat([Buffer.from('NRX1'), Buffer.from([0]), randomBytes(12 + 64)]);
     assertError(await sync(t, { method: 'PUT', body: other, headers: { 'If-Match': moved.header('etag') } }), 400, 'INVALID_BODY');
   });
+
+  it('a forward is final – a removed device cannot replace or delete it', async () => {
+    const t = token();
+    const created = await sync(t, { method: 'PUT', body: blob(), headers: { 'If-None-Match': '*' } });
+    const forward = () => Buffer.concat([Buffer.from('NRF1'), Buffer.from([0]), randomBytes(12 + 64)]);
+    const moved = await sync(t, { method: 'PUT', body: forward(), headers: { 'If-Match': created.header('etag') } });
+    assert.equal(moved.status, 200, moved.text);
+    const etag = moved.header('etag');
+
+    assertError(await sync(t, { method: 'PUT', body: blob(), headers: { 'If-Match': etag } }), 410, 'FORWARDED');
+    assertError(await sync(t, { method: 'PUT', body: forward(), headers: { 'If-Match': etag } }), 410, 'FORWARDED');
+    assertError(await sync(t, { method: 'DELETE' }), 410, 'FORWARDED');
+    assertError(await sync(t, { method: 'DELETE', headers: { 'If-Match': etag } }), 410, 'FORWARDED');
+
+    const got = await sync(t);
+    assert.equal(got.status, 200);
+    assert.equal(got.header('etag'), etag, 'the forward is untouched');
+  });
 });

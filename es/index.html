@@ -171,7 +171,7 @@
                     "name": "¿Qué necesito para alojarlo?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "PHP 8.1+ con dom, libxml y mbstring (curl recomendado), un servidor web con HTTPS y una carpeta var/ con permiso de escritura. Sin servidor de base de datos, sin paso de build, sin procesos en segundo plano. Incluye una configuración de nginx."
+                        "text": "PHP 8.5+ con dom, libxml y mbstring (curl recomendado), un servidor web con HTTPS y una carpeta var/ con permiso de escritura. Sin servidor de base de datos, sin paso de build, sin procesos en segundo plano. Incluye una configuración de nginx."
                     }
                 },
                 {
@@ -690,7 +690,7 @@
           <ol class="steps">
             <li><h3 data-i18n="build.clone">Clonar</h3><p data-i18n="build.a_handful_of_php">Un puñado de archivos PHP y una web app estática. Sin servidor de base de datos, sin paso de build, sin contenedor.</p></li>
             <li><h3 data-i18n="build.rebrand">Personalizar</h3><p data-i18n="build.colours_and_fonts_live">Colores y fuentes están en <code>app/theme.css</code>. Cambia los iconos y el nombre de la app en el manifest – listo. Tus usuarios ven tu lector, no el nuestro.</p></li>
-            <li><h3 data-i18n="build.deploy">Desplegar</h3><p data-i18n="build.any_web_server_with">Cualquier servidor web con PHP 8.1+ y HTTPS. La configuración de nginx incluida bloquea todo salvo la app y la API.</p></li>
+            <li><h3 data-i18n="build.deploy">Desplegar</h3><p data-i18n="build.any_web_server_with">Cualquier servidor web con PHP 8.5+ y HTTPS. La configuración de nginx incluida bloquea todo salvo la app y la API.</p></li>
           </ol>
           <div>
             <div class="terminal" role="figure" aria-label="Installing News Reader">
@@ -706,7 +706,7 @@
 
 <span class="c"># open https://news.example.com/app/ – done</span></code></pre>
             </div>
-            <p class="req" data-i18n="build.requires_php_8_1">Requiere PHP 8.1+ con <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recomendado) y una carpeta <code>var/</code> con permiso de escritura. Eso es todo.</p>
+            <p class="req" data-i18n="build.requires_php">Requiere PHP 8.5+ con <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recomendado) y una carpeta <code>var/</code> con permiso de escritura. Eso es todo.</p>
           </div>
         </div>
         <ul class="sov" aria-label="Soberanía digital" data-i18n-attr="aria-label:build.sov_label">
@@ -732,7 +732,7 @@
           <details><summary data-i18n="faq.what_if_a_website">¿Y si una web no tiene feed RSS?</summary><p data-i18n="faq.news_can_still_follow">News puede seguirla igualmente. El Collector usa el sitemap de la web si lleva fechas y, si no, saca las entradas directamente de la página (JSON-LD, elementos article o enlaces bajo la ruta solicitada).</p></details>
           <details><summary data-i18n="faq.can_i_host_my">¿Puedo alojar mi propio News Reader con mi propia marca?</summary><p data-i18n="faq.yes_it_is_mit">Sí – tiene licencia MIT. Colores y fuentes están en un archivo de tema; el nombre y los iconos, en el manifest de la web app. Úsalo para ti, tu familia, tu equipo o tus lectores, en tu propio dominio.</p></details>
           <details><summary data-i18n="faq.for_organisations">¿Es News Reader adecuado para empresas e instituciones públicas?</summary><p data-i18n="faq.for_organisations_text">Sí. Lo ejecutas en tu propia infraestructura, así que todos los datos quedan bajo tu control y en tu jurisdicción. No hay cuentas de usuario, perfiles personales ni base de datos, la sincronización está cifrada de extremo a extremo y la licencia MIT significa sin costes por puesto y sin depender de un proveedor. Las fuentes internas en hosts privados se pueden permitir explícitamente.</p></details>
-          <details><summary data-i18n="faq.what_do_i_need">¿Qué necesito para alojarlo?</summary><p data-i18n="faq.php_8_1_with">PHP 8.1+ con dom, libxml y mbstring (curl recomendado), un servidor web con HTTPS y una carpeta var/ con permiso de escritura. Sin servidor de base de datos, sin paso de build, sin procesos en segundo plano. Incluye una configuración de nginx.</p></details>
+          <details><summary data-i18n="faq.what_do_i_need">¿Qué necesito para alojarlo?</summary><p data-i18n="faq.php_with">PHP 8.5+ con dom, libxml y mbstring (curl recomendado), un servidor web con HTTPS y una carpeta var/ con permiso de escritura. Sin servidor de base de datos, sin paso de build, sin procesos en segundo plano. Incluye una configuración de nginx.</p></details>
           <details><summary data-i18n="faq.can_i_switch">¿Puedo traer mis feeds de otro lector?</summary><p data-i18n="faq.yes_export_opml">Sí. Casi todos los lectores de feeds exportan tus suscripciones como archivo OPML – impórtalo en News en Feeds y listo. News también exporta OPML, así que eres libre de irte cuando quieras.</p></details>
         </div>
       </div>

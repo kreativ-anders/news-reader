@@ -77,6 +77,7 @@ function nr_sync_put(string $file): never
         $stored  = @file_get_contents($file);
         $exists  = $stored !== false;
         $current = $exists ? nr_sync_etag($stored) : null;
+        if ($exists) nr_sync_refuse_forwarded($stored);
 
         if ($ifNone === '*' && $exists) {
             header('ETag: ' . $current);
@@ -124,6 +125,7 @@ function nr_sync_delete(string $file): never
         if ($stored === false) {
             nr_error('NOT_FOUND', 'No vault stored for this key.', 404);
         }
+        nr_sync_refuse_forwarded($stored);
         $ifMatch = trim((string)($_SERVER['HTTP_IF_MATCH'] ?? ''));
         if ($ifMatch !== '' && !nr_sync_etag_matches($ifMatch, nr_sync_etag($stored))) {
             nr_error('CONFLICT', 'The vault was changed meanwhile.', 412);
@@ -135,6 +137,15 @@ function nr_sync_delete(string $file): never
     }
     http_response_code(204);
     exit;
+}
+
+// WARNING: a forward is final. Whoever still knows the old key (e.g. a removed device) could otherwise
+//          replace or delete it and keep devices that were offline during the key change on the old key.
+function nr_sync_refuse_forwarded(string $stored): void
+{
+    if (str_starts_with($stored, 'NRF1')) {
+        nr_error('FORWARDED', 'This vault moved to a new key – fetch it and follow the forward.', 410);
+    }
 }
 
 // INFO: 32 bytes base64url without padding (43 chars)

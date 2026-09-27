@@ -10,7 +10,9 @@ const KEEP = new Set(['later', 'reading']);
 const GRACE_MS = 864e5;                        // INFO: done/dismissed copies stay 1 day (undo, "read again")
 const RETRY_TRANSIENT_MS = 5 * 60 * 1000;
 const RETRY_PERMANENT_MS = 24 * 3600 * 1000;
-const TRANSIENT = new Set(['UNREACHABLE', 'TIMEOUT', 'RATE_LIMITED', 'HTTP_500', 'HTTP_502', 'HTTP_503', 'HTTP_504']);
+const TRANSIENT = new Set(['UNREACHABLE', 'TIMEOUT', 'RATE_LIMITED', 'BUSY', 'UPSTREAM_FETCH_FAILED', 'HTTP_500', 'HTTP_502', 'HTTP_503', 'HTTP_504']);
+// INFO: the source itself answered 5xx / 429 – worth a retry soon, unlike a 404
+const transient = (code) => TRANSIENT.has(code) || /^UPSTREAM_HTTP_(5\d\d|429)$/.test(code);
 
 export class OfflineStore extends EventTarget {
   constructor() {
@@ -59,7 +61,7 @@ export class OfflineStore extends EventTarget {
         const m = this.meta.get(r.id);
         if (!m) return true;
         if (m.ok) return false;
-        return now - m.triedAt > (TRANSIENT.has(m.code) ? RETRY_TRANSIENT_MS : RETRY_PERMANENT_MS);
+        return now - m.triedAt > (transient(m.code) ? RETRY_TRANSIENT_MS : RETRY_PERMANENT_MS);
       });
       if (!todo.length) return;
 
@@ -95,7 +97,9 @@ async function fetchArticle({ id, url, feedUrl }, timeout = 45000) {
     let body = null;
     try { body = await res.json(); } catch { /* INFO: not JSON – handled below */ }
     if (!res.ok || !body?.article) {
-      throw Object.assign(new Error(body?.error?.message || `HTTP ${res.status}`), { code: body?.error?.code || 'HTTP_' + res.status });
+      const e = body?.error;
+      const code = e?.code === 'UPSTREAM_HTTP_ERROR' && e.upstreamStatus ? `UPSTREAM_HTTP_${e.upstreamStatus}` : e?.code || 'HTTP_' + res.status;
+      throw Object.assign(new Error(e?.message || `HTTP ${res.status}`), { code });
     }
     const a = body.article;
     return {

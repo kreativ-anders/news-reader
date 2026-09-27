@@ -12,10 +12,10 @@ Project site: `index.html`, `privacy.html`, `imprint.html`, `thanks.html` + gene
 
 ## Setup
 
-- PHP 8.1+ with `dom`, `libxml`, `mbstring`; `curl` recommended (fallback: stream wrapper, needs `openssl` + `allow_url_fopen`). No database.
+- PHP 8.5+ with `dom`, `libxml`, `mbstring`; `curl` recommended (fallback: stream wrapper, needs `openssl` + `allow_url_fopen`). No database.
 - `var/` (`cache/`, `sync/`, `rate/`) writable by PHP.
 - nginx: `nginx.conf.example` (production) or `wharf.conf.example` (local). Both block `/src`, `/var`, `/tests`, `/tools`, dotfiles, config/doc files and `*.vault`.
-- HTTPS required for install, service worker, share target and WebCrypto (except `localhost`). Windows: OS certificate store is used (PHP 8.2+), else `NR_CA_BUNDLE` / `curl.cainfo`.
+- HTTPS required for install, service worker, share target and WebCrypto (except `localhost`). Windows: OS certificate store is used, else `NR_CA_BUNDLE` / `curl.cainfo`.
 - Behind a reverse proxy: configure nginx `real_ip`, otherwise rate limits see the proxy.
 - Settings: `src/config.php` (`NR_*` constants).
 
@@ -68,7 +68,8 @@ Resolution order (`strategy`):
 
 - `id` = sha256 of the GUID, else of the normalized URL. Feeds/sitemaps newest first; HTML keeps page order.
 - Header `X-Collector-Cache: HIT | MISS | STALE`.
-- Errors: 4xx + `{"error":{"code","message"}}` – `INVALID_URL`, `UNSUPPORTED_URL`, `FORBIDDEN_HOST`, `DNS_FAILED`, `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR`, `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS`, `NO_FEED_DETECTED`, `PLATFORM_NO_FEED`.
+- Errors: 4xx + `{"error":{"code","message"}}` – `INVALID_URL`, `UNSUPPORTED_URL`, `FORBIDDEN_HOST`, `DNS_FAILED`, `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR`, `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS`, `NO_FEED_DETECTED`, `PLATFORM_NO_FEED`; `503 BUSY` (+ `Retry-After`) when another request fetches the same URL for longer than `NR_LOCK_WAIT`.
+- Cached errors: `NO_FEED_DETECTED` / `PLATFORM_NO_FEED` for `NR_ERROR_TTL`, temporary upstream failures (`UPSTREAM_FETCH_FAILED`, HTTP 5xx/429) for `NR_TRANSIENT_ERROR_TTL`.
 
 ### Platform rules
 
@@ -101,8 +102,8 @@ vault key (32 random bytes, base64url; QR / app/#pair=<key>[&server=<url>])
 | Request | Semantics |
 |---|---|
 | `GET` | blob + `ETag`; `304` on `If-None-Match`; `404` if none |
-| `PUT` | `If-Match: "<etag>"` (update) or `If-None-Match: *` (create); `412` conflict, `428` no precondition |
-| `DELETE` | remove vault (`204`) |
+| `PUT` | `If-Match: "<etag>"` (update) or `If-None-Match: *` (create); `412` conflict, `428` no precondition, `410 FORWARDED` if the location holds a forward |
+| `DELETE` | remove vault (`204`); `410 FORWARDED` if the location holds a forward |
 
 - Auth `Authorization: Bearer <token>`; file `var/sync/<2 hex>/<sha256(token)>.vault`; atomic writes under a global `flock`.
 - Blob: `"NRS1"` · flags (bit 0 = gzip) · 12-byte IV · ciphertext (AAD `newsreader-sync-v1`). Plaintext `{v:1, at, records:[{kind,id,data,updatedAt}]}`; `feed` → `{url,title,since,d?}`, `item` → `{s,t,u,f,p}`, `device` → `{name,platform,since,seen,pub,r?}`. Forward after a key change: `"NRF1"` · flags · IV · ciphertext under the old key (AAD `newsreader-sync-v1 forward`), plaintext `{v:1, at, envelopes:[{id,epk,iv,ct}]}`.
@@ -110,7 +111,7 @@ vault key (32 random bytes, base64url; QR / app/#pair=<key>[&server=<url>])
 - Server sees: token hash, blob size, timestamps, client IP (web server log).
 - A pairing link is the key: joining a foreign link merges your data into that vault (and may switch the server). Only confirm links you created yourself.
 - Paired devices (*Settings → Paired devices*): every device keeps one encrypted `device` record (random id, editable name, platform, paired since, last active – refreshed at most hourly) with its ECDH P-256 public key; the private key is non-extractable and never leaves the device.
-- Removing a device (or *Change key*) rotates the vault key: full snapshot to the new location, then the old location is replaced (`If-Match`) by an `NRF1` forward holding the new key wrapped for every remaining device (ephemeral ECDH → HKDF-SHA256 → AES-GCM, device id bound in info and AAD). Remaining devices follow automatically; the removed device and stale pairing links find no envelope and unpair. The removed device keeps what it already downloaded. Forwards expire with the old vault (180 days after the last read).
+- Removing a device (or *Change key*) rotates the vault key: full snapshot to the new location, then the old location is replaced (`If-Match`) by an `NRF1` forward holding the new key wrapped for every remaining device (ephemeral ECDH → HKDF-SHA256 → AES-GCM, device id bound in info and AAD). Remaining devices follow automatically; the removed device and stale pairing links find no envelope and unpair. The removed device keeps what it already downloaded. A forward is final: the server refuses to replace or delete it (`410`), so a removed device that still knows the old key cannot plant its own forward or push offline devices back to the old location. Forwards expire with the old vault (180 days after the last read).
 - *Unpair this device* announces itself (`r:1`) before leaving.
 
 ## Configuration (`src/config.php`)
@@ -118,6 +119,7 @@ vault key (32 random bytes, base64url; QR / app/#pair=<key>[&server=<url>])
 | Setting | Default |
 |---|---|
 | `NR_CACHE_TTL` / `NR_STALE_TTL` (served while source is down) / `NR_ERROR_TTL` | 24 h / 7 d / 1 h |
+| `NR_TRANSIENT_ERROR_TTL` (timeouts, upstream 5xx/429) / `NR_LOCK_WAIT` | 2 min / 20 s |
 | `NR_REFRESH_MIN_AGE` (`refresh=1`) | 15 min |
 | `NR_ARTICLE_TTL` / `NR_ARTICLE_ERROR_TTL` | 7 d / 1 h |
 | `NR_RATE_COLLECT_MISS` / `NR_RATE_ARTICLE_MISS` (upstream fetches; cache hits free) | 60 / 30 per 10 min |
@@ -130,7 +132,7 @@ vault key (32 random bytes, base64url; QR / app/#pair=<key>[&server=<url>])
 | `NR_ALLOWED_PORTS` (upstream) | 80, 443, 8080, 8443 |
 | `NR_CACHE_GC_AGE` (cache files deleted after) | 14 d |
 
-Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 grouped per `/64`), `429` + `Retry-After`; a rate-limited Collector request gets the stale copy if one exists. A per-URL `flock` lets one request refresh a source; concurrent requests get the stale copy.
+Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 grouped per `/64`), `429` + `Retry-After`; a rate-limited Collector request gets the stale copy if one exists. A per-URL `flock` lets one request refresh a source; concurrent requests get the stale copy or wait at most `NR_LOCK_WAIT` (then `503 BUSY`). An article fetch that fails keeps and serves an existing copy.
 
 ## Security
 
@@ -174,7 +176,7 @@ Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 grouped per `/6
 | JS | `npm run test:js` | syntax, `feedId()` stability (sync format), OPML, translations, service-worker shell, manifests |
 | E2E | `npm run test:e2e` | Playwright/Chromium desktop + mobile: every view and language, item flow, keyboard, swipe, OPML, share target, two-device sync, offline reader, service worker, site pages and links – any JS exception or `console.error` fails |
 
-CI also lints all PHP on 8.1–8.4 (plus one run without ext-curl) and fails if the site pages, `de/ fr/ it/ es/`, the canonicals of `app/` and `docs/api/` or `sitemap.xml` were not regenerated. Local: PHP 8.1+, Node 22+, `npm ci && npx playwright install chromium && npm test`. Known bugs are `todo` tests (reported, not failing).
+CI runs on PHP 8.5, the minimum version (older versions get `SERVER_MISCONFIGURED` from the API), treats deprecations in the lint as errors, adds one run without ext-curl and fails if the site pages, `de/ fr/ it/ es/`, the canonicals of `app/` and `docs/api/` or `sitemap.xml` were not regenerated. Local: PHP 8.5+, Node 22+, `npm ci && npx playwright install chromium && npm test`. Known bugs are `todo` tests (reported, not failing).
 
 ## License
 

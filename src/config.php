@@ -9,6 +9,8 @@ const NR_CACHE_DIR          = NR_VAR_DIR . '/cache';
 const NR_CACHE_TTL          = 86400;      // INFO: seconds a feed is served from cache without contacting the source
 const NR_STALE_TTL          = 604800;     // INFO: seconds a stale feed may be served while the source is down
 const NR_ERROR_TTL          = 3600;       // INFO: seconds "no feed found" results are cached
+const NR_TRANSIENT_ERROR_TTL = 120;       // INFO: seconds temporary upstream failures (timeout, 5xx) are cached
+const NR_LOCK_WAIT          = 20;         // INFO: seconds a request waits for another one fetching the same URL
 const NR_REFRESH_MIN_AGE    = 900;        // INFO: ?refresh=1 is ignored for younger cache entries
 const NR_CACHE_GC_AGE       = 1209600;    // INFO: cache and lock files untouched this long are deleted
 const NR_MAX_ENTRIES        = 100;

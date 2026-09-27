@@ -1,6 +1,6 @@
 # News Reader
 
-> News is a calm, local-first RSS/Atom feed reader for phone and desktop (installable web app, works offline). Every entry gets one decision: read now, later or not interested. Devices sync end-to-end encrypted (AES-256-GCM) without an account or database. It ships with the Collector, a REST endpoint that turns any website – with or without an RSS feed – into normalized JSON entries. Open source (MIT), self-hostable and white-label; server side is plain PHP 8.1+, no build step.
+> News is a calm, local-first RSS/Atom feed reader for phone and desktop (installable web app, works offline). Every entry gets one decision: read now, later or not interested. Devices sync end-to-end encrypted (AES-256-GCM) without an account or database. It ships with the Collector, a REST endpoint that turns any website – with or without an RSS feed – into normalized JSON entries. Open source (MIT), self-hostable and white-label; server side is plain PHP 8.5+, no build step.
 
 Project by kreativ-anders (https://kreativ-anders.de). Planned home: https://news-reader.app/.
 
@@ -14,7 +14,7 @@ Key facts:
 - Migration: OPML import and export – works with virtually every other feed reader.
 - Digital sovereignty: run it on your own infrastructure (company, public sector, intranet); no accounts, no database, end-to-end encrypted sync, MIT license without per-seat fees; internal sources on private hosts can be enabled explicitly.
 - Languages: English (default), German, French, Italian, Spanish.
-- Hosting requirements: PHP 8.1+ with dom, libxml, mbstring (curl recommended), HTTPS, writable `var/`. No database server, no background workers. nginx config included.
+- Hosting requirements: PHP 8.5+ with dom, libxml, mbstring (curl recommended), HTTPS, writable `var/`. No database server, no background workers. nginx config included.
 
 ## Docs
 

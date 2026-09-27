@@ -170,7 +170,7 @@
                     "name": "What do I need to host it?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "PHP 8.1+ with dom, libxml and mbstring (curl recommended), a web server with HTTPS and a writable var/ folder. No database server, no build step, no background workers. An nginx config is included."
+                        "text": "PHP 8.5+ with dom, libxml and mbstring (curl recommended), a web server with HTTPS and a writable var/ folder. No database server, no build step, no background workers. An nginx config is included."
                     }
                 },
                 {
@@ -689,7 +689,7 @@
           <ol class="steps">
             <li><h3 data-i18n="build.clone">Clone</h3><p data-i18n="build.a_handful_of_php">A handful of PHP files and a static web app. No database server, no build step, no container.</p></li>
             <li><h3 data-i18n="build.rebrand">Rebrand</h3><p data-i18n="build.colours_and_fonts_live">Colours and fonts live in <code>app/theme.css</code>. Swap the icons and the app name in the manifest – done. Your users see your reader, not ours.</p></li>
-            <li><h3 data-i18n="build.deploy">Deploy</h3><p data-i18n="build.any_web_server_with">Any web server with PHP 8.1+ and HTTPS. The bundled nginx config blocks everything except the app and the API.</p></li>
+            <li><h3 data-i18n="build.deploy">Deploy</h3><p data-i18n="build.any_web_server_with">Any web server with PHP 8.5+ and HTTPS. The bundled nginx config blocks everything except the app and the API.</p></li>
           </ol>
           <div>
             <div class="terminal" role="figure" aria-label="Installing News Reader">
@@ -705,7 +705,7 @@
 
 <span class="c"># open https://news.example.com/app/ – done</span></code></pre>
             </div>
-            <p class="req" data-i18n="build.requires_php_8_1">Requires PHP 8.1+ with <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recommended) and a writable <code>var/</code>. That's it.</p>
+            <p class="req" data-i18n="build.requires_php">Requires PHP 8.5+ with <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recommended) and a writable <code>var/</code>. That's it.</p>
           </div>
         </div>
         <ul class="sov" aria-label="Digital sovereignty" data-i18n-attr="aria-label:build.sov_label">
@@ -731,7 +731,7 @@
           <details><summary data-i18n="faq.what_if_a_website">What if a website has no RSS feed?</summary><p data-i18n="faq.news_can_still_follow">News can still follow it. The Collector uses the site&#x27;s sitemap if it carries dates, and otherwise picks the posts straight from the page (JSON-LD, article elements or links below the requested path).</p></details>
           <details><summary data-i18n="faq.can_i_host_my">Can I host my own News Reader under my own brand?</summary><p data-i18n="faq.yes_it_is_mit">Yes – it is MIT-licensed. Colours and fonts live in one theme file, name and icons in the web app manifest. Run it for yourself, your family, your team or your readers, on your own domain.</p></details>
           <details><summary data-i18n="faq.for_organisations">Is News Reader suitable for companies and public institutions?</summary><p data-i18n="faq.for_organisations_text">Yes. You run it on your own infrastructure, so all data stays under your control and within your jurisdiction. There are no user accounts, no personal profiles and no database, sync data is end-to-end encrypted, and the MIT license means no per-seat fees and no dependency on a vendor. Internal sources on private hosts can be allowed explicitly.</p></details>
-          <details><summary data-i18n="faq.what_do_i_need">What do I need to host it?</summary><p data-i18n="faq.php_8_1_with">PHP 8.1+ with dom, libxml and mbstring (curl recommended), a web server with HTTPS and a writable var/ folder. No database server, no build step, no background workers. An nginx config is included.</p></details>
+          <details><summary data-i18n="faq.what_do_i_need">What do I need to host it?</summary><p data-i18n="faq.php_with">PHP 8.5+ with dom, libxml and mbstring (curl recommended), a web server with HTTPS and a writable var/ folder. No database server, no build step, no background workers. An nginx config is included.</p></details>
           <details><summary data-i18n="faq.can_i_switch">Can I bring my feeds from another reader?</summary><p data-i18n="faq.yes_export_opml">Yes. Almost every feed reader can export your subscriptions as an OPML file – import it in News under Feeds and you are done. News exports OPML too, so you are free to leave any time.</p></details>
         </div>
       </div>

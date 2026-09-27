@@ -43,7 +43,8 @@ export async function fetchFeed(url, { refresh = false, timeout = 60000, t = (k)
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
-    const res = await fetch(api.href, { signal: ctrl.signal });
+    // INFO: revalidate – the HTTP cache would otherwise keep serving an answer older than the last ?refresh=1
+    const res = await fetch(api.href, { signal: ctrl.signal, cache: 'no-cache' });
     let body = null;
     try { body = await res.json(); } catch { /* INFO: not JSON – handled below */ }
     if (!res.ok || !body || body.error) {

@@ -26,7 +26,10 @@ self.addEventListener('fetch', (e) => {
   const scope = new URL(self.registration.scope);
   if (req.method !== 'GET' || url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
 
-  // INFO: navigations (share target ?url=…, pairing #pair=…) get the app shell
+  // INFO: navigations to the app (share target ?url=…, pairing #pair=…) get the app shell. Other navigations
+  //       (e.g. a link to i18n/en.json) go to the network – cached as the shell they would replace the app.
+  const shell = url.pathname === scope.pathname || url.pathname === scope.pathname + 'index.html';
+  if (req.mode === 'navigate' && !shell) return;
   const key = req.mode === 'navigate' ? new Request(new URL('index.html', scope)) : req;
 
   // INFO: stale-while-revalidate – updates arrive with the next launch

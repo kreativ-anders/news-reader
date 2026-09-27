@@ -1,6 +1,6 @@
 <?php
 /**
- * Minimal test harness – no Composer, no PHPUnit, runs on any PHP 8.1+.
+ * Minimal test harness – no Composer, no PHPUnit, needs PHP 8.5+ (like the app).
  *
  *   php tests/php/run.php            all *-test.php files in this folder
  *   php tests/php/run.php parsers    only files whose name contains "parsers"
@@ -12,6 +12,11 @@ declare(strict_types=1);
 
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+
+if (PHP_VERSION_ID < 80500) {
+    fwrite(STDERR, 'PHP 8.5+ required, running ' . PHP_VERSION . PHP_EOL);
+    exit(1);
+}
 
 // Load the server code exactly like api/index.php does. Unit tests are pure: no network,
 // no files written (cache, sync and rate limits are covered by the API tests in tests/api/).

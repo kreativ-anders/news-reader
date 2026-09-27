@@ -36,17 +36,45 @@ function nr_cache_write(string $url, array $data, string $ns = ''): void
     if (random_int(1, 500) === 1) nr_cache_gc();
 }
 
-// INFO: per-URL lock so that concurrent requests do not hit the source in parallel;
-//       returns null if $wait is false and another process holds it
-function nr_lock(string $url, bool $wait, string $ns = '')
+// INFO: per-URL lock so that concurrent requests do not hit the source in parallel. Waits at most $wait
+//       seconds (0 = not at all) – a blocking flock() would tie up PHP workers for as long as a slow source
+//       takes, and that time does not count against max_execution_time.
+//       Returns the handle, false if another process holds it, null if no lock file can be created.
+function nr_lock(string $url, float $wait, string $ns = '')
 {
-    $fp = @fopen(nr_cache_path($url, 'lock', $ns), 'c');
+    $path = nr_cache_path($url, 'lock', $ns);
+    $fp = @fopen($path, 'c');
     if ($fp === false) return null;
-    if (!flock($fp, LOCK_EX | ($wait ? 0 : LOCK_NB))) {
-        fclose($fp);
-        return null;
+    $deadline = microtime(true) + $wait;
+    while (!flock($fp, LOCK_EX | LOCK_NB)) {
+        if (microtime(true) >= $deadline) {
+            fclose($fp);
+            return false;
+        }
+        usleep(100_000);
     }
+    @touch($path); // INFO: the lock file is never written – without this, the GC deletes it while in use
     return $fp;
+}
+
+// INFO: cached error entries carry their own lifetime ('ttl'); temporary upstream failures only a short one
+function nr_error_ttl(array $error, int $default): int
+{
+    $status = (int)($error['upstreamStatus'] ?? 0);
+    $transient = ($error['code'] ?? '') === 'UPSTREAM_FETCH_FAILED'
+        || (($error['code'] ?? '') === 'UPSTREAM_HTTP_ERROR' && ($status >= 500 || $status === 429));
+    return $transient ? NR_TRANSIENT_ERROR_TTL : $default;
+}
+
+function nr_cache_ttl(array $cached, int $ttl, int $errorTtl): int
+{
+    return isset($cached['data']['error']) ? (int)($cached['data']['ttl'] ?? $errorTtl) : $ttl;
+}
+
+function nr_busy(): never
+{
+    header('Retry-After: 10');
+    nr_error('BUSY', 'The source is being fetched by another request – try again shortly.', 503);
 }
 
 function nr_unlock($fp): void

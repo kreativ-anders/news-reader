@@ -41,3 +41,16 @@ test('limits are sane', function () {
     }
     assert_true(NR_CACHE_TTL > NR_REFRESH_MIN_AGE && NR_STALE_TTL > NR_CACHE_TTL, 'cache TTL ordering');
 });
+
+test('cached errors: temporary upstream failures expire quickly, others keep the default', function () {
+    assert_true(nr_error_ttl(['code' => 'UPSTREAM_FETCH_FAILED'], 3600) === NR_TRANSIENT_ERROR_TTL, 'timeout');
+    foreach ([500, 503, 429] as $status) {
+        assert_true(nr_error_ttl(['code' => 'UPSTREAM_HTTP_ERROR', 'upstreamStatus' => $status], 3600) === NR_TRANSIENT_ERROR_TTL, "HTTP $status");
+    }
+    assert_true(nr_error_ttl(['code' => 'UPSTREAM_HTTP_ERROR', 'upstreamStatus' => 404], 3600) === 3600, 'HTTP 404');
+    assert_true(nr_error_ttl(['code' => 'NO_FEED_DETECTED'], 3600) === 3600, 'no feed');
+    assert_true(NR_TRANSIENT_ERROR_TTL < NR_ERROR_TTL && NR_TRANSIENT_ERROR_TTL < NR_ARTICLE_ERROR_TTL, 'shorter than the defaults');
+    assert_true(nr_cache_ttl(['data' => ['error' => [], 'ttl' => 120]], 86400, 3600) === 120, 'entry ttl wins');
+    assert_true(nr_cache_ttl(['data' => ['error' => []]], 86400, 3600) === 3600, 'older entries: default');
+    assert_true(nr_cache_ttl(['data' => ['entries' => []]], 86400, 3600) === 86400, 'success');
+});

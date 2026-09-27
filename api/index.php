@@ -11,6 +11,11 @@ require __DIR__ . '/../src/config.php';
 require __DIR__ . '/../src/response.php';
 require __DIR__ . '/../src/ratelimit.php';
 
+// INFO: minimum PHP version (README → Setup) – fail loudly instead of with subtle differences
+if (PHP_VERSION_ID < 80500) {
+    nr_error('SERVER_MISCONFIGURED', 'PHP 8.5 or newer is required (running ' . PHP_VERSION . ').', 500);
+}
+
 $nrPath = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
 
 if (preg_match('#/api/sync/?$#', $nrPath)) {
@@ -80,7 +85,7 @@ $cached = nr_cache_read($url);
 $usable = $cached !== null && !isset($cached['data']['error']);
 
 if ($cached !== null) {
-    $ttl = $usable ? NR_CACHE_TTL : NR_ERROR_TTL;
+    $ttl = nr_cache_ttl($cached, NR_CACHE_TTL, NR_ERROR_TTL);
     $refreshAllowed = $forceRefresh && $cached['age'] >= NR_REFRESH_MIN_AGE;
     if ($cached['age'] < $ttl && !$refreshAllowed) {
         nr_serve_cached($cached, 'HIT', $limit);
@@ -93,13 +98,14 @@ if ($wait = nr_rate_hit('collect', NR_RATE_COLLECT_MISS)) {
     nr_rate_reject($wait);
 }
 
-// INFO: one refresh per URL at a time – others get stale data or wait for the result
-$lock = nr_lock($url, false);
-if ($lock === null) {
+// INFO: one refresh per URL at a time – others get stale data or wait (bounded) for the result
+$lock = nr_lock($url, 0);
+if ($lock === false) {
     if ($usable) nr_serve_cached($cached, 'STALE', $limit);
-    $lock = nr_lock($url, true);
+    $lock = nr_lock($url, NR_LOCK_WAIT);
+    if ($lock === false) nr_busy();
     $fresh = nr_cache_read($url);
-    if ($fresh !== null && $fresh['age'] < (isset($fresh['data']['error']) ? NR_ERROR_TTL : NR_CACHE_TTL)) {
+    if ($fresh !== null && $fresh['age'] < nr_cache_ttl($fresh, NR_CACHE_TTL, NR_ERROR_TTL)) {
         nr_unlock($lock);
         nr_serve_cached($fresh, 'HIT', $limit);
     }
@@ -124,9 +130,11 @@ foreach (['tried' => 'tried', 'status' => 'upstreamStatus', 'rule' => 'rule'] as
     if (isset($result[$from])) $error[$to] = $result[$from];
 }
 
-// INFO: "no feed" is cached briefly to protect the source from repeated probing
-if (in_array($result['code'], ['NO_FEED_DETECTED', 'PLATFORM_NO_FEED'], true)) {
-    nr_cache_write($url, ['error' => $error]);
+// INFO: "no feed" is cached briefly to protect the source from repeated probing, a temporary failure
+//       even more briefly – otherwise every request waiting for the lock would try the dead source again
+$errorTtl = nr_error_ttl($error, NR_ERROR_TTL);
+if (in_array($result['code'], ['NO_FEED_DETECTED', 'PLATFORM_NO_FEED'], true) || ($errorTtl < NR_ERROR_TTL && !$usable)) {
+    nr_cache_write($url, ['error' => $error, 'ttl' => $errorTtl]);
 }
 nr_unlock($lock);
 
@@ -141,11 +149,12 @@ function nr_serve_cached(array $cached, string $state, int $limit): never
     header('X-Collector-Cache: ' . $state);
 
     if (isset($data['error'])) {
-        header('Cache-Control: public, max-age=' . max(0, NR_ERROR_TTL - $cached['age']));
+        $ttl = nr_cache_ttl($cached, NR_CACHE_TTL, NR_ERROR_TTL);
+        header('Cache-Control: public, max-age=' . max(0, $ttl - $cached['age']));
         nr_json(['error' => $data['error'], 'meta' => [
             'cached'           => true,
             'cachedAt'         => nr_iso($cachedAt),
-            'nextRefreshAfter' => nr_iso($cachedAt + NR_ERROR_TTL),
+            'nextRefreshAfter' => nr_iso($cachedAt + $ttl),
         ]], 422);
     }
 
