@@ -15,6 +15,13 @@ test('first run explains the three decisions and leads into the address field @m
   await app.open();
   await expect(page.locator('.empty.onboard')).toContainText('Not interested');
   await expect(page.locator('#startImport')).toBeVisible();
+  // INFO: the decision words stay bold words in the sentence, and the buttons form a spaced row – not blocks or glued buttons
+  expect(await page.locator('.onboard > span strong').evaluateAll((els) => els.map((e) => getComputedStyle(e).display))).toEqual(['inline', 'inline', 'inline']);
+  const row = await page.locator('.onboard .row').evaluate((r) => {
+    const [a, b] = [...r.children].map((e) => e.getBoundingClientRect());
+    return { display: getComputedStyle(r).display, gap: getComputedStyle(r).columnGap, sameTop: Math.abs(a.top - b.top) < 1 || a.bottom <= b.top };
+  });
+  expect(row).toEqual({ display: 'flex', gap: '8px', sameTop: true });
   await page.locator('.onboard [data-view="feeds"]').click();
   await expect(page.locator('#addUrl')).toBeFocused();
   await expect(page.locator('#addUrl')).toHaveAttribute('type', 'text');

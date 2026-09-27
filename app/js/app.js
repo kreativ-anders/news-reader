@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.2';
+const VERSION = '0.7.3';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;

@@ -54,6 +54,15 @@ header{position:sticky;top:0;z-index:5;backdrop-filter:blur(12px);-webkit-backdr
 .theme svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:none}
 .theme[data-mode="auto"] .t-auto,.theme[data-mode="light"] .t-light,.theme[data-mode="dark"] .t-dark{display:block}
 .cta{display:flex;flex-wrap:wrap;gap:12px}
+button.btn{font-family:inherit;line-height:inherit;cursor:pointer}button.btn-ghost{background:none}
+.btn[hidden],.install-dlg [hidden]{display:none}
+/* INFO: install steps – a modal <dialog>, so focus trap, Escape and focus return come from the browser */
+.install-dlg{width:min(30rem,calc(100% - 32px));margin:auto;padding:0;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--card);color:var(--fg)}
+.install-dlg::backdrop{background:rgb(0 0 0 / .55)}
+.install-dlg>div{padding:28px}
+.install-dlg h2{font-size:1.6rem;margin-bottom:10px}
+.install-dlg p{color:var(--muted)}
+.install-dlg ol{margin:16px 0 24px;padding-left:1.4em;display:grid;gap:8px}
 
 footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:.92rem}
 footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}

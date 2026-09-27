@@ -96,6 +96,14 @@
                 },
                 {
                     "@type": "Question",
+                    "name": "Comment installer News ?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Directement depuis votre navigateur – pas d’App Store, pas de compte. Dans Chrome, Edge ou Samsung Internet, utilisez le bouton « Installer News » sur cette page. Sur iPhone et iPad, ouvrez News dans Safari, touchez Partager et choisissez Sur l’écran d’accueil. Sur Mac, ouvrez News dans Safari et choisissez Fichier › Ajouter au Dock. Une fois installée, News a sa propre icône et sa propre fenêtre et fonctionne hors ligne."
+                    }
+                },
+                {
+                    "@type": "Question",
                     "name": "Quelle différence avec les autres lecteurs de flux ?",
                     "acceptedAnswer": {
                         "@type": "Answer",
@@ -403,7 +411,8 @@
           <h1 id="hero-title" data-i18n="hero.read_what_matters_skip">Lisez l’essentiel. <em class="accent">Passez le reste.</em></h1>
           <p class="lead" data-i18n="hero.news_is_a_calm">News est un lecteur RSS serein pour votre mobile et votre ordinateur. Pas de défilement sans fin, pas d’algorithme – seulement vos sources. Chaque nouvel article appelle une décision rapide : lire maintenant, plus tard ou pas intéressé. Vos appareils restent synchronisés, chiffrés de bout en bout, sans compte.</p>
           <div class="cta">
-            <a class="btn btn-primary" href="../app/" data-i18n="hero.open_news">Ouvrir News</a>
+            <button class="btn btn-primary" type="button" data-install hidden data-i18n="install.button">Installer News</button>
+            <a class="btn btn-primary" href="../app/" data-open-app><span class="l-app" data-i18n="hero.open_news">Ouvrir News</span><span class="l-browser" hidden data-i18n="install.open_in_browser">Ouvrir dans le navigateur</span></a>
             <a class="btn btn-ghost" href="#build" data-i18n="hero.host_your_own">Héberger le vôtre</a>
           </div>
           <p class="hero-note" data-i18n="hero.free_amp_open_source">Gratuit &amp; open source · s’installe comme une app · fonctionne hors ligne</p>
@@ -736,6 +745,7 @@
         <div class="sec-head"><h2 id="faq-title" data-i18n="faq.questions_amp_answers">Questions &amp; réponses</h2></div>
         <div class="faq">
           <details><summary data-i18n="faq.what_is_news">Qu’est-ce que News ?</summary><p data-i18n="faq.news_is_a_calm">Un lecteur de flux serein pour votre mobile et le navigateur de votre ordinateur. Chaque nouvel article arrive en réception et appelle une décision : lire maintenant, plus tard ou pas intéressé. News s’installe comme une app, fonctionne hors ligne et est gratuit et open source.</p></details>
+          <details><summary data-i18n="faq.how_install">Comment installer News ?</summary><p data-i18n="faq.how_install_text">Directement depuis votre navigateur – pas d’App Store, pas de compte. Dans Chrome, Edge ou Samsung Internet, utilisez le bouton « Installer News » sur cette page. Sur iPhone et iPad, ouvrez News dans Safari, touchez Partager et choisissez Sur l’écran d’accueil. Sur Mac, ouvrez News dans Safari et choisissez Fichier › Ajouter au Dock. Une fois installée, News a sa propre icône et sa propre fenêtre et fonctionne hors ligne.</p></details>
           <details><summary data-i18n="faq.how_is_it_different">Quelle différence avec les autres lecteurs de flux ?</summary><p data-i18n="faq.no_account_no_ads">Pas de compte, pas de pub, pas de pistage et pas d’algorithme qui décide de ce que vous voyez. Votre progression de lecture reste sur vos appareils, la synchro est chiffrée de bout en bout, et vous pouvez tout héberger sur votre propre serveur.</p></details>
           <details><summary data-i18n="faq.does_news_use_ai">News utilise-t-il l’IA ?</summary><p data-i18n="faq.does_news_use_ai_text">Non. Il n’y a ni IA ni modèle qui apprend de vos habitudes de lecture – ni sur votre appareil, ni sur le serveur. News suit quelques règles simples : les nouveaux articles arrivent dans la réception, les plus récents d’abord, et seule votre décision les fait avancer. Ce que vous voyez dépend de vos sources, pas d’un profil de vous.</p></details>
           <details><summary data-i18n="faq.how_does_sync_work">Comment fonctionne la synchro sans compte ?</summary><p data-i18n="faq.the_first_device_creates">Votre premier appareil crée une clé secrète aléatoire. Les autres le rejoignent en scannant un QR code ou en ouvrant le lien d’association. À partir de cette clé, chaque appareil dérive un jeton d’accès et une clé de chiffrement. Le serveur ne reçoit que le jeton et un fichier chiffré – la clé elle-même ne quitte jamais vos appareils.</p></details>
@@ -757,7 +767,8 @@
           <h2 id="final-title" data-i18n="final.start_reading">À vous de lire.</h2>
           <p data-i18n="final.open_news_in_your">Ouvrez News dans votre navigateur, suivez votre premier site et ajoutez-le à l’écran d’accueil de votre mobile – en une minute. Ou faites tourner votre propre News Reader, pour vous, votre équipe ou toute votre organisation.</p>
           <div class="cta">
-            <a class="btn btn-primary" href="../app/" data-i18n="final.open_news">Ouvrir News</a>
+            <button class="btn btn-primary" type="button" data-install hidden data-i18n="install.button">Installer News</button>
+            <a class="btn btn-primary" href="../app/" data-open-app><span class="l-app" data-i18n="final.open_news">Ouvrir News</span><span class="l-browser" hidden data-i18n="install.open_in_browser">Ouvrir dans le navigateur</span></a>
             <a class="btn btn-ghost" href="https://github.com/kreativ-anders/news-reader" rel="noopener" data-i18n="final.source_on_github">Code source sur GitHub</a>
           </div>
           <p class="support" data-i18n="final.support">News Reader est gratuit et le restera. S’il a de la valeur pour vous : <a href="https://buy.stripe.com/aFa9ATbxpe2u03T2aies002" rel="noopener">payez ce que vous voulez</a>.</p>
@@ -765,6 +776,22 @@
       </div>
     </section>
   </main>
+
+  <!-- INFO: steps for browsers without an install dialog of their own (Safari, Firefox on Android) – site.js shows the list for the system -->
+  <dialog id="installDlg" class="install-dlg" aria-labelledby="installTitle" closedby="any">
+    <div>
+      <h2 id="installTitle" tabindex="-1" autofocus data-i18n="install.title">Installer News</h2>
+      <p data-i18n="install.intro">Pas d’App Store, pas de compte – deux gestes suffisent. Ouvrez News avec le bouton ci-dessous, puis :</p>
+      <ol data-how="ios" hidden><li data-i18n="install.ios_1">Touchez <strong>Partager</strong> (le carré avec la flèche). Sur les iPhone récents, il se trouve dans le menu <strong>•••</strong>.</li><li data-i18n="install.ios_2">Choisissez <strong>Sur l’écran d’accueil</strong> et touchez <strong>Ajouter</strong>.</li></ol>
+      <ol data-how="mac" hidden><li data-i18n="install.mac_1">Dans la barre des menus, choisissez <strong>Fichier › Ajouter au Dock</strong>.</li><li data-i18n="install.mac_2">Cliquez sur <strong>Ajouter</strong>. News s’ouvre désormais depuis votre Dock, dans sa propre fenêtre.</li></ol>
+      <ol data-how="android" hidden><li data-i18n="install.android_1">Ouvrez le menu du navigateur <strong>⋮</strong>.</li><li data-i18n="install.android_2">Choisissez <strong>Ajouter à l’écran d’accueil</strong> ou <strong>Installer</strong> et confirmez.</li></ol>
+      <ol data-how="chrome" hidden><li data-i18n="install.chrome_1">Sur un ordinateur, cliquez sur l’icône d’installation à droite de la barre d’adresse.</li><li data-i18n="install.chrome_2">Sur un téléphone, ouvrez le menu du navigateur <strong>⋮</strong> et choisissez <strong>Ajouter à l’écran d’accueil</strong> ou <strong>Installer l’application</strong>.</li><li data-i18n="install.chrome_3">Déjà installée ? Ouvrez simplement News depuis vos applications.</li></ol>
+      <form method="dialog" class="cta">
+        <a class="btn btn-primary" href="../app/" data-i18n="install.open">Ouvrir News</a>
+        <button class="btn btn-ghost" type="submit" data-i18n="install.close">Fermer</button>
+      </form>
+    </div>
+  </dialog>
 
   <footer>
     <div class="wrap">

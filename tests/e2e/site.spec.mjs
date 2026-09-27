@@ -211,3 +211,68 @@ test('the preview shows the sync time the way the app formats it', async ({ page
     await expect(page.locator('.d-sync em')).toHaveText(new RegExp(` ${time.replace(/\s/g, '\\s')}$`));
   }
 });
+
+// INFO: "Install News" – Chromium's own dialog where it exists, steps for the system elsewhere, nothing where no way exists
+test.describe('install button', () => {
+  const spy = () => {
+    window.__events = [];
+    window.pirsch = (name, opts) => { window.__events.push([name, opts.meta]); return Promise.resolve(); };
+  };
+
+  test('Chromium: one click opens the browser’s install dialog', async ({ page }) => {
+    await page.addInitScript(spy);
+    await page.goto(API() + '/de/');
+    const hero = page.locator('.hero .cta');
+    await expect(hero.locator('[data-install]')).toHaveText('News installieren');
+    await expect(hero.locator('[data-open-app]')).toHaveAccessibleName('Im Browser öffnen');
+    await expect(hero.locator('[data-open-app]')).toHaveClass(/btn-ghost/);
+    await page.evaluate(() => {
+      const e = new Event('beforeinstallprompt', { cancelable: true });
+      e.prompt = () => { window.__prompted = (window.__prompted || 0) + 1; };
+      dispatchEvent(e);
+    });
+    await hero.locator('[data-install]').click();
+    expect(await page.evaluate(() => window.__prompted)).toBe(1);
+    await expect(page.locator('#installDlg')).not.toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.__events)).toContainEqual(['Install app', { lang: 'de', position: 'hero', way: 'prompt' }]);
+    // INFO: a prompt works once – after "cancel" the next click shows the steps
+    await hero.locator('[data-install]').click();
+    await expect(page.locator('#installDlg ol[data-how="chrome"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => dispatchEvent(new Event('appinstalled')));
+    await expect(hero.locator('[data-install]')).toBeHidden();
+    await expect(hero.locator('[data-open-app]')).toHaveAccessibleName('News öffnen');
+    await expect(hero.locator('[data-open-app]')).toHaveClass(/btn-primary/);
+  });
+
+  test.describe('iPhone', () => {
+    test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+    test('the steps open in a dialog, focus goes in and comes back', async ({ page }) => {
+      await page.addInitScript(spy);
+      await page.goto(API() + '/');
+      const btn = page.locator('.final [data-install]');
+      await btn.click();
+      const dlg = page.locator('#installDlg');
+      await expect(dlg).toBeVisible();
+      await expect(dlg.locator('#installTitle')).toBeFocused();
+      await expect(dlg.locator('ol:visible')).toHaveCount(1);
+      await expect(dlg.locator('ol[data-how="ios"]')).toContainText('Add to Home Screen');
+      await expect(dlg.locator('a[href$="app/"]')).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.__events)).toContainEqual(['Install app', { lang: 'en', position: 'final', way: 'ios' }]);
+      await dlg.getByRole('button', { name: 'Close' }).click();
+      await expect(dlg).not.toBeVisible();
+      await expect(btn).toBeFocused();
+    });
+  });
+
+  test.describe('Firefox on a computer', () => {
+    test.use({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0' });
+    test('no install button, "Open News" stays', async ({ page }) => {
+      await page.addInitScript(() => { delete Window.prototype.onbeforeinstallprompt; delete window.onbeforeinstallprompt; });
+      await page.goto(API() + '/');
+      await expect(page.locator('.hero [data-install]')).toBeHidden();
+      await expect(page.locator('.hero [data-open-app]')).toHaveAccessibleName('Open News');
+      await expect(page.locator('.hero [data-open-app]')).toHaveClass(/btn-primary/);
+    });
+  });
+});

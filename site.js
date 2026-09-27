@@ -60,3 +60,54 @@ if (motion) {
 }
 paintTheme();
 useLang(pageLang);
+
+// INFO: "Install News" – Chromium hands over its own install dialog (beforeinstallprompt, fires on / too although the app's scope is /app/).
+//       Safari and Firefox have none, so the button opens the steps for the system instead; these start in the app, because
+//       Safari adds the page it is on. Without JS, where no way exists (Firefox desktop) and inside the installed app, "Open News" stays alone.
+const installBtns = document.querySelectorAll('[data-install]'), installDlg = document.getElementById('installDlg');
+let installEvent = null, installWay = '';
+
+function detectInstallWay() {
+  const ua = navigator.userAgent;
+  if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) return '';
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ios';
+  if (/Android/.test(ua) && /Firefox\//.test(ua)) return 'android';
+  if ('onbeforeinstallprompt' in window) return 'chrome';
+  if (/Macintosh/.test(ua) && /Version\/[\d.]+ Safari\//.test(ua)) return 'mac';
+  return '';
+}
+
+function paintInstall() {
+  installBtns.forEach((b) => {
+    const on = !!installWay, link = b.parentElement.querySelector('[data-open-app]');
+    b.hidden = !on;
+    if (!link) return;
+    link.classList.toggle('btn-primary', !on);
+    link.classList.toggle('btn-ghost', on);
+    link.querySelector('.l-app').hidden = on;
+    link.querySelector('.l-browser').hidden = !on;
+  });
+}
+
+if (installBtns.length && installDlg) {
+  installWay = detectInstallWay();
+  paintInstall();
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; });
+  addEventListener('appinstalled', () => { installEvent = null; installWay = ''; paintInstall(); if (installDlg.open) installDlg.close(); });
+  let opener = null;
+  installBtns.forEach((b) => b.addEventListener('click', () => {
+    // INFO: read by track.js – which way the click took
+    document.documentElement.dataset.installWay = installEvent ? 'prompt' : installWay;
+    if (installEvent) {
+      // INFO: the event can only prompt once – a later click after "cancel" shows the steps
+      const ev = installEvent;
+      installEvent = null;
+      ev.prompt();
+      return;
+    }
+    installDlg.querySelectorAll('ol[data-how]').forEach((ol) => { ol.hidden = ol.dataset.how !== installWay; });
+    opener = b;
+    installDlg.showModal();
+  }));
+  installDlg.addEventListener('close', () => opener?.focus());
+}

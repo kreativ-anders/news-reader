@@ -3,6 +3,7 @@
 //       Events carry fixed, language-neutral values only – never text a visitor typed or anything personal.
 //
 //       Open app · Self-host · GitHub · Support · API docs   { position, lang }
+//       Install app { position, way: prompt | ios | mac | android | chrome }
 //       FAQ { question } · Collector strategy { strategy } · Language { from, to } · Theme { mode } · Animations { state }
 //       <body data-track-view="…"> – one event per page view (404.html: Not found)
 const lang = document.documentElement.lang || 'en';
@@ -15,6 +16,7 @@ function track(name, meta = {}) {
 function position(el) {
   if (el.closest('header')) return 'header';
   if (el.closest('footer')) return 'footer';
+  if (el.closest('#installDlg')) return 'install-steps';
   const sec = el.closest('section');
   return sec?.id || sec?.classList[0] || 'page';
 }
@@ -33,6 +35,8 @@ document.addEventListener('click', (ev) => {
     const a = el.closest(sel);
     if (a) return track(name, { position: position(a) });
   }
+  const inst = el.closest('[data-install]');
+  if (inst) return track('Install app', { position: position(inst), way: document.documentElement.dataset.installWay || '' });
   const tab = el.closest('.vtab [role="tab"]');
   if (tab) return track('Collector strategy', { strategy: (tab.id || '').replace(/^vt-/, '') });
   // INFO: the site's own handlers run first (bubbling) – read the state they set

@@ -95,6 +95,14 @@
                 },
                 {
                     "@type": "Question",
+                    "name": "How do I install News?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Right from your browser – no app store, no account. In Chrome, Edge or Samsung Internet, use the “Install News” button on this page. On iPhone and iPad, open News in Safari, tap Share and choose Add to Home Screen. On a Mac, open News in Safari and choose File › Add to Dock. Installed, News gets its own icon and window and works offline."
+                    }
+                },
+                {
+                    "@type": "Question",
                     "name": "How is it different from other feed readers?",
                     "acceptedAnswer": {
                         "@type": "Answer",
@@ -402,7 +410,8 @@
           <h1 id="hero-title" data-i18n="hero.read_what_matters_skip">Read what matters. <em class="accent">Skip the rest.</em></h1>
           <p class="lead" data-i18n="hero.news_is_a_calm">News is a calm RSS reader for your phone and your desktop. No endless scrolling, no algorithm – just your sources. Every new post gets one quick decision: read now, later or not interested. Your devices stay in sync, end-to-end encrypted, no account needed.</p>
           <div class="cta">
-            <a class="btn btn-primary" href="app/" data-i18n="hero.open_news">Open News</a>
+            <button class="btn btn-primary" type="button" data-install hidden data-i18n="install.button">Install News</button>
+            <a class="btn btn-primary" href="app/" data-open-app><span class="l-app" data-i18n="hero.open_news">Open News</span><span class="l-browser" hidden data-i18n="install.open_in_browser">Open in browser</span></a>
             <a class="btn btn-ghost" href="#build" data-i18n="hero.host_your_own">Host your own</a>
           </div>
           <p class="hero-note" data-i18n="hero.free_amp_open_source">Free &amp; open source · installs like an app · works offline</p>
@@ -735,6 +744,7 @@
         <div class="sec-head"><h2 id="faq-title" data-i18n="faq.questions_amp_answers">Questions &amp; answers</h2></div>
         <div class="faq">
           <details><summary data-i18n="faq.what_is_news">What is News?</summary><p data-i18n="faq.news_is_a_calm">A calm feed reader for your phone and your desktop browser. Every new post lands in your inbox and gets one decision: read now, later or not interested. It installs like an app, works offline and is free and open source.</p></details>
+          <details><summary data-i18n="faq.how_install">How do I install News?</summary><p data-i18n="faq.how_install_text">Right from your browser – no app store, no account. In Chrome, Edge or Samsung Internet, use the “Install News” button on this page. On iPhone and iPad, open News in Safari, tap Share and choose Add to Home Screen. On a Mac, open News in Safari and choose File › Add to Dock. Installed, News gets its own icon and window and works offline.</p></details>
           <details><summary data-i18n="faq.how_is_it_different">How is it different from other feed readers?</summary><p data-i18n="faq.no_account_no_ads">No account, no ads, no tracking and no algorithm deciding what you see. Your reading progress lives on your devices, sync is end-to-end encrypted, and you can run the whole thing on your own server.</p></details>
           <details><summary data-i18n="faq.does_news_use_ai">Does News use AI?</summary><p data-i18n="faq.does_news_use_ai_text">No. There is no AI and no model learning from your reading habits – not on your device and not on the server. News follows a few simple rules: new posts land in your inbox newest first, and only your own decision moves them on. What you see depends on your sources, not on a profile of you.</p></details>
           <details><summary data-i18n="faq.how_does_sync_work">How does sync work without an account?</summary><p data-i18n="faq.the_first_device_creates">Your first device creates a random secret key. Other devices join by scanning a QR code or opening the pairing link. From that key, each device derives an access token and an encryption key. The server only ever gets the token and one encrypted file – the key itself never leaves your devices.</p></details>
@@ -756,7 +766,8 @@
           <h2 id="final-title" data-i18n="final.start_reading">Start reading.</h2>
           <p data-i18n="final.open_news_in_your">Open News in your browser, follow your first website and put it on your phone’s home screen – takes a minute. Or run your own News Reader, for you, your team or your whole organisation.</p>
           <div class="cta">
-            <a class="btn btn-primary" href="app/" data-i18n="final.open_news">Open News</a>
+            <button class="btn btn-primary" type="button" data-install hidden data-i18n="install.button">Install News</button>
+            <a class="btn btn-primary" href="app/" data-open-app><span class="l-app" data-i18n="final.open_news">Open News</span><span class="l-browser" hidden data-i18n="install.open_in_browser">Open in browser</span></a>
             <a class="btn btn-ghost" href="https://github.com/kreativ-anders/news-reader" rel="noopener" data-i18n="final.source_on_github">Source on GitHub</a>
           </div>
           <p class="support" data-i18n="final.support">News Reader is free and stays free. If it is worth something to you: <a href="https://buy.stripe.com/aFa9ATbxpe2u03T2aies002" rel="noopener">pay what you want</a>.</p>
@@ -764,6 +775,22 @@
       </div>
     </section>
   </main>
+
+  <!-- INFO: steps for browsers without an install dialog of their own (Safari, Firefox on Android) – site.js shows the list for the system -->
+  <dialog id="installDlg" class="install-dlg" aria-labelledby="installTitle" closedby="any">
+    <div>
+      <h2 id="installTitle" tabindex="-1" autofocus data-i18n="install.title">Install News</h2>
+      <p data-i18n="install.intro">No app store, no account – it takes two taps. Open News with the button below, then:</p>
+      <ol data-how="ios" hidden><li data-i18n="install.ios_1">Tap <strong>Share</strong> (the square with the arrow). On newer iPhones it sits in the <strong>•••</strong> menu.</li><li data-i18n="install.ios_2">Choose <strong>Add to Home Screen</strong> and tap <strong>Add</strong>.</li></ol>
+      <ol data-how="mac" hidden><li data-i18n="install.mac_1">In the menu bar, choose <strong>File › Add to Dock</strong>.</li><li data-i18n="install.mac_2">Click <strong>Add</strong>. News now opens from your Dock in its own window.</li></ol>
+      <ol data-how="android" hidden><li data-i18n="install.android_1">Open the browser menu <strong>⋮</strong>.</li><li data-i18n="install.android_2">Choose <strong>Add to Home screen</strong> or <strong>Install</strong> and confirm.</li></ol>
+      <ol data-how="chrome" hidden><li data-i18n="install.chrome_1">On a computer, click the install icon at the right end of the address bar.</li><li data-i18n="install.chrome_2">On a phone, open the browser menu <strong>⋮</strong> and choose <strong>Add to Home screen</strong> or <strong>Install app</strong>.</li><li data-i18n="install.chrome_3">Already installed? Then just open News from your apps.</li></ol>
+      <form method="dialog" class="cta">
+        <a class="btn btn-primary" href="app/" data-i18n="install.open">Open News</a>
+        <button class="btn btn-ghost" type="submit" data-i18n="install.close">Close</button>
+      </form>
+    </div>
+  </dialog>
 
   <footer>
     <div class="wrap">
