@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Fixture WordPress</title>
+  <link>{{base}}/</link>
+  <item><title>WordPress – newest post</title><link>{{base}}/article/full.html</link><guid isPermaLink="false">{{base}}/?p=101</guid><pubDate>{{date:0.5}}</pubDate></item>
+  <item><title>Second WordPress post</title><link>{{base}}/article/second.html</link><guid isPermaLink="false">{{base}}/?p=102</guid><pubDate>{{date:1}}</pubDate></item>
+  <item><title>Oldest WordPress post</title><link>{{base}}/article/oldest.html</link><guid isPermaLink="false">{{base}}/?p=103</guid><pubDate>{{date:2}}</pubDate></item>
+</channel>
+</rss>

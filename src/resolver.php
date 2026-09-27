@@ -80,6 +80,33 @@ function nr_resolve(string $url): array
     return nr_err('NO_FEED_DETECTED', 'No RSS/Atom feed, article listing or matching sitemap entries were found.', ['tried' => $tried]);
 }
 
+// INFO: addresses the user's browser may fetch when the source turns the Collector away (401/403): the order of
+//       nr_resolve() (rule feeds, the URL itself), then the WordPress REST API, which often answers browsers (CORS)
+//       where the feed does not – only for the site root or its /feed/, where "all posts" is what was asked for
+function nr_client_try(string $url): array
+{
+    $rule = nr_rule_match($url);
+    $try = [...($rule['feeds'] ?? []), $url];
+    $p = parse_url($url);
+    if (preg_match('#^/?(?:feed/?)?$#', (string)($p['path'] ?? '')) && ($p['query'] ?? '') === '') {
+        $try[] = nr_origin($url) . '/wp-json/wp/v2/posts?per_page=' . NR_CLIENT_WP_POSTS
+            . '&_fields=guid,link,title,excerpt,date_gmt,modified_gmt,jetpack_featured_media_url,author_name';
+    }
+    return array_values(array_unique(array_filter($try, 'nr_is_http_url')));
+}
+
+// INFO: parses a body the app fetched itself from one of nr_client_try() – no upstream request, no cache
+function nr_resolve_client(string $url, string $from, string $body): array
+{
+    $rule = nr_rule_match($url);
+    $feed = nr_parse_feed($body, $from) ?? nr_parse_wp_posts($body, $from);
+    if ($feed === null) {
+        return nr_err('NO_FEED_DETECTED', 'The body is neither a feed nor a WordPress post list.');
+    }
+    $isRuleFeed = in_array($from, $rule['feeds'] ?? [], true);
+    return nr_success($url, $from, $feed['type'], 'client', $feed['title'], $from, $feed['entries'], $isRuleFeed ? $rule['id'] : null, $feed['siteUrl'], $feed['icon']);
+}
+
 // INFO: first feed with entries wins; a valid but empty feed is only used if no other has entries
 function nr_resolve_rule(string $url, array $rule, array &$tried): ?array
 {

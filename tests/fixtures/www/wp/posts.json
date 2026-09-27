@@ -1,0 +1,26 @@
+[
+  {
+    "guid": { "rendered": "{{base}}/?p=101" },
+    "link": "{{base}}/article/full.html",
+    "title": { "rendered": "WordPress &#8211; newest post" },
+    "excerpt": { "rendered": "<p>Teaser of the newest post &hellip;</p>\n" },
+    "date_gmt": "{{iso:0.5}}",
+    "modified_gmt": "{{iso:0.4}}",
+    "jetpack_featured_media_url": "https://images.example.org/wp-101.jpg",
+    "author_name": "Jane Doe"
+  },
+  {
+    "guid": { "rendered": "{{base}}/?p=102" },
+    "link": "{{base}}/article/second.html",
+    "title": { "rendered": "Second <em>WordPress</em> post" },
+    "excerpt": { "rendered": "<p>Teaser of the second post.</p>" },
+    "date_gmt": "{{iso:1}}"
+  },
+  {
+    "guid": { "rendered": "{{base}}/?p=103" },
+    "link": "{{base}}/article/oldest.html",
+    "title": { "rendered": "Oldest WordPress post" },
+    "date_gmt": "{{iso:2}}"
+  },
+  { "link": "javascript:alert(1)", "title": { "rendered": "Not a link" } }
+]

@@ -21,7 +21,7 @@ describe('service', () => {
     assert.match(r.header('content-type'), /^application\/json/);
     assert.equal(r.header('x-content-type-options'), 'nosniff');
     assert.equal((await s.get('/api/collect', { method: 'OPTIONS' })).status, 204);
-    assertError(await s.get('/api/collect', { method: 'POST' }), 405, 'METHOD_NOT_ALLOWED');
+    assertError(await s.get('/api/collect', { method: 'PUT' }), 405, 'METHOD_NOT_ALLOWED');
   });
 
   it('unknown endpoint → 404 JSON', async () => {
@@ -158,5 +158,48 @@ describe('regressions (formerly known issues)', () => {
   it('JSON-LD listings keep the page order (README: "HTML sources keep the page order")', async () => {
     const r = await s.collect(s.fx.url + '/jsonld/');
     assert.deepEqual(r.json.entries.map((e) => e.title), ['JSON-LD post one', 'JSON-LD post two', 'JSON-LD post three']);
+  });
+});
+
+describe('source turns the server away → fetched by the app (POST)', () => {
+  const post = (url, from, body, init = {}) => s.get(`/api/collect?url=${encodeURIComponent(url)}&from=${encodeURIComponent(from)}`, { method: 'POST', body, ...init });
+
+  it('401/403 error names clientTry and is cached', async () => {
+    const r = await s.collect(s.fx.url + '/');
+    assertError(r, 422, 'UPSTREAM_HTTP_ERROR');
+    assert.equal(r.json.error.upstreamStatus, 403);
+    assert.deepEqual(r.json.error.clientTry, [s.fx.url + '/', s.fx.url + r.json.error.clientTry[1].slice(s.fx.url.length)]);
+    assert.match(r.json.error.clientTry[1], /\/wp-json\/wp\/v2\/posts\?per_page=\d+&_fields=/);
+    const again = await s.collect(s.fx.url + '/');
+    assert.equal(again.header('x-collector-cache'), 'HIT');
+    assert.deepEqual(again.json.error.clientTry, r.json.error.clientTry);
+    assert.equal((await s.collect(s.fx.url + '/missing')).json.error.clientTry, undefined, 'only for 401/403');
+  });
+
+  it('a body from clientTry is parsed for the caller only – never cached', async () => {
+    const { clientTry } = (await s.collect(s.fx.url + '/')).json.error;
+    const body = await (await fetch(clientTry[1])).text();
+    const r = await post(s.fx.url + '/', clientTry[1], body);
+    assert.equal(r.status, 200, r.text);
+    assertCollectorShape(r.json);
+    assert.equal(r.json.source.strategy, 'client');
+    assert.equal(r.json.source.type, 'wordpress');
+    assert.equal(r.json.meta.count, 3);
+    assert.equal(r.json.meta.cached, false);
+    assert.equal(r.json.meta.cachedAt, null);
+    assert.match(r.header('cache-control'), /no-store/);
+    const feed = (await s.collect(s.fx.url + '/wp/feed.xml')).json;
+    assert.deepEqual(r.json.entries.map((e) => e.id), feed.entries.map((e) => e.id), 'same ids as the RSS feed of the site');
+    assertError(await s.collect(s.fx.url + '/'), 422, 'UPSTREAM_HTTP_ERROR'); // the shared cache still holds the error
+  });
+
+  it('from must be one of clientTry; junk, oversize and bad methods are refused', async () => {
+    const feed = await (await fetch(s.fx.url + '/wp/feed.xml')).text();
+    assertError(await post(s.fx.url + '/', s.fx.url + '/wp/feed.xml', feed), 400, 'INVALID_URL');
+    assertError(await post(s.fx.url + '/', 'https://evil.example/', feed), 400, 'INVALID_URL');
+    assertError(await post(s.fx.url + '/', s.fx.url + '/', '<!doctype html><p>Checking your browser…</p>'), 422, 'NO_FEED_DETECTED');
+    assertError(await post(s.fx.url + '/', s.fx.url + '/', 'x'.repeat(1_000_001)), 413, 'PAYLOAD_TOO_LARGE');
+    const ok = await post(s.fx.url + '/', s.fx.url + '/', feed);
+    assert.equal(ok.json.source.type, 'rss');
   });
 });

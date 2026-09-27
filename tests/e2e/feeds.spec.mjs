@@ -74,6 +74,43 @@ test('refresh all (r) keeps entries and states', async ({ app, page }) => {
   await expect(app.badge('later')).toHaveText('1');
 });
 
+test('a source that turns the server away is fetched from the device – same entries after a refresh', async ({ app, page }) => {
+  // INFO: the server answers for https://blocked.example/ as it does for the fixture's blocked root (403 + clientTry);
+  //       the site itself is played by routes: its root refuses, its WordPress API answers browsers (CORS)
+  const real = await (await fetch(`${API()}/api/collect?url=${encodeURIComponent(FX() + '/')}`)).json();
+  const clientTry = real.error.clientTry.map((u) => u.replace(FX(), 'https://blocked.example'));
+  await page.route('**/api/collect?**', (route) => {
+    const req = route.request();
+    if (req.method() !== 'GET' || !decodeURIComponent(req.url()).includes('url=https://blocked.example/')) return route.continue();
+    return route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: { ...real.error, clientTry } }) });
+  });
+  const posted = [];
+  await page.route('https://blocked.example/**', async (route) => {
+    const cors = { 'access-control-allow-origin': '*' };
+    const req = route.request();
+    posted.push({ url: req.url(), cookie: req.headers().cookie, referer: req.headers().referer });
+    if (!req.url().includes('/wp-json/')) return route.fulfill({ status: 403, headers: cors, body: 'bot wall' });
+    return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: await (await fetch(`${FX()}/wp-json/wp/v2/posts`)).text() });
+  });
+
+  await app.open();
+  const result = await app.follow('https://blocked.example/');
+  await expect(result.locator('.pill')).toHaveAttribute('title', 'client');
+  await expect(result.locator('.pill')).toHaveText('from your device');
+  expect(posted.map((p) => p.url)).toEqual(clientTry);
+  expect(posted.every((p) => !p.cookie && !p.referer)).toBe(true);
+  await app.go('inbox');
+  await expect(app.cards()).toHaveCount(3);
+  await expect(app.cards().first()).toContainText('WordPress – newest post');
+  const ids = await page.evaluate(() => [...document.querySelectorAll('#view .card')].map((c) => c.dataset.id));
+
+  await page.keyboard.press('r');
+  await expect(app.toast()).toBeVisible();
+  await expect(app.cards()).toHaveCount(3);
+  expect(await page.evaluate(() => [...document.querySelectorAll('#view .card')].map((c) => c.dataset.id))).toEqual(ids);
+  expect(Object.values(await app.kv('fetchState'))[0]).toMatchObject({ ok: true, strategy: 'client' });
+});
+
 test('refresh: at most two fetches at once; a feed turned away with BUSY is fetched again after Retry-After', async ({ app, page }) => {
   await app.open();
   for (const f of ['rdf.xml', 'atom.xml', 'rss.xml']) await app.follow(`${FX()}/feeds/${f}`);

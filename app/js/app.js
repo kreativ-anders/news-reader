@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.7';
+const VERSION = '0.7.8';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -801,7 +801,7 @@ function renderItems() {
 }
 
 // INFO: how the Collector found the posts, in plain words – the technical strategy name stays in the tooltip
-const strategyPill = (s) => `<span class="pill" title="${esc(s)}">${t('feeds.strategy_' + (s === 'sitemap' ? 'sitemap' : s.startsWith('html') ? 'page' : 'feed'))}</span>`;
+const strategyPill = (s) => `<span class="pill" title="${esc(s)}">${t('feeds.strategy_' + (s === 'sitemap' || s === 'client' ? s : s.startsWith('html') ? 'page' : 'feed'))}</span>`;
 
 function renderFeeds() {
   const feeds = liveFeeds();

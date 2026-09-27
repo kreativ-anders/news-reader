@@ -46,8 +46,10 @@ index.html …    project site (+ generated de/ fr/ it/ es/), docs/api/, i18n/
 | `NR_TIME_BUDGET` (wall clock for all upstream requests of one API call) | 60 s |
 | `NR_UPSTREAM_SLOTS` (all clients) / `NR_UPSTREAM_PER_CLIENT` – upstream fetches at once, more → `503 BUSY` | 8 / 2 |
 | `NR_RATE_COLLECT_MISS` / `NR_RATE_ARTICLE_MISS` (upstream fetches; cache hits and `503 BUSY` answers are free) | 60 / 30 per 10 min |
-| `NR_RATE_*_48` (IPv6 only, per /48) | collect 240 · article 120 per 10 min · sync create 20 per day |
+| `NR_RATE_COLLECT_CLIENT` (`POST /api/collect`, bodies fetched by the app) | 60 per 10 min |
+| `NR_RATE_*_48` (IPv6 only, per /48) | collect 240 · collect client 240 · article 120 per 10 min · sync create 20 per day |
 | `NR_RATE_SYNC` / `NR_RATE_SYNC_CREATE` / `NR_RATE_SYNC_CREATE_ALL` (all clients) | 300 per 10 min / 5 per day / 500 per day |
+| `NR_CLIENT_MAX_BYTES` (≤ nginx `client_max_body_size`) / `NR_CLIENT_REFRESH_AFTER` / `NR_CLIENT_WP_POSTS` – fetched by the app | 1 MB / 1 h / 20 |
 | `NR_SYNC_MAX_BYTES` / `NR_SYNC_EXPIRE_DAYS` / `NR_SYNC_MAX_VAULTS` | 1 MB / 180 / 10 000 |
 | `NR_SYNC_ENABLED` / `NR_SYNC_ALLOWED_NETS` | `true` / `[]` (everyone) |
 | `NR_ALLOWED_PORTS` (upstream) | 80, 443, 8080, 8443 |
@@ -100,6 +102,7 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 **Feeds**
 - Adding: address field (`https://` optional), Web Share Target (installed app on Android), bookmarklet (`?add=<url>`), OPML import/export. A page and its feed resolve to the same feed – following both is refused.
 - OPML import adds feeds even when the server is busy or unreachable; the next refresh fills them.
+- A source that turns the server away is fetched from the device itself (Collector step 6, `client`); the pill says *from your device*. Nothing changes in the sync data – each device does this on its own.
 - The app fetches at most 2 feeds at once (`NR_UPSTREAM_PER_CLIENT`). A feed answered with `BUSY` / `RATE_LIMITED` is fetched again automatically after `Retry-After` (doubling on repeats, at most 15 min; `retry`/`tries` in `fetchState`); *Refresh* skips it until then and says so.
 - The Collector strategy is shown in plain words (*feed*, *sitemap*, *from the page*); the technical name is in the tooltip. Server errors are shown as friendly text in the app language (raw message in the tooltip).
 
@@ -124,7 +127,8 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 ## Collector (`/api/collect`)
 
 ```
-GET /api/collect?url=<url>[&refresh=1][&limit=1..100]
+GET  /api/collect?url=<url>[&refresh=1][&limit=1..100]
+POST /api/collect?url=<url>&from=<one of error.clientTry>[&limit=1..100]   body: raw response, ≤ NR_CLIENT_MAX_BYTES
 ```
 
 `url` – page, section or feed (scheme defaults to `https://`); `refresh=1` bypasses the cache if it is older than 15 min; `limit` default/max 100. Without `url`: HTTP 400 with `{"name","service":"collector","version","sync":bool,"usage","example"}` (used by *Settings → Test*). `/api/?url=` is an alias.
@@ -137,10 +141,11 @@ Resolution order (`strategy`):
 3. `guessed` – common paths (`/feed`, `/rss.xml`, `/feed.xml`, `/atom.xml`, `/index.xml`, …; at most 12 probes).
 4. `sitemap` – `robots.txt` → `sitemap.xml` → `sitemap_index.xml` (at most 4 candidates, 3 child sitemaps), filtered to the path; accepted with ≥ 3 entries of which ≥ 50 % are dated; slug titles replaced by link titles from the page.
 5. `html-jsonld` · `html-article` · `html-links` – extracted from the page (≥ 3 hits); missing dates filled from the sitemap.
+6. `client` – fetched by the app. If the source answers `401`/`403` (often a bot wall), the error carries `clientTry[]`: the rule feeds, the URL itself and, for a site root or its `/feed/`, the WordPress REST API (`/wp-json/wp/v2/posts?per_page=NR_CLIENT_WP_POSTS&_fields=…`, which answers browsers via CORS where the feed often does not). The app fetches them in order from the user's browser (`https` only, no cookies, no referrer, ≤ `NR_CLIENT_MAX_BYTES`) and posts the first body it gets to `POST /api/collect` with `from` = that address. The server only accepts a `from` from `clientTry` of the same `url`, fetches nothing, parses the body (feed, else WordPress post list → `type: wordpress`) and answers this caller alone (`Cache-Control: no-store`, `meta.cachedAt: null`, `meta.nextRefreshAfter` = now + `NR_CLIENT_REFRESH_AFTER`). **Nothing is cached or shared**: the server cannot tell a genuine body from a forged one, and a shared copy would let anyone plant entries for everyone. Every device repeats the fallback itself; the feed record stays the same (`{url,title,…}`, no new field), so a device that is still on an older version simply sees the blocked error. Entry ids come from the same parser – WordPress `guid.rendered` is the `<guid>` of the site's RSS feed – so reading states match across devices and when the server can read the feed again.
 
 ```json
 {
-  "source":  { "inputUrl", "url", "type": "rss|rdf|atom|html|sitemap", "strategy", "rule", "feedUrl", "title", "siteUrl", "icon" },
+  "source":  { "inputUrl", "url", "type": "rss|rdf|atom|html|sitemap|wordpress", "strategy", "rule", "feedUrl", "title", "siteUrl", "icon" },
   "entries": [ { "id": "sha256", "url", "title", "publishedAt", "updatedAt", "summary", "image", "author" } ],
   "meta":    { "count", "fetchedAt", "cached", "stale", "cachedAt", "nextRefreshAfter", "version", "lastError?" }
 }
@@ -156,16 +161,17 @@ Resolution order (`strategy`):
 | Status | Codes |
 |---|---|
 | 400 | `INVALID_URL`, `UNSUPPORTED_URL`, `FORBIDDEN_HOST`, `DNS_FAILED` |
-| 422 | `NO_FEED_DETECTED`, `PLATFORM_NO_FEED` (+ `rule`), `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR` (+ `upstreamStatus`), `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS` – body may carry `tried[]` |
+| 413 | `PAYLOAD_TOO_LARGE` – `POST` body larger than `NR_CLIENT_MAX_BYTES` |
+| 422 | `NO_FEED_DETECTED`, `PLATFORM_NO_FEED` (+ `rule`), `UPSTREAM_FETCH_FAILED`, `UPSTREAM_HTTP_ERROR` (+ `upstreamStatus`; `clientTry[]` for 401/403), `UPSTREAM_TOO_LARGE`, `TOO_MANY_REDIRECTS` – body may carry `tried[]` |
 | 429 | `RATE_LIMITED` + `Retry-After` (a stale copy is served instead if one exists); only fetches that actually reach the source count |
 | 503 | `BUSY` + `Retry-After` – another request fetches the same URL for longer than `NR_LOCK_WAIT`, or all upstream slots are taken |
 | 404 / 405 / 500 | `NOT_FOUND` (unknown endpoint) / `METHOD_NOT_ALLOWED` / `SERVER_MISCONFIGURED` |
 
-Errors are JSON `{"error":{"code","message",…}}`. Cached errors: `NO_FEED_DETECTED` / `PLATFORM_NO_FEED` for `NR_ERROR_TTL`, temporary upstream failures for `NR_TRANSIENT_ERROR_TTL`.
+Errors are JSON `{"error":{"code","message",…}}`. Cached errors: `NO_FEED_DETECTED` / `PLATFORM_NO_FEED` and sources answering `401`/`403` (with `clientTry`) for `NR_ERROR_TTL`, temporary upstream failures for `NR_TRANSIENT_ERROR_TTL`.
 
 ### Platform rules
 
-`src/feed-rules.php`: curated snapshot (2026-09-25) of 65 URL → native feed rules for ~30 platforms (Medium, Substack, YouTube, Reddit, Mastodon, Bluesky, GitHub, arXiv, …) plus 5 platforms without feeds. Native feeds only, no bridges; cross-checked against [get-rss-feed-url-extension](https://github.com/shevabam/get-rss-feed-url-extension) (MIT) and [RSSHub Radar](https://github.com/DIYgod/RSSHub-Radar) (AGPL-3.0, consulted only). Failed rules fall through to step 1.
+`src/feed-rules.php`: curated snapshot (2026-09-25) of 66 URL → native feed rules for ~30 platforms (Medium, Substack, YouTube, Reddit, Mastodon, Bluesky, GitHub, arXiv, …) and single sites whose feed is not announced (cio.de) plus 5 platforms without feeds. Native feeds only, no bridges; cross-checked against [get-rss-feed-url-extension](https://github.com/shevabam/get-rss-feed-url-extension) (MIT) and [RSSHub Radar](https://github.com/DIYgod/RSSHub-Radar) (AGPL-3.0, consulted only). Failed rules fall through to step 1.
 
 - Own rules: `src/feed-rules.local.php` (same format, gitignored, checked first).
 - After changes: `php tests/feed-rules-test.php` (runs each rule's `examples`).
@@ -222,6 +228,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - Disk: cache size budget and a free-space floor; per-feed full-text budget.
 - XML: `LIBXML_NONET`, no `LIBXML_NOENT` / `LIBXML_PARSEHUGE` (entity-expansion protection stays on).
 - Rate limits: fixed windows per salted IP hash (`var/rate/`, IPv6 per /64 and additionally per /48), `429` + `Retry-After`.
+- `POST /api/collect`: `from` must be one of `clientTry` for `url` (the endpoint is no general parser), own rate limit, body cap, no upstream request, nothing written to the cache.
 - Entries: only `http(s)` links and images leave the Collector; the app re-checks every URL before `href`, `src` or `window.open` and sanitizes article HTML again.
 - App: no third-party scripts (no analytics), Content Security Policy (`app/index.html`), `no-referrer`, external links `noopener noreferrer`. Site pages: CSP header from the nginx config (hashed inline scripts). API: `Content-Security-Policy: default-src 'none'`, `nosniff`, no cookies (CORS `*` is intentional).
 - Logs: the example configs log `/api/` requests without the query string – feed and article URLs are never stored next to an IP.

@@ -190,7 +190,8 @@
     "placeholder": "example.com/blog",
     "strategy_feed": "flux",
     "strategy_sitemap": "sitemap",
-    "strategy_page": "depuis la page"
+    "strategy_page": "depuis la page",
+    "strategy_client": "depuis votre appareil"
   },
   "settings": {
     "title": "Réglages",

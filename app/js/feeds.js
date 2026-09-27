@@ -1,4 +1,5 @@
 import { serverBase } from './sync.js';
+import { httpUrl } from './util.js';
 
 // INFO: same normalisation as the Collector (scheme optional)
 export function normalizeUrl(input) {
@@ -43,21 +44,74 @@ export async function fetchFeed(url, { refresh = false, timeout = 60000, t = (k)
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
-    // INFO: revalidate – the HTTP cache would otherwise keep serving an answer older than the last ?refresh=1
-    const res = await fetch(api.href, { signal: ctrl.signal, cache: 'no-cache' });
-    let body = null;
-    try { body = await res.json(); } catch { /* INFO: not JSON – handled below */ }
-    if (!res.ok || !body || body.error) {
-      const e = body?.error;
-      throw Object.assign(new Error(e?.message || t('err.http', { status: res.status })), { code: e?.code || 'HTTP_' + res.status, status: e?.upstreamStatus || 0, retryAfter: Number(res.headers.get('retry-after')) || 0 });
+    try {
+      // INFO: revalidate – the HTTP cache would otherwise keep serving an answer older than the last ?refresh=1
+      return await collectorJson(await fetch(api.href, { signal: ctrl.signal, cache: 'no-cache' }), t);
+    } catch (err) {
+      if (!err.clientTry?.length) throw err;
+      const direct = await fetchDirect(api, err.clientTry, ctrl.signal, t);
+      if (direct) return direct;
+      throw err;
     }
-    return body;
   } catch (err) {
     if (err.name === 'AbortError') throw Object.assign(new Error(t('err.timeout')), { code: 'TIMEOUT' });
     if (err instanceof TypeError) throw Object.assign(new Error(t('err.unreachable')), { code: 'UNREACHABLE' });
     throw err;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function collectorJson(res, t) {
+  let body = null;
+  try { body = await res.json(); } catch { /* INFO: not JSON – handled below */ }
+  if (res.ok && body && !body.error) return body;
+  const e = body?.error;
+  throw Object.assign(new Error(e?.message || t('err.http', { status: res.status })), {
+    code: e?.code || 'HTTP_' + res.status, status: e?.upstreamStatus || 0, retryAfter: Number(res.headers.get('retry-after')) || 0,
+    clientTry: Array.isArray(e?.clientTry) ? e.clientTry : [],
+  });
+}
+
+// INFO: = NR_CLIENT_MAX_BYTES – larger bodies are not sent to the server
+const CLIENT_MAX_BYTES = 1_000_000;
+
+// INFO: a source that turns the server away may still answer this browser (CORS). The app fetches the addresses the
+//       server names (error.clientTry) without cookies or referrer and lets the server parse the body – for this
+//       device only, nothing is cached or shared (README → Collector). Returns null if none of them works.
+async function fetchDirect(api, tries, signal, t) {
+  for (const from of tries) {
+    if (!/^https:/.test(httpUrl(from))) continue; // INFO: the CSP only allows https
+    let body = null;
+    try {
+      const res = await fetch(from, { signal, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
+      if (res.ok) body = await capped(res, CLIENT_MAX_BYTES);
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+    }
+    if (!body) continue;
+    const post = new URL(api);
+    post.searchParams.delete('refresh');
+    post.searchParams.set('from', from);
+    try {
+      return await collectorJson(await fetch(post.href, { method: 'POST', body, signal, headers: { 'Content-Type': 'application/octet-stream' } }), t);
+    } catch (err) {
+      if (err.code !== 'NO_FEED_DETECTED') throw err;
+    }
+  }
+  return null;
+}
+
+async function capped(res, max) {
+  if (!res.body || Number(res.headers.get('content-length')) > max) return null;
+  const reader = res.body.getReader(), parts = [];
+  let n = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return new Blob(parts);
+    n += value.length;
+    if (n > max) { reader.cancel(); return null; }
+    parts.push(value);
   }
 }
 

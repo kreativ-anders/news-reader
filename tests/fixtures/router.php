@@ -24,6 +24,9 @@ $special = [
     '/to-private'   => fn() => redirect('http://10.0.0.1/feed.xml'),
     '/missing'      => fn() => status(404, 'not found'),
     '/forbidden'    => fn() => status(403, 'forbidden'),
+    // INFO: a WordPress site behind a bot wall: the root turns the Collector away, the REST API answers browsers (CORS)
+    '/'             => fn() => status(403, 'forbidden'),
+    '/wp-json/wp/v2/posts' => function () { header('Access-Control-Allow-Origin: *'); send('application/json; charset=UTF-8', expand(file_get_contents(__DIR__ . '/www/wp/posts.json'))); },
     '/server-error' => fn() => status(500, 'boom'),
     '/too-large'    => fn() => send('text/html', '<!doctype html><html><body>' . str_repeat('<p>large</p>', 500_000) . '</body></html>'),
     '/text.txt'     => fn() => send('text/plain', "just some text\n"),

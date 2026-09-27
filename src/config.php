@@ -33,6 +33,12 @@ const NR_SUMMARY_LENGTH     = 300;
 const NR_CACHE_SCHEMA       = 3;          // INFO: bump when the entry format changes – older cache files are ignored
 const NR_USER_AGENT         = 'NewsReader-Collector/' . NR_VERSION . ' (+https://news-reader.app)';
 
+// INFO: Collector fallback for sources that turn the server away (401/403) – the app fetches error.clientTry
+//       itself and posts the body back to be parsed (POST /api/collect); nothing of it is cached
+const NR_CLIENT_MAX_BYTES     = 1_000_000;  // WARNING: keep <= nginx client_max_body_size
+const NR_CLIENT_REFRESH_AFTER = 3600;       // INFO: seconds before the app fetches such a source again
+const NR_CLIENT_WP_POSTS      = 20;         // INFO: posts asked from the WordPress REST API
+
 // INFO: Articles (/api/article) – offline copies for "Later"
 const NR_FULLTEXT_MIN_CHARS = 1200;       // INFO: shorter feed content counts as teaser
 const NR_ARTICLE_MAX_BYTES  = 400_000;
@@ -64,6 +70,8 @@ const NR_SYNC_ALLOWED_NETS = [];
 const NR_RATE_DIR             = NR_VAR_DIR . '/rate';
 const NR_RATE_COLLECT_MISS    = [60, 600];
 const NR_RATE_COLLECT_MISS_48 = [240, 600];
+const NR_RATE_COLLECT_CLIENT    = [60, 600];
+const NR_RATE_COLLECT_CLIENT_48 = [240, 600];
 const NR_RATE_ARTICLE_MISS    = [30, 600];
 const NR_RATE_ARTICLE_MISS_48 = [120, 600];
 const NR_RATE_SYNC            = [300, 600];

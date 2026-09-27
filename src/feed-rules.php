@@ -475,6 +475,13 @@ return [
         'feeds' => ['https://www.producthunt.com/feed'],
         'examples' => ['https://www.producthunt.com/' => 'https://www.producthunt.com/feed'],
     ],
+    [
+        'id' => 'cio-de',
+        'hosts' => ['cio.de'],
+        'match' => '#^/?(?:\?|$)#',
+        'feeds' => ['https://www.cio.de/feed/'],
+        'examples' => ['https://www.cio.de/' => 'https://www.cio.de/feed/'],
+    ],
 
 
     [

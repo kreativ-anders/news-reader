@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // INFO: front controller for the whole API (README → Collector, Articles, Sync)
-//       GET /api/collect?url=…   GET /api/article?url=…   GET|PUT|DELETE /api/sync
+//       GET|POST /api/collect?url=…   GET /api/article?url=…   GET|PUT|DELETE /api/sync
 
 ini_set('display_errors', '0'); // WARNING: warnings must never corrupt the JSON output
 ini_set('log_errors', '1');
@@ -52,15 +52,15 @@ require __DIR__ . '/../src/rules.php';
 require __DIR__ . '/../src/resolver.php';
 
 set_time_limit(NR_TIME_BUDGET + 30);
-nr_api_headers('GET');
+nr_api_headers('GET, POST');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-if ($method !== 'GET') {
-    nr_error('METHOD_NOT_ALLOWED', 'Use GET.', 405);
+if ($method !== 'GET' && $method !== 'POST') {
+    nr_error('METHOD_NOT_ALLOWED', 'Use GET (or POST for a body fetched from error.clientTry).', 405);
 }
 
 $url = trim((string)($_GET['url'] ?? ''));
@@ -87,6 +87,8 @@ if (!nr_is_http_url($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
 if (($invalid = nr_validate_target($url)) !== null) {
     nr_error($invalid['code'], $invalid['message'], 400);
 }
+
+if ($method === 'POST') nr_collect_client($url, $limit);
 
 $cached = nr_cache_read($url);
 $usable = $cached !== null && !isset($cached['data']['error']);
@@ -170,16 +172,53 @@ $error = ['code' => $result['code'], 'message' => $result['message']];
 foreach (['tried' => 'tried', 'status' => 'upstreamStatus', 'rule' => 'rule'] as $from => $to) {
     if (isset($result[$from])) $error[$to] = $result[$from];
 }
+// INFO: 401/403 = the source turns the server away (often a bot wall) – the app may still reach it itself
+$blocked = in_array($result['status'] ?? 0, [401, 403], true);
+if ($blocked) $error['clientTry'] = nr_client_try($url);
 
-// INFO: "no feed" is cached briefly to protect the source from repeated probing, a temporary failure
-//       even more briefly – otherwise every request waiting for the lock would try the dead source again
+// INFO: "no feed" and "blocked" are cached briefly to protect the source from repeated probing, a temporary
+//       failure even more briefly – otherwise every request waiting for the lock would try the dead source again
 $errorTtl = nr_error_ttl($error, NR_ERROR_TTL);
-if (in_array($result['code'], ['NO_FEED_DETECTED', 'PLATFORM_NO_FEED'], true) || ($errorTtl < NR_ERROR_TTL && !$usable)) {
+if ($blocked || in_array($result['code'], ['NO_FEED_DETECTED', 'PLATFORM_NO_FEED'], true) || ($errorTtl < NR_ERROR_TTL && !$usable)) {
     nr_cache_write($url, ['error' => $error, 'ttl' => $errorTtl]);
 }
 nr_unlock($lock);
 
 nr_json(['error' => $error, 'meta' => ['cached' => false]], 422);
+
+// INFO: POST ?url=…&from=<one of error.clientTry> with the body the app fetched itself. Parsed for this caller only:
+//       the server cannot tell a genuine body from a forged one, so nothing is cached or shared (README → Collector)
+function nr_collect_client(string $url, int $limit): never
+{
+    $from = (string)($_GET['from'] ?? '');
+    $match = array_values(array_filter(nr_client_try($url), fn($u) => nr_normalize_url($u) === nr_normalize_url($from)));
+    if (!nr_is_http_url($from) || $match === []) {
+        nr_error('INVALID_URL', 'Provide one of the addresses from error.clientTry in the "from" parameter.', 400);
+    }
+    if ($wait = nr_rate_hit_wide('collect-client', NR_RATE_COLLECT_CLIENT, NR_RATE_COLLECT_CLIENT_48)) nr_rate_reject($wait);
+
+    $tooLarge = fn() => nr_error('PAYLOAD_TOO_LARGE', 'Body larger than ' . NR_CLIENT_MAX_BYTES . ' bytes.', 413);
+    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > NR_CLIENT_MAX_BYTES) $tooLarge();
+    $body = (string)file_get_contents('php://input', false, null, 0, NR_CLIENT_MAX_BYTES + 1);
+    if (strlen($body) > NR_CLIENT_MAX_BYTES) $tooLarge();
+
+    header('Cache-Control: no-store');
+    $result = nr_resolve_client($url, $match[0], $body);
+    if (!$result['ok']) nr_json(['error' => ['code' => $result['code'], 'message' => $result['message']]], 422);
+
+    $data = $result['payload'];
+    $data['entries'] = array_map(fn(array $e) => array_diff_key($e, ['content' => 0]), array_slice($data['entries'], 0, $limit));
+    $data['meta'] = [
+        'count'            => count($data['entries']),
+        'fetchedAt'        => $data['meta']['fetchedAt'],
+        'cached'           => false,
+        'stale'            => false,
+        'cachedAt'         => null,
+        'nextRefreshAfter' => nr_iso(time() + NR_CLIENT_REFRESH_AFTER),
+        'version'          => NR_VERSION,
+    ];
+    nr_json($data);
+}
 
 function nr_serve_cached(array $cached, string $state, int $limit): never
 {

@@ -62,7 +62,7 @@ export function makeSandbox(profile = 'lab', overrides = {}) {
     set('NR_ALLOW_PRIVATE_HOSTS', 'true');
     set('NR_CONNECT_TIMEOUT', '2');
     set('NR_REQUEST_TIMEOUT', '2');
-    for (const name of ['NR_RATE_COLLECT_MISS', 'NR_RATE_ARTICLE_MISS', 'NR_RATE_SYNC', 'NR_RATE_SYNC_CREATE']) set(name, '[100000, 600]');
+    for (const name of ['NR_RATE_COLLECT_MISS', 'NR_RATE_COLLECT_CLIENT', 'NR_RATE_ARTICLE_MISS', 'NR_RATE_SYNC', 'NR_RATE_SYNC_CREATE']) set(name, '[100000, 600]');
   }
   for (const [name, value] of Object.entries(overrides)) set(name, value);
   writeFileSync(configFile, config);

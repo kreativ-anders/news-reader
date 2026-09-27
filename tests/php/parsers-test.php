@@ -191,3 +191,45 @@ test('entries are capped at NR_MAX_ENTRIES', function () {
     $feed = nr_parse_feed("<rss version=\"2.0\"><channel><title>x</title>$items</channel></rss>", 'https://x.test/');
     assert_same(NR_MAX_ENTRIES, count($feed['entries']));
 });
+
+test('WordPress REST API: entries, dates, ids match the RSS feed of the same site', function () use ($B) {
+    $wp = nr_parse_wp_posts(fixture('wp/posts.json'), "$B/wp-json/wp/v2/posts");
+    assert_not_null($wp);
+    assert_same('wordpress', $wp['type']);
+    assert_same("$B/", $wp['siteUrl']);
+    assert_same(['WordPress – newest post', 'Second WordPress post', 'Oldest WordPress post'], array_column($wp['entries'], 'title'), 'entities decoded, tags stripped, javascript: link dropped');
+    assert_same('Teaser of the newest post …', $wp['entries'][0]['summary']);
+    assert_same('https://images.example.org/wp-101.jpg', $wp['entries'][0]['image']);
+    assert_same('Jane Doe', $wp['entries'][0]['author']);
+    $rss = nr_parse_feed(fixture('wp/feed.xml'), "$B/feed/");
+    assert_same(array_column($rss['entries'], 'id'), array_column($wp['entries'], 'id'), 'guid.rendered = RSS <guid>');
+
+    $plain = nr_parse_wp_posts('[{"link":"https://x.test/a","title":{"rendered":"A"},"date_gmt":"2026-09-25T09:23:00"}]', 'https://x.test/wp-json/wp/v2/posts');
+    assert_same('2026-09-25T09:23:00Z', $plain['entries'][0]['publishedAt'], 'date_gmt without zone is UTC');
+    assert_same(hash('sha256', 'https://x.test/a'), $plain['entries'][0]['id'], 'no guid → id of the URL');
+    assert_same([], nr_parse_wp_posts('[]', 'https://x.test/')['entries']);
+    foreach (['{"code":"rest_no_route"}', '[1,2]', '[{"title":"x"}]', 'not json', '<rss/>'] as $junk) {
+        assert_null(nr_parse_wp_posts($junk, 'https://x.test/'), $junk);
+    }
+});
+
+test('clientTry: rule feeds, the URL, WordPress API only for the site root', function () {
+    $try = nr_client_try('https://www.cio.de/');
+    assert_same('https://www.cio.de/feed/', $try[0], 'rule first');
+    assert_same('https://www.cio.de/', $try[1]);
+    assert_matches('#^https://www\.cio\.de/wp-json/wp/v2/posts\?per_page=\d+&_fields=guid,link,#', $try[2]);
+    assert_matches('#^https://example\.com/wp-json/#', nr_client_try('https://example.com/feed/')[1], 'site feed → its WordPress API');
+    assert_same(['https://example.com/category/news/'], nr_client_try('https://example.com/category/news/'));
+    assert_same(['https://example.com/?s=x'], nr_client_try('https://example.com/?s=x'));
+});
+
+test('client body: parsed as feed or WordPress list, strategy "client"', function () use ($B) {
+    $r = nr_resolve_client("$B/", "$B/feed/", fixture('wp/feed.xml'));
+    assert_true($r['ok']);
+    assert_same('client', $r['payload']['source']['strategy']);
+    assert_same('rss', $r['payload']['source']['type']);
+    assert_same('rss', nr_resolve_client('https://www.cio.de/', 'https://www.cio.de/feed/', fixture('wp/feed.xml'))['payload']['source']['type']);
+    assert_same('cio-de', nr_resolve_client('https://www.cio.de/', 'https://www.cio.de/feed/', fixture('wp/feed.xml'))['payload']['source']['rule']);
+    assert_same('wordpress', nr_resolve_client("$B/", "$B/wp-json/wp/v2/posts", fixture('wp/posts.json'))['payload']['source']['type']);
+    assert_same('NO_FEED_DETECTED', nr_resolve_client("$B/", "$B/", '<!doctype html><p>bot wall</p>')['code']);
+});

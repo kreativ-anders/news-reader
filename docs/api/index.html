@@ -58,6 +58,8 @@
   "meta":    { "count": 20, "cached": true, "nextRefreshAfter": "…" }
 }</code></pre>
     <p><code>limit</code> defaults to 100. <code>refresh=1</code> bypasses the cache once it is older than 15 minutes. The scheme defaults to <code>https://</code>.</p>
+    <p>If the source turns the server away (<code>UPSTREAM_HTTP_ERROR</code> with <code>upstreamStatus</code> 401/403), the error lists <code>clientTry</code>: addresses a browser may fetch itself (the site often still allows it via CORS, e.g. the WordPress REST API). Post the body you got to have it parsed – for you only, nothing is cached:</p>
+    <pre tabindex="0" aria-label="Collector client fallback"><code>POST /api/collect?url=https://example.com/&amp;from=&lt;one of clientTry&gt;   (body: the raw response, max. 1 MB)</code></pre>
 
     <h2>Article</h2>
     <p>A readable copy of one article, e.g. for offline reading. With <code>feed</code> and <code>id</code>, a full text the feed already carries is served without fetching the page.</p>

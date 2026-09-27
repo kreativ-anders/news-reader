@@ -399,6 +399,44 @@ function nr_parse_feed(string $body, string $baseUrl): ?array
     return null;
 }
 
+// INFO: WordPress REST API (/wp/v2/posts) – many sites that block servers still answer browsers here.
+//       guid.rendered is the <guid> of the site's RSS feed, so the ids match whichever of the two was read.
+function nr_parse_wp_posts(string $body, string $baseUrl): ?array
+{
+    $posts = json_decode($body, true, 32);
+    if (!is_array($posts) || !array_is_list($posts)) return null;
+
+    $text = fn(mixed $v): string => is_array($v) && is_string($v['rendered'] ?? null) ? $v['rendered'] : '';
+    $date = fn(mixed $v): ?string => is_string($v) && $v !== '' ? nr_parse_date(preg_match('/[zZ]|[+-]\d\d:?\d\d$/', $v) ? $v : $v . 'Z') : null;
+
+    $entries = [];
+    foreach (array_slice($posts, 0, NR_MAX_PARSE_ITEMS) as $p) {
+        if (!is_array($p) || !is_string($p['link'] ?? null) || $p['link'] === '') continue;
+        $url = nr_absolute_url($p['link'], $baseUrl);
+        $image = is_string($p['jetpack_featured_media_url'] ?? null) ? nr_image_url($p['jetpack_featured_media_url'], $url) : null;
+        $entries[] = nr_entry(
+            $url,
+            strip_tags($text($p['title'] ?? null)),
+            $date($p['date_gmt'] ?? null),
+            $date($p['modified_gmt'] ?? null),
+            $text($p['excerpt'] ?? null),
+            html_entity_decode($text($p['guid'] ?? null), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            $image,
+            null,
+            is_string($p['author_name'] ?? null) ? $p['author_name'] : null
+        );
+    }
+    if ($posts !== [] && $entries === []) return null;
+
+    return [
+        'type'    => 'wordpress',
+        'title'   => null,
+        'siteUrl' => nr_origin($baseUrl) . '/',
+        'icon'    => null,
+        'entries' => nr_finalize_entries($entries, true),
+    ];
+}
+
 function nr_load_html(string $html): DOMDocument
 {
     $prev = libxml_use_internal_errors(true);
