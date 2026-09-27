@@ -18,6 +18,7 @@ svg{display:block}
 .brand svg{width:32px;height:32px;flex:none}
 .brand small{display:block;font-family:var(--font);font-weight:500;font-size:.7rem;color:var(--muted);letter-spacing:.02em;margin-top:-3px}
 @media (max-width:420px){.brand small{display:none}}
+@media (max-width:360px){.brand>span{display:none}}
 .top-actions{display:flex;align-items:center;gap:6px}
 .icon-btn{all:unset;box-sizing:border-box;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);cursor:pointer;color:var(--muted);transition:background .15s,color .15s}
 .icon-btn:hover{background:var(--hover);color:var(--fg)}
@@ -113,9 +114,12 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 .card>.meta{grid-row:1;grid-column:1}
 .card>.acts{grid-row:1;grid-column:2;align-self:center}
 .card>h3{grid-row:2;grid-column:1/-1}
-.card>.sum{grid-row:3;grid-column:1/-1}
 .card:hover{background:var(--bg2)}
-.card:focus-visible,.card.kb{outline:none;background:var(--hover);box-shadow:inset 3px 0 0 var(--brand-ink)}
+.card:focus-visible,.card.kb{outline:2px solid transparent;outline-offset:-2px;background:var(--hover);box-shadow:inset 3px 0 0 var(--brand-ink)}
+/* INFO: sticky header + day header (and the bottom bar on phones) must not cover what has focus (WCAG 2.4.11) */
+html{scroll-padding-top:calc(104px + env(safe-area-inset-top))}
+.card{scroll-margin-top:calc(104px + env(safe-area-inset-top))}
+@media (max-width:760px){html{scroll-padding-bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom))}.card{scroll-margin-bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom))}}
 .card .meta{display:flex;align-items:center;gap:6px;min-height:30px;font-size:.78rem;color:var(--muted);min-width:0}
 .card .src{display:inline-flex;align-items:center;gap:6px;font-weight:650;min-width:0;flex:0 1 auto}
 .card .src>span:last-child,.card .by{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -127,10 +131,14 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 .card h3 a:hover{color:var(--brand-ink);text-decoration:underline;text-underline-offset:3px}
 .card .sum{color:var(--muted);font-size:.9rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card .sum.open{display:block;-webkit-line-clamp:unset}
-.card>.sum-t{grid-row:4;grid-column:1/-1;justify-self:start}
-.sum-t{all:unset;box-sizing:border-box;margin-top:2px;padding:4px 0;font-size:.82rem;font-weight:650;color:var(--brand-ink);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
-.sum-t:hover{text-decoration-color:currentColor}
-.sum-t:focus-visible{outline:2px solid var(--brand-ink);outline-offset:2px}
+.card .sum:is(.cut,.open){cursor:pointer}
+.card>.sumw{grid-row:3;grid-column:1/-1;display:flex;align-items:flex-end;gap:4px;min-width:0}
+.sumw .sum{flex:1;min-width:0}
+.sum-t{all:unset;box-sizing:border-box;flex:none;display:grid;place-items:center;width:28px;height:24px;border-radius:var(--radius);color:var(--muted);cursor:pointer;transition:background .15s,color .15s}
+.sum-t:hover{background:var(--hover);color:var(--fg)}
+.sum-t svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.sum-t[aria-expanded="true"] svg{transform:rotate(180deg)}
+.sum-t:focus-visible{outline:2px solid var(--brand-ink);outline-offset:0}
 .card .acts{display:flex;gap:2px;justify-content:flex-end}
 /* INFO: hidden only for a fine pointer that can hover; always visible on touch, in forced colours (Windows high
  *       contrast), with "more contrast" and with Settings → Card actions → Always. opacity keeps the buttons in the
@@ -140,7 +148,7 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
   :root:not([data-acts="always"]) .card:is(:hover,:focus-within,.kb) .act{opacity:1}
 }
 .card.has-img{grid-template-rows:auto auto 1fr;column-gap:16px}
-.card.has-img>h3,.card.has-img>.sum,.card.has-img>.sum-t{grid-column:1}
+.card.has-img>h3,.card.has-img>.sumw{grid-column:1}
 .card .thumb{grid-column:2;grid-row:2/4;align-self:start;justify-self:end;width:120px;height:80px;margin-top:4px;border-radius:calc(var(--radius) * .6);object-fit:cover;background:var(--line);pointer-events:none;user-select:none;-webkit-user-drag:none}
 .card .thumb.fit{object-fit:contain;background:var(--card2);padding:6px}
 @media (max-width:560px){
@@ -161,7 +169,7 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 
 /* INFO: compact – one line of meta, the title, nothing else */
 [data-density="compact"] .card{padding:6px 12px 8px}
-[data-density="compact"] .card :is(.sum,.sum-t,.thumb){display:none}
+[data-density="compact"] .card :is(.sumw,.thumb){display:none}
 [data-density="compact"] .card>:is(h3,.sum){grid-column:1/-1}
 [data-density="compact"] .card h3{font-size:1.02rem;margin:0}
 [data-density="compact"] .card .meta{min-height:28px}
@@ -174,7 +182,7 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 .ctx-ops .icon-btn{width:34px;height:34px}
 .ctx-ops .icon-btn svg{width:17px;height:17px}
 .card.leaving{opacity:0;transform:translateX(var(--leave,0));pointer-events:none}
-.card.opened{opacity:.45}
+.card.opened{opacity:.7}
 .card[data-swipe]::after{position:absolute;top:50%;transform:translateY(-50%);font-weight:700;font-size:.85rem;color:var(--brand-ink);opacity:var(--swipe-o,0)}
 .card[data-swipe="right"]::after{content:attr(data-right);left:14px}
 .card[data-swipe="left"]::after{content:attr(data-left);right:14px}
@@ -184,6 +192,13 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 .empty>svg{width:44px;height:44px;margin:0 auto 16px;fill:none;stroke:var(--faint);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .empty strong{display:block;color:var(--fg);font:600 1.35rem/1.3 var(--serif);margin-bottom:6px}
 .empty .btn{margin-top:18px}
+.empty.onboard>span{display:block;max-width:34em;margin:0 auto 10px}
+.empty.onboard .row{justify-content:center;margin-top:8px}
+.empty.onboard .row .btn{margin-top:0}
+/* INFO: settings that only matter for one kind of input */
+@media (hover:hover) and (pointer:fine){.only-touch{display:none}}
+@media (hover:none){.only-keys{display:none}}
+.row.keep .btns{display:flex;gap:8px;flex:none}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
 .panel h2{font-family:var(--serif);font-weight:600;font-size:1.25rem;margin-bottom:6px;letter-spacing:-.01em}
@@ -236,7 +251,7 @@ dialog::backdrop{background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
 dialog h2{font-family:var(--serif);font-weight:600;font-size:1.3rem;margin-bottom:8px}
 dialog #dlgBody{color:var(--muted);font-size:.93rem}
 dialog #dlgBody p + p{margin-top:8px}
-dialog menu{display:flex;justify-content:flex-end;gap:8px;padding:0;margin-top:20px}
+dialog .dlg-actions{display:flex;justify-content:flex-end;gap:8px;padding:0;margin-top:20px}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
@@ -288,7 +303,7 @@ html.reader-open,html.reader-open body{overflow:hidden}
 .palette li .fi{width:18px;height:18px}
 .palette li .pl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .palette li small{color:var(--faint);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
-.palette li[aria-selected="true"]{background:var(--card2);box-shadow:inset 3px 0 0 var(--brand)}
+.palette li[aria-selected="true"]{background:var(--hover);box-shadow:inset 3px 0 0 var(--brand-ink)}
 .palette li.k-post .pl{font-family:var(--serif);font-weight:600}
 .palette li.k-post:not(.k-post + .k-post),.palette li.k-filter:not(.k-filter + .k-filter):not(:first-child){margin-top:6px;border-top:1px solid var(--line);padding-top:12px}
 .palette li.none{display:block;color:var(--muted);text-align:center;padding:24px;cursor:default}
@@ -299,3 +314,8 @@ html.reader-open,html.reader-open body{overflow:hidden}
 /* INFO: all:unset above also removes the outline – give those controls their focus ring back (WCAG 2.4.7) */
 :is(.icon-btn,.sync,.toast button):focus-visible{outline:2px solid var(--brand-ink);outline-offset:2px}
 .nav button:focus-visible{outline:2px solid var(--brand-ink);outline-offset:-2px}
+
+/* INFO: forced colours drop backgrounds and shadows – selection and current item need a real outline */
+@media (forced-colors:active){
+  .card:focus-visible,.card.kb,.palette li[aria-selected="true"],.nav button[aria-current="page"],.subnav button[aria-current="page"]{outline:2px solid Highlight;outline-offset:-2px}
+}

@@ -1,7 +1,7 @@
 /* INFO: shared by all site pages (index, privacy, imprint, thanks) – colours and fonts come from app/theme.css */
 :root{--max:1120px}
 *{box-sizing:border-box;margin:0}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
 body{font-family:var(--font);font-size:17px;background:var(--bg);color:var(--fg);line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:inherit}
 img,svg{display:block;max-width:100%}
@@ -31,7 +31,8 @@ header{position:sticky;top:0;z-index:5;backdrop-filter:blur(12px);-webkit-backdr
 .nav ul{display:flex;gap:26px;list-style:none;padding:0;align-items:center}
 .nav a{text-decoration:none;color:var(--muted);font-size:.96rem;font-weight:600;transition:color .2s}
 .nav a:hover{color:var(--fg)}
-@media (max-width:820px){.nav ul li:not(:last-child){display:none}.brand small{display:none}}
+/* INFO: narrow screens – the section links move into a second, horizontally scrollable row (no hidden menu) */
+@media (max-width:820px){html{scroll-padding-top:124px}.nav{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:6px;row-gap:4px}.nav ul{order:3;width:100%;margin-left:0;gap:20px;overflow-x:auto;padding:6px 0;scrollbar-width:none}.nav ul li{flex:none}.nav .prefs{margin-left:auto}.brand small{display:none}}
 @media (max-width:480px){.nav{gap:10px}.nav .btn{padding:7px 12px;font-size:.9rem}.brand{font-size:1.2rem}.brand svg{width:28px;height:28px}}
 @media (max-width:360px){.lang{padding:7px 8px}}
 
@@ -55,7 +56,8 @@ header{position:sticky;top:0;z-index:5;backdrop-filter:blur(12px);-webkit-backdr
 
 footer{border-top:1px solid var(--line);padding:32px 0;color:var(--muted);font-size:.92rem}
 footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
-footer a{text-decoration:none}footer a:hover{color:var(--brand-ink)}
+footer a{text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}footer a:hover{color:var(--brand-ink);text-decoration-color:currentColor}
+.linkbtn{all:unset;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}.linkbtn:hover{color:var(--brand-ink)}.linkbtn:focus-visible{outline:2px solid var(--brand-ink);outline-offset:3px}
 
 /* subtle "pay what you want" note (index final section) */
 .support{margin-top:26px;font-size:.92rem;color:var(--muted)}

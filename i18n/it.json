@@ -10,7 +10,9 @@
     "theme": "Tema",
     "theme_auto": "Tema: automatico",
     "theme_light": "Tema: chiaro",
-    "theme_dark": "Tema: scuro"
+    "theme_dark": "Tema: scuro",
+    "pause_motion": "Metti in pausa le animazioni",
+    "play_motion": "Avvia le animazioni"
   },
   "nav": {
     "skip_to_content": "Vai al contenuto",
@@ -19,7 +21,9 @@
     "collector": "Collector",
     "build_your_own": "Self-hosting",
     "faq": "FAQ",
-    "open_news": "Apri News"
+    "open_news": "Apri News",
+    "main_label": "Menu principale",
+    "home_label": "Home di News Reader"
   },
   "hero": {
     "news_reader": "Lettore RSS open source",
@@ -62,7 +66,7 @@
     "everything_a_reader_needs": "Tutto ciò che serve a un lettore. Niente di superfluo.",
     "no_ads_no_tracking": "Niente pubblicità, niente tracciamento, niente «consigliati per te» – solo le tue fonti, in un posto tranquillo.",
     "phone_and_desktop": "Smartphone e desktop",
-    "install_news_from_the": "Installa News dal browser come un’app. Scorri gli articoli con uno swipe sullo smartphone, sfrecciaci sopra con <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> sul desktop e condividi qualsiasi pagina con News per seguirla.",
+    "install_news_from_the": "Installa News dal browser come un’app. Scorri gli articoli con uno swipe sullo smartphone, sfrecciaci sopra con <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> sul desktop – e su Android condividi qualsiasi pagina con News per seguirla.",
     "encrypted_sync_no_account": "Sync cifrata, senza account",
     "pair_a_device_by": "Scansiona un codice QR e i tuoi dispositivi sono associati. Feed, lista di lettura e progressi vengono chiusi a chiave prima di lasciare il tuo dispositivo.",
     "local_first_amp_offline": "Prima in locale &amp; offline",
@@ -72,7 +76,7 @@
     "bring_your_feeds": "Porta con te i tuoi feed",
     "import_your_opml_export": "Arrivi da un altro lettore? Importa il tuo file OPML e tutte le tue fonti traslocano. Esportare è altrettanto semplice – nessun vincolo, mai.",
     "private_and_light": "Privato e leggero",
-    "no_cookies_no_profiles": "Niente cookie, niente pubblicità, niente profili, nessun framework. Solo pochi kilobyte di JavaScript semplice e font ospitati in proprio – più un conteggio delle visite anonimo e senza cookie."
+    "no_cookies_no_profiles": "Niente cookie, niente pubblicità, niente profili, nessun framework. JavaScript semplice (circa 50 KB compressi) e font ospitati in proprio – più un conteggio delle visite anonimo e senza cookie."
   },
   "sync": {
     "sync": "Sync",
@@ -81,11 +85,11 @@
     "end_to_end_encrypted": "Cifrata end-to-end",
     "aes_256_gcm_keys": "– AES-256-GCM, con chiavi che esistono solo sui tuoi dispositivi.",
     "no_database": "Niente database",
-    "one_opaque_file_per": "– un file sigillato per cassaforte. Niente da interrogare, copiare o violare.",
+    "one_opaque_file_per": "– un file sigillato per gruppo di dispositivi. Niente da interrogare, copiare o violare.",
     "minimal_surface": "Superficie d’attacco minima",
-    "one_endpoint_three_verbs": "– un endpoint, tre verbi, limiti rigorosi di dimensione e frequenza.",
+    "one_endpoint_three_verbs": "– un solo indirizzo di sync, con limiti rigorosi di dimensione e frequenza.",
     "leaves_no_trace": "Non lascia tracce",
-    "delete_with_one_click": "– sparisce con un clic; le casseforti dimenticate svaniscono dopo 180 giorni.",
+    "delete_with_one_click": "– si cancella con un clic; i dati di sync inutilizzati spariscono dopo 180 giorni.",
     "phone_and_laptop_hold": "Smartphone e laptop custodiscono la chiave e si scambiano tramite il server solo un file cifrato, che il server non può leggere",
     "phone": "Smartphone",
     "news_app": "app News",
@@ -121,7 +125,8 @@
     "html_article_entries_extracted": "<span class=\"pill\">html-article</span> Voci estratte dalla pagina",
     "fact_cache": "<b>24 h</b> di cache condivisa per fonte",
     "fact_ssrf": "<b>Protetto da SSRF</b> – host privati bloccati, ogni redirect ricontrollato",
-    "fact_rate": "<b>Rate limit</b> per client"
+    "fact_rate": "<b>Rate limit</b> per client",
+    "variants_label": "Strategie di risoluzione"
   },
   "build": {
     "build_your_own": "Self-hosting · sovranità digitale",
@@ -132,17 +137,18 @@
     "rebrand": "Personalizza",
     "colours_and_fonts_live": "Colori e font stanno in <code>app/theme.css</code>. Cambia le icone e il nome dell’app nel manifest – fatto. I tuoi utenti vedono il tuo lettore, non il nostro.",
     "deploy": "Pubblica",
-    "any_web_server_with": "Qualsiasi web server con PHP 8.5+ e HTTPS. La config nginx inclusa blocca tutto tranne l’app e l’API.",
+    "any_web_server_with": "Un web server con PHP 8.5+ e HTTPS. La config nginx inclusa serve solo il sito, l’app e l’API – tutto il resto rimane privato.",
     "requires_php": "Richiede PHP 8.5+ con <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> consigliato) e una cartella <code>var/</code> scrivibile. Tutto qui.",
     "sov_label": "Sovranità digitale",
     "sov_data": "I dati restano in casa",
-    "sov_data_text": "Feed, liste di lettura e casseforti di sincronizzazione stanno su server che controlli tu – il tuo data center, la tua regione cloud, la tua giurisdizione.",
+    "sov_data_text": "Feed, liste di lettura e dati di sincronizzazione stanno su server che controlli tu – il tuo data center, la tua regione cloud, la tua giurisdizione.",
     "sov_gdpr": "Conforme al GDPR per progettazione",
     "sov_gdpr_text": "Nessun account utente, nessun profilo personale, nessun database. I dati sincronizzati sono cifrati end-to-end – nemmeno i tuoi amministratori possono leggerli.",
     "sov_lockin": "Nessun vendor lock-in",
     "sov_lockin_text": "Licenza MIT, OPML in entrata e in uscita, PHP semplice. Nessun costo per postazione, nessun aggiornamento forzato, nessuna roadmap altrui.",
     "sov_audit": "Verificabile e pronto per l’intranet",
-    "sov_audit_text": "Ogni riga è aperta alla tua revisione di sicurezza. Le fonti interne su host privati si possono abilitare esplicitamente con un’unica impostazione."
+    "sov_audit_text": "Ogni riga è aperta alla tua revisione di sicurezza. Le fonti interne su host privati si possono abilitare esplicitamente con un’unica impostazione.",
+    "terminal_label": "Installare News Reader"
   },
   "faq": {
     "questions_amp_answers": "Domande &amp; risposte",
@@ -155,13 +161,13 @@
     "how_does_sync_work": "Come funziona la sync senza account?",
     "the_first_device_creates": "Il tuo primo dispositivo crea una chiave segreta casuale. Gli altri si uniscono scansionando un codice QR o aprendo il link di associazione. Da quella chiave ogni dispositivo ricava un token di accesso e una chiave di cifratura. Il server riceve solo il token e un file cifrato – la chiave non lascia mai i tuoi dispositivi.",
     "can_the_server_operator": "Chi gestisce il server può leggere i miei feed o la mia lista di lettura?",
-    "no_feeds_reading_list": "No. Feed, lista di lettura e progressi vengono cifrati sul tuo dispositivo (AES-256-GCM) prima del caricamento. Il server conserva un file sigillato per cassaforte, chiamato come un hash del token di accesso – niente database, niente di leggibile da far trapelare. Come ogni sito web, il server vede comunque il tuo indirizzo IP quando ti colleghi.",
+    "no_feeds_reading_list": "No. Feed, lista di lettura e progressi vengono cifrati sul tuo dispositivo (AES-256-GCM) prima del caricamento. Il server conserva un file sigillato per i tuoi dispositivi, chiamato come un hash del token di accesso – niente database, niente di leggibile da far trapelare. Come ogni sito web, il server vede comunque il tuo indirizzo IP quando ti colleghi.",
     "what_if_i_lose": "E se perdo tutti i miei dispositivi?",
-    "then_the_vault_cannot": "Allora nessuno può aprire la cassaforte – nemmeno noi. È il prezzo di una vera cifratura end-to-end. Vuoi un backup? Esporta ogni tanto i tuoi feed in OPML.",
+    "then_the_vault_cannot": "Allora nessuno può aprire i tuoi dati sincronizzati – nemmeno noi. È il prezzo di una vera cifratura end-to-end. Vuoi un backup? Esporta ogni tanto i tuoi feed in OPML.",
     "what_is_the_collector": "Che cos’è il Collector?",
-    "the_collector_is_the": "L’endpoint REST incluso in News Reader: <code>GET /api/collect?url=…</code> trasforma qualsiasi URL di sito o di feed in voci JSON normalizzate. Prova prima un feed nativo, poi un feed dichiarato, i percorsi di feed comuni, la sitemap e infine l’HTML della pagina.",
+    "the_collector_is_the": "La parte di News Reader che recupera le tue fonti. Dagli l’indirizzo di un sito o di un feed e trova i nuovi articoli – dal feed del sito se c’è, altrimenti dalla sitemap o direttamente dalla pagina. Gli sviluppatori possono usarlo come piccola API web: <code>GET /api/collect?url=…</code>.",
     "what_if_a_website": "E se un sito non ha un feed RSS?",
-    "news_can_still_follow": "News può seguirlo lo stesso. Il Collector usa la sitemap del sito se contiene date, altrimenti prende gli articoli direttamente dalla pagina (JSON-LD, elementi article o link sotto il percorso richiesto).",
+    "news_can_still_follow": "News può seguirlo lo stesso. Il Collector legge allora la sitemap del sito oppure prende gli articoli più recenti direttamente dalla pagina.",
     "can_i_host_my": "Posso ospitare il mio News Reader con il mio marchio?",
     "yes_it_is_mit": "Sì – ha licenza MIT. Colori e font stanno in un file di tema, nome e icone nel manifest della web app. Usalo per te, la tua famiglia, il tuo team o i tuoi lettori, sul tuo dominio.",
     "for_organisations": "News Reader è adatto ad aziende ed enti pubblici?",
@@ -204,10 +210,10 @@
     "logs_text": "A ogni richiesta il server web tratta automaticamente i dati trasmessi dal tuo browser: indirizzo IP, data e ora, indirizzo richiesto, stato HTTP, quantità di dati trasferiti, referrer e user agent. È tecnicamente necessario per fornire le pagine e l’app e per proteggerle, ad esempio per riconoscere attacchi. I log sono conservati solo per il tempo necessario a questi scopi e poi cancellati. Se un fornitore di hosting gestisce il server per nostro conto, agisce come responsabile del trattamento vincolato alle nostre istruzioni (art. 28 GDPR). Base giuridica: art. 6, par. 1, lett. f GDPR.",
     "pirsch_h": "Statistiche di visita con Pirsch Analytics",
     "pirsch_1": "Tutte le pagine di questo sito e l’app News ospitata qui usano Pirsch Analytics, un servizio di analisi web senza cookie progettato secondo il principio della privacy by design. Per contare i visitatori, alla ricezione di una visualizzazione Pirsch ricava un ID visitatore da indirizzo IP, user agent, data e un salt tramite una funzione di hash unidirezionale.",
-    "pirsch_2": "L’indirizzo IP non viene memorizzato né per intero né in parte ed è anonimizzato in modo irreversibile dall’hash. Poiché vengono inclusi la data e un salt specifico per sito, i visitatori non possono essere riconosciuti per più di 24 ore né tracciati tra siti diversi. Una localizzazione approssimativa (paese, città) è ricavata da un database locale. Pirsch non imposta cookie e non salva nulla sul tuo dispositivo. Viene registrata solo la pagina visitata – mai il contenuto dei tuoi feed o della tua lista di lettura.",
+    "pirsch_2": "L’indirizzo IP non viene memorizzato né per intero né in parte ed è anonimizzato in modo irreversibile dall’hash. Poiché vengono inclusi la data e un salt specifico per sito, i visitatori non possono essere riconosciuti per più di 24 ore né tracciati tra siti diversi. Una localizzazione approssimativa (paese, città) è ricavata da un database locale. Pirsch non imposta cookie e non salva nulla sul tuo dispositivo. Viene registrata solo la pagina visitata, senza parametri né ancore – mai il contenuto dei tuoi feed o della tua lista di lettura, i link di associazione o gli indirizzi che condividi con l’app.",
     "pirsch_3": "Fornitore: Emvi Software GmbH, Nickelstraße 1b, 33378 Rheda-Wiedenbrück, Germania. Il trattamento avviene su server in Germania; non vi è alcun trasferimento verso paesi terzi. Base giuridica: art. 6, par. 1, lett. f GDPR – il nostro legittimo interesse a capire quali contenuti vengono trovati e usati. Maggiori informazioni: <a href=\"https://docs.pirsch.io/privacy\" rel=\"noopener\">privacy di Pirsch Analytics</a>.",
     "storage_h": "Impostazioni locali invece dei cookie",
-    "storage_text": "Questo sito non imposta cookie. Se scegli una lingua o un tema di colore, la scelta viene salvata nella memoria locale del browser (<code>nr.lang</code>, <code>nr.theme</code>) e non viene mai trasmessa. Ciò è strettamente necessario per fornire la funzione richiesta (§ 25, c. 2, n. 2 TDDDG). Puoi cancellarla in qualsiasi momento dalle impostazioni del browser.",
+    "storage_text": "Questo sito non imposta cookie. Se scegli una lingua o un tema di colore, la scelta viene salvata nella memoria locale del browser (<code>nr.lang</code>, <code>nr.theme</code>) e non viene mai trasmessa. L’app News vi conserva anche le impostazioni di visualizzazione (<code>news.*</code>) e salva feed, voci, copie offline e la chiave di sync nel database del browser (IndexedDB). Nulla di tutto ciò viene trasmesso, salvo quanto descritto sotto – per la sync solo in forma cifrata. Ciò è strettamente necessario per fornire le funzioni richieste (§ 25, c. 2, n. 2 TDDDG). Puoi cancellarlo in qualsiasi momento dalle impostazioni del browser.",
     "stripe_h": "Sostegno volontario tramite Stripe",
     "stripe_1": "News Reader è gratuito. Se vuoi sostenerlo, il link «Paga quanto vuoi» ti porta a una pagina di pagamento ospitata da Stripe (Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Grand Canal Dock, Dublin, D02 H210, Irlanda). Su questo sito non è incorporato alcuno script di Stripe – i dati arrivano a Stripe solo quando clicchi il link. Stripe tratta i dati di pagamento che inserisci lì; noi non vediamo mai i dati completi della carta o del conto. Riceviamo importo, orario, nome e indirizzo e-mail inseriti e, a seconda del metodo di pagamento, informazioni limitate come il circuito della carta e le ultime quattro cifre. Dopo il pagamento, Stripe ti riporta alla nostra pagina di ringraziamento.",
     "stripe_2": "Base giuridica: art. 6, par. 1, lett. b GDPR (esecuzione del pagamento da te avviato) e art. 6, par. 1, lett. c GDPR in combinato con gli obblighi di conservazione del diritto commerciale e fiscale tedesco (fino a 10 anni). Stripe può trattare dati anche negli Stati Uniti; Stripe, Inc. è certificata nell’ambito dell’EU-US Data Privacy Framework. Dettagli: <a href=\"https://stripe.com/it/privacy\" rel=\"noopener\">informativa sulla privacy di Stripe</a>.",
@@ -216,11 +222,11 @@
     "app_h": "Uso dell’app News",
     "app_intro": "News funziona in locale: feed, voci, lista di lettura e progressi sono salvati nel browser (IndexedDB) sul tuo dispositivo, non sul nostro server. Il server interviene solo dove un browser non può farcela da solo:",
     "collector_h": "Caricamento dei feed (Collector)",
-    "collector_text": "Quando segui un sito o aggiorni i feed, l’app invia l’indirizzo della fonte a <code>/api/collect</code>. Il server recupera la fonte per te e restituisce le voci. I contenuti dei feed sono memorizzati in cache per tutti gli utenti insieme fino a 14 giorni, solo con l’indirizzo della fonte e senza alcun legame con te. Per prevenire abusi, il server conta le richieste per client in brevi intervalli; a tal fine conserva un hash con salt del tuo indirizzo IP (per IPv6, del prefisso di rete) e lo cancella automaticamente dopo circa due giorni. Base giuridica: art. 6, par. 1, lett. f GDPR.",
+    "collector_text": "Quando segui un sito o aggiorni i feed, l’app invia l’indirizzo della fonte a <code>/api/collect</code>. Il server recupera la fonte per te e restituisce le voci. I contenuti dei feed sono memorizzati in cache per tutti gli utenti insieme fino a 14 giorni, solo con l’indirizzo della fonte e senza alcun legame con te; come ogni richiesta, la richiesta stessa compare nei file di log del server (vedi sopra). Per prevenire abusi, il server conta le richieste alle sue interfacce (feed, copie offline, sync) per client in brevi intervalli; a tal fine conserva un hash con salt del tuo indirizzo IP (per IPv6, del prefisso di rete) e lo cancella automaticamente dopo circa due giorni. Base giuridica: art. 6, par. 1, lett. f GDPR.",
     "article_h": "Copie offline per «Più tardi»",
-    "article_text": "Quando sposti una voce in «Più tardi», l’app richiede a <code>/api/article</code> una copia leggibile dell’articolo. Il server recupera la pagina e restituisce il testo, che viene poi salvato sul tuo dispositivo. Sul server la copia resta in cache fino a 14 giorni, solo con l’indirizzo dell’articolo e senza alcun legame con te. Base giuridica: art. 6, par. 1, lett. f GDPR.",
+    "article_text": "Quando sposti una voce in «Più tardi», l’app richiede a <code>/api/article</code> una copia leggibile dell’articolo. Il server recupera la pagina e restituisce il testo, che viene poi salvato sul tuo dispositivo. Sul server la copia resta in cache fino a 14 giorni, solo con l’indirizzo dell’articolo e senza alcun legame con te; la richiesta stessa compare nei file di log del server come ogni richiesta. Base giuridica: art. 6, par. 1, lett. f GDPR.",
     "sync_h": "Sincronizzazione cifrata end-to-end",
-    "sync_text": "La sincronizzazione è facoltativa. Quando abbini dei dispositivi, i tuoi dati vengono cifrati sul tuo dispositivo (AES-256-GCM) prima del caricamento. La chiave non lascia mai i tuoi dispositivi, quindi non possiamo leggere il contenuto. Il server conserva un file cifrato per cassaforte, denominato con un hash del token di accesso, insieme a dimensione e data di modifica. Una cassaforte viene cancellata quando la rimuovi nell’app, e automaticamente 180 giorni dopo l’ultimo utilizzo. Base giuridica: art. 6, par. 1, lett. b GDPR.",
+    "sync_text": "La sincronizzazione è facoltativa. Quando abbini dei dispositivi, i tuoi dati vengono cifrati sul tuo dispositivo (AES-256-GCM) prima del caricamento. La chiave non lascia mai i tuoi dispositivi, quindi non possiamo leggere il contenuto. Il server conserva un file cifrato per gruppo di dispositivi abbinati, denominato con un hash del token di accesso, insieme a dimensione e data di modifica. Viene cancellato quando scegli <em>Elimina la copia sul server</em> nelle impostazioni dell’app (prima dissocia gli altri dispositivi, altrimenti lo ricaricano), e automaticamente 180 giorni dopo l’ultimo utilizzo. Base giuridica: art. 6, par. 1, lett. b GDPR.",
     "sources_h": "Contenuti delle fonti che segui",
     "sources_text": "Le voci e l’elenco dei feed possono contenere immagini e icone dei siti che il browser carica direttamente dal sito di origine o dal suo server di immagini, e «Leggi ora» apre l’articolo sul sito originale. In entrambi i casi il rispettivo gestore riceve il tuo indirizzo IP ed è responsabile di tale trattamento. L’app non invia alcun referrer.",
     "selfhost_h": "Altre istanze di News Reader",
@@ -228,7 +234,7 @@
     "rights_h": "I tuoi diritti",
     "rights_1": "Hai diritto di accesso (art. 15 GDPR), rettifica (art. 16), cancellazione (art. 17), limitazione del trattamento (art. 18), portabilità (art. 20) e opposizione (art. 21). Per esercitarli contattaci ai recapiti indicati sopra. Puoi inoltre presentare reclamo a un’autorità di controllo, ad esempio quella competente per noi: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach, Germania, <a href=\"https://www.lda.bayern.de\" rel=\"noopener\">www.lda.bayern.de</a>.",
     "rights_2": "Statistiche e cache non contengono dati riconducibili a te (niente cookie, nessun indirizzo IP memorizzato, riconoscimento per al massimo 24 ore), perciò di norma non possiamo attribuire singoli record a una persona.",
-    "rights_3": "I tuoi dati di lettura sono sui tuoi dispositivi e la cassaforte di sincronizzazione è cifrata con una chiave che possiedi solo tu. Puoi esportare i tuoi feed in OPML in qualsiasi momento e cancellare tutto nell’app.",
+    "rights_3": "I tuoi dati di lettura sono sui tuoi dispositivi e i dati sincronizzati sono cifrati con una chiave che possiedi solo tu. Puoi esportare i tuoi feed in OPML in qualsiasi momento e cancellare tutto nell’app.",
     "updated": "Ultimo aggiornamento: settembre 2026."
   },
   "imprint": {

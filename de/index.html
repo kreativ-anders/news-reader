@@ -47,7 +47,7 @@
   <link rel="preload" href="../app/fonts/source-sans-3.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../app/theme.css">
   <link rel="stylesheet" href="../site.css">
-  <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="m4MxtiKjOBnyv9GEhLXBIcrjrwiP0tzu"></script>
+  <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="m4MxtiKjOBnyv9GEhLXBIcrjrwiP0tzu" data-disable-query data-strip-anchor data-disable-outbound-links></script>
 
   <script type="application/ld+json">
 {
@@ -123,7 +123,7 @@
                     "name": "Kann der Serverbetreiber meine Feeds oder meine Leseliste lesen?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Nein. Feeds, Leseliste und Lesestand werden auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Server speichert pro Tresor eine versiegelte Datei, benannt nach einem Hash des Zugangs-Tokens – keine Datenbank, nichts Lesbares, das durchsickern könnte. Wie bei jeder Website sieht der Webserver beim Verbinden allerdings deine IP-Adresse."
+                        "text": "Nein. Feeds, Leseliste und Lesestand werden auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Server speichert für deine Geräte eine versiegelte Datei, benannt nach einem Hash des Zugangs-Tokens – keine Datenbank, nichts Lesbares, das durchsickern könnte. Wie bei jeder Website sieht der Webserver beim Verbinden allerdings deine IP-Adresse."
                     }
                 },
                 {
@@ -131,7 +131,7 @@
                     "name": "Was passiert, wenn ich alle meine Geräte verliere?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Dann kann niemand den Tresor öffnen – auch wir nicht. Das ist der Preis echter Ende-zu-Ende-Verschlüsselung. Lust auf ein Backup? Exportiere deine Feeds ab und zu als OPML."
+                        "text": "Dann kann niemand deine synchronisierten Daten öffnen – auch wir nicht. Das ist der Preis echter Ende-zu-Ende-Verschlüsselung. Lust auf ein Backup? Exportiere deine Feeds ab und zu als OPML."
                     }
                 },
                 {
@@ -139,7 +139,7 @@
                     "name": "Was ist der Collector?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Der REST-Endpunkt, der mit News Reader kommt: GET /api/collect?url=… macht aus jeder Website- oder Feed-URL normalisierte JSON-Einträge. Er probiert zuerst einen nativen Feed, dann einen angegebenen Feed, übliche Feed-Pfade, die Sitemap und zuletzt das HTML der Seite."
+                        "text": "Der Teil von News Reader, der deine Quellen abruft. Gib ihm eine beliebige Website- oder Feed-Adresse, und er findet die neuen Beiträge – aus dem Feed der Seite, wenn es einen gibt, sonst aus ihrer Sitemap oder direkt aus der Seite. Entwickler können ihn als kleine Web-API nutzen: GET /api/collect?url=…."
                     }
                 },
                 {
@@ -147,7 +147,7 @@
                     "name": "Was, wenn eine Website keinen RSS-Feed hat?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "News kann ihr trotzdem folgen. Der Collector nutzt die Sitemap der Website, wenn sie Datumsangaben enthält, und holt die Beiträge sonst direkt aus der Seite (JSON-LD, article-Elemente oder Links unterhalb des angefragten Pfads)."
+                        "text": "News kann ihr trotzdem folgen. Der Collector liest dann die Sitemap der Website oder holt die neuesten Beiträge direkt aus der Seite."
                     }
                 },
                 {
@@ -236,7 +236,7 @@
     .d-acts span:first-child{color:var(--brand-ink)}
     .d-acts span:last-child{margin-left:auto}
     .d-acts svg{width:13px;height:13px}
-    .d-card.go{animation:triage 9s ease-in-out infinite}
+    .d-card.go{animation:triage 9s ease-in-out 3}
     @keyframes triage{0%,62%{opacity:1;transform:none}70%{opacity:0;transform:translateX(46px)}72%,80%{opacity:0;transform:translateX(-10px)}90%,100%{opacity:1;transform:none}}
     .d-nav{display:flex;justify-content:space-around;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:.68rem;font-weight:700;color:var(--muted)}
     .d-nav span{display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -289,7 +289,7 @@
     .vbar{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--v)}
     .vtab .run .vbar{animation:vbar var(--vdur,5.5s) linear forwards}
     @keyframes vbar{to{width:100%}}
-    .vfall{font:12px var(--mono);color:var(--muted);opacity:.7;padding:2px 0 2px 38px}
+    .vfall{font:12px var(--mono);color:var(--muted);padding:2px 0 2px 38px}
     .vconsole{--v-rule:#FFB020;--v-direct:#FFA500;--v-discovered:#FFC54D;--v-guessed:#FFE196;--v-html:#FA7C20;--v-sitemap:#EAB084;--on-v:#000000;position:sticky;top:96px;background:#1C1C1C;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25)}
     .vhead{display:flex;align-items:center;gap:6px;padding:12px 16px;border-bottom:1px solid #333333;font:12px var(--mono);color:#8a8a8a}
     .vhead i{width:11px;height:11px;border-radius:50%;background:#4a4a4a}
@@ -298,7 +298,7 @@
     .vin{word-break:break-all}
     .vk{color:#8a8a8a;margin-right:4px}
     .vurl{color:#fff}
-    .caret{display:inline-block;width:8px;height:1.1em;vertical-align:-3px;background:var(--v);margin-left:2px;animation:blink 1s steps(1) infinite}
+    .caret{display:inline-block;width:8px;height:1.1em;vertical-align:-3px;background:var(--v);margin-left:2px;animation:blink 1s steps(1) 8}
     @keyframes blink{50%{opacity:0}}
     .vstat{margin:14px 0 12px;color:#bdbdbd;font-family:var(--font);font-size:.96rem}
     .pill{display:inline-block;font:700 .74rem var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:3px 10px;border-radius:var(--radius);background:var(--v);color:var(--on-v);margin-right:8px}
@@ -354,14 +354,16 @@
 
 
     @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.syncviz .pkt{display:none}}
+    .still *{animation-play-state:paused!important}.still .syncviz .pkt{display:none}
+    @media (forced-colors:active){.vtab button[aria-selected="true"]{outline:2px solid Highlight}}
   </style>
 </head>
 <body>
   <a class="skip" href="#main" data-i18n="nav.skip_to_content">Zum Inhalt springen</a>
 
   <header>
-    <nav class="wrap nav" aria-label="Main">
-      <a class="brand" href="./" aria-label="News Reader home"><svg class="nr-mark" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="i" x="8" y="8" width="48" height="48" rx="6" stroke-width="4"/><rect class="f" x="16" y="16" width="32" height="7" rx="1.5"/><path class="i" d="M40.5 30.5H46.5M40.5 38.5H46.5M40.5 46.5H43.5" stroke-width="3"/><path class="r" d="M19 37.5A7.5 7.5 0 0 1 26.5 45M19 31A14 14 0 0 1 33 45" stroke-width="4"/><circle class="d" cx="19" cy="45" r="3"/></svg>News <small>Reader</small></a>
+    <nav class="wrap nav" aria-label="Hauptmenü" data-i18n-attr="aria-label:nav.main_label">
+      <a class="brand" href="./" aria-label="News Reader Startseite" data-i18n-attr="aria-label:nav.home_label"><svg class="nr-mark" viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="i" x="8" y="8" width="48" height="48" rx="6" stroke-width="4"/><rect class="f" x="16" y="16" width="32" height="7" rx="1.5"/><path class="i" d="M40.5 30.5H46.5M40.5 38.5H46.5M40.5 46.5H43.5" stroke-width="3"/><path class="r" d="M19 37.5A7.5 7.5 0 0 1 26.5 45M19 31A14 14 0 0 1 33 45" stroke-width="4"/><circle class="d" cx="19" cy="45" r="3"/></svg>News <small>Reader</small></a>
       <ul>
         <li><a href="#reader" data-i18n="nav.reader">Reader</a></li>
         <li><a href="#sync" data-i18n="nav.sync">Sync</a></li>
@@ -454,7 +456,7 @@
           <article class="card">
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></div>
             <h3 data-i18n="features.phone_and_desktop">Smartphone und Desktop</h3>
-            <p data-i18n="features.install_news_from_the">Installiere News direkt aus dem Browser wie eine App. Wisch dich auf dem Smartphone durch die Beiträge, flieg am Desktop mit <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> hindurch – und teile jede Seite an News, um ihr zu folgen.</p>
+            <p data-i18n="features.install_news_from_the">Installiere News direkt aus dem Browser wie eine App. Wisch dich auf dem Smartphone durch die Beiträge, flieg am Desktop mit <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> hindurch – und teile unter Android jede Seite an News, um ihr zu folgen.</p>
           </article>
           <article class="card">
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
@@ -479,7 +481,7 @@
           <article class="card">
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M4.9 4.9l14.2 14.2"/></svg></div>
             <h3 data-i18n="features.private_and_light">Privat und leicht</h3>
-            <p data-i18n="features.no_cookies_no_profiles">Keine Cookies, keine Werbung, keine Profile, kein Framework. Nur ein paar Kilobyte schlichtes JavaScript und selbst gehostete Schriften – plus cookiefreie, anonyme Besucherzählung.</p>
+            <p data-i18n="features.no_cookies_no_profiles">Keine Cookies, keine Werbung, keine Profile, kein Framework. Schlichtes JavaScript (rund 50 KB komprimiert) und selbst gehostete Schriften – plus cookiefreie, anonyme Besucherzählung.</p>
           </article>
         </div>
       </div>
@@ -494,9 +496,9 @@
           <p class="lead" style="margin:14px 0 26px" data-i18n="sync.your_devices_share_one">Deine Geräte teilen einen geheimen Schlüssel. Er reist per QR-Code und erreicht nie den Server. Alles wird zuerst auf deinem Gerät verschlüsselt – der Server hat also immer nur eine versiegelte Datei, die er nicht öffnen kann. Keine Datenbank, kein Konto, keine E-Mail.</p>
           <ul class="checks">
             <li><strong data-i18n="sync.end_to_end_encrypted">Ende-zu-Ende-verschlüsselt</strong> <span data-i18n="sync.aes_256_gcm_keys">– AES-256-GCM, mit Schlüsseln, die nur auf deinen Geräten existieren.</span></li>
-            <li><strong data-i18n="sync.no_database">Keine Datenbank</strong> <span data-i18n="sync.one_opaque_file_per">– eine versiegelte Datei pro Tresor. Nichts abzufragen, abzuziehen oder zu knacken.</span></li>
-            <li><strong data-i18n="sync.minimal_surface">Winzige Angriffsfläche</strong> <span data-i18n="sync.one_endpoint_three_verbs">– ein Endpunkt, drei Methoden, strenge Größen- und Ratenlimits.</span></li>
-            <li><strong data-i18n="sync.leaves_no_trace">Hinterlässt keine Spuren</strong> <span data-i18n="sync.delete_with_one_click">– mit einem Klick weg; vergessene Tresore verschwinden nach 180 Tagen.</span></li>
+            <li><strong data-i18n="sync.no_database">Keine Datenbank</strong> <span data-i18n="sync.one_opaque_file_per">– eine versiegelte Datei pro Gerätegruppe. Nichts abzufragen, abzuziehen oder zu knacken.</span></li>
+            <li><strong data-i18n="sync.minimal_surface">Winzige Angriffsfläche</strong> <span data-i18n="sync.one_endpoint_three_verbs">– eine einzige Sync-Adresse mit strengen Größen- und Ratenlimits.</span></li>
+            <li><strong data-i18n="sync.leaves_no_trace">Hinterlässt keine Spuren</strong> <span data-i18n="sync.delete_with_one_click">– mit einem Klick gelöscht; ungenutzte Sync-Daten verschwinden nach 180 Tagen.</span></li>
           </ul>
         </div>
         <svg class="syncviz" viewBox="0 0 520 380" role="img" aria-labelledby="sync-t" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -526,8 +528,8 @@
             <text class="s" x="352" y="262" data-i18n="sync.one_sealed_file">eine versiegelte Datei</text>
             <text class="s" x="352" y="278" data-i18n="sync.no_database_no_key">keine Datenbank · kein Schlüssel</text>
           </g>
-          <circle class="pkt" r="5"><animateMotion dur="3.2s" repeatCount="indefinite" rotate="0"><mpath href="#s1" xlink:href="#s1"/></animateMotion></circle>
-          <circle class="pkt" r="5"><animateMotion dur="3.2s" begin="-1.6s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear" rotate="0"><mpath href="#s2" xlink:href="#s2"/></animateMotion></circle>
+          <circle class="pkt" r="5"><animateMotion dur="3.2s" repeatCount="6" fill="freeze" rotate="0"><mpath href="#s1" xlink:href="#s1"/></animateMotion></circle>
+          <circle class="pkt" r="5"><animateMotion dur="3.2s" begin="-1.6s" repeatCount="6" fill="freeze" keyPoints="1;0" keyTimes="0;1" calcMode="linear" rotate="0"><mpath href="#s2" xlink:href="#s2"/></animateMotion></circle>
         </svg>
       </div>
     </section>
@@ -541,7 +543,7 @@
           <p data-i18n="collector.most_readers_give_up">Die meisten Reader geben auf, wenn eine Seite keinen RSS-Link hat. News nicht – dank des <strong>Collector</strong>, eines kleinen REST-Endpunkts auf demselben Server. Er probiert zuerst die präziseste Strategie, tastet sich Schritt für Schritt zurück und liefert immer dasselbe saubere JSON. Nutze ihn für News – oder bau deinen eigenen Reader darauf.</p>
         </div>
         <div class="variants-grid">
-          <ol class="vtabs" role="tablist" aria-label="Resolution variants" aria-orientation="vertical">
+          <ol class="vtabs" role="tablist" aria-label="Lösungswege" data-i18n-attr="aria-label:collector.variants_label" aria-orientation="vertical">
             <li class="vtab" role="presentation" style="--v:var(--v-rule)">
               <button role="tab" id="vt-rule" aria-controls="vp-rule" aria-selected="true" tabindex="0">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11M4 17h7"/><path d="M15 4l3 3-3 3M11 14l3 3-3 3"/><circle cx="19" cy="17" r="1.5"/></svg></span>
@@ -651,7 +653,7 @@
   <span class="jk">"source"</span>: {
     <span class="jk">"strategy"</span>: <span class="jv">"sitemap"</span>,
     <span class="jk">"type"</span>: <span class="js">"sitemap"</span>,
-    <span class="jk">"feedUrl"</span>: <span class="jn">null</span>
+    <span class="jk">"feedUrl"</span>: <span class="js">"https://example.com/sitemap.xml"</span>
   },
   <span class="jk">"entries"</span>: [ <span class="jc">… 50 normalized entries</span> ],
   <span class="jk">"meta"</span>: { <span class="jk">"count"</span>: <span class="jn">50</span>, <span class="jk">"cached"</span>: <span class="jn">false</span> }
@@ -689,10 +691,10 @@
           <ol class="steps">
             <li><h3 data-i18n="build.clone">Klonen</h3><p data-i18n="build.a_handful_of_php">Eine Handvoll PHP-Dateien und eine statische Web-App. Kein Datenbankserver, kein Build-Schritt, kein Container.</p></li>
             <li><h3 data-i18n="build.rebrand">Umbenennen</h3><p data-i18n="build.colours_and_fonts_live">Farben und Schriften stehen in <code>app/theme.css</code>. Icons und App-Namen im Manifest tauschen – fertig. Deine Nutzer sehen deinen Reader, nicht unseren.</p></li>
-            <li><h3 data-i18n="build.deploy">Ausrollen</h3><p data-i18n="build.any_web_server_with">Jeder Webserver mit PHP 8.5+ und HTTPS. Die mitgelieferte nginx-Konfiguration sperrt alles außer App und API.</p></li>
+            <li><h3 data-i18n="build.deploy">Ausrollen</h3><p data-i18n="build.any_web_server_with">Ein Webserver mit PHP 8.5+ und HTTPS. Die mitgelieferte nginx-Konfiguration liefert nur Website, App und API aus – alles andere bleibt privat.</p></li>
           </ol>
           <div>
-            <div class="terminal" role="figure" aria-label="Installing News Reader">
+            <div class="terminal" role="figure" aria-label="News Reader installieren" data-i18n-attr="aria-label:build.terminal_label">
               <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>shell</span></div>
 <pre><code><span class="c"># get the code</span>
 <span class="p">$ </span>git clone https://github.com/kreativ-anders/news-reader.git
@@ -709,7 +711,7 @@
           </div>
         </div>
         <ul class="sov" aria-label="Digitale Souveränität" data-i18n-attr="aria-label:build.sov_label">
-          <li><h3 data-i18n="build.sov_data">Daten bleiben im Haus</h3><p data-i18n="build.sov_data_text">Feeds, Leselisten und Sync-Tresore liegen auf Servern, die du kontrollierst – in deinem Rechenzentrum, deiner Cloud-Region, deinem Rechtsraum.</p></li>
+          <li><h3 data-i18n="build.sov_data">Daten bleiben im Haus</h3><p data-i18n="build.sov_data_text">Feeds, Leselisten und Sync-Daten liegen auf Servern, die du kontrollierst – in deinem Rechenzentrum, deiner Cloud-Region, deinem Rechtsraum.</p></li>
           <li><h3 data-i18n="build.sov_gdpr">DSGVO-freundlich von Grund auf</h3><p data-i18n="build.sov_gdpr_text">Keine Benutzerkonten, keine personenbezogenen Profile, keine Datenbank. Sync-Daten sind Ende-zu-Ende-verschlüsselt – nicht einmal eure eigenen Admins können sie lesen.</p></li>
           <li><h3 data-i18n="build.sov_lockin">Kein Vendor-Lock-in</h3><p data-i18n="build.sov_lockin_text">MIT-Lizenz, OPML rein und raus, schlichtes PHP. Keine Kosten pro Arbeitsplatz, keine erzwungenen Upgrades, keine fremde Roadmap.</p></li>
           <li><h3 data-i18n="build.sov_audit">Prüfbar und intranettauglich</h3><p data-i18n="build.sov_audit_text">Jede Zeile liegt offen für euer Security-Review. Interne Quellen auf privaten Hosts lassen sich mit einer Einstellung gezielt freischalten.</p></li>
@@ -725,10 +727,10 @@
           <details><summary data-i18n="faq.how_is_it_different">Was unterscheidet News von anderen Feed-Readern?</summary><p data-i18n="faq.no_account_no_ads">Kein Konto, keine Werbung, kein Tracking und kein Algorithmus, der entscheidet, was du siehst. Dein Lesestand liegt auf deinen Geräten, der Sync ist Ende-zu-Ende-verschlüsselt, und du kannst das Ganze auf deinem eigenen Server betreiben.</p></details>
           <details><summary data-i18n="faq.does_news_use_ai">Steckt in News eine KI?</summary><p data-i18n="faq.does_news_use_ai_text">Nein. Es gibt keine KI und kein Modell, das aus deinem Leseverhalten lernt – weder auf deinem Gerät noch auf dem Server. News folgt ein paar einfachen Regeln: Neue Beiträge landen im Eingang, die neuesten zuerst, und nur deine eigene Entscheidung bewegt sie weiter. Was du siehst, hängt von deinen Quellen ab – nicht von einem Profil über dich.</p></details>
           <details><summary data-i18n="faq.how_does_sync_work">Wie funktioniert Sync ohne Konto?</summary><p data-i18n="faq.the_first_device_creates">Dein erstes Gerät erzeugt einen zufälligen geheimen Schlüssel. Weitere Geräte kommen dazu, indem sie einen QR-Code scannen oder den Kopplungslink öffnen. Aus diesem Schlüssel leitet jedes Gerät ein Zugangs-Token und einen Verschlüsselungsschlüssel ab. Der Server bekommt nur das Token und eine verschlüsselte Datei – der Schlüssel selbst verlässt nie deine Geräte.</p></details>
-          <details><summary data-i18n="faq.can_the_server_operator">Kann der Serverbetreiber meine Feeds oder meine Leseliste lesen?</summary><p data-i18n="faq.no_feeds_reading_list">Nein. Feeds, Leseliste und Lesestand werden auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Server speichert pro Tresor eine versiegelte Datei, benannt nach einem Hash des Zugangs-Tokens – keine Datenbank, nichts Lesbares, das durchsickern könnte. Wie bei jeder Website sieht der Webserver beim Verbinden allerdings deine IP-Adresse.</p></details>
-          <details><summary data-i18n="faq.what_if_i_lose">Was passiert, wenn ich alle meine Geräte verliere?</summary><p data-i18n="faq.then_the_vault_cannot">Dann kann niemand den Tresor öffnen – auch wir nicht. Das ist der Preis echter Ende-zu-Ende-Verschlüsselung. Lust auf ein Backup? Exportiere deine Feeds ab und zu als OPML.</p></details>
-          <details><summary data-i18n="faq.what_is_the_collector">Was ist der Collector?</summary><p data-i18n="faq.the_collector_is_the">Der REST-Endpunkt, der mit News Reader kommt: <code>GET /api/collect?url=…</code> macht aus jeder Website- oder Feed-URL normalisierte JSON-Einträge. Er probiert zuerst einen nativen Feed, dann einen angegebenen Feed, übliche Feed-Pfade, die Sitemap und zuletzt das HTML der Seite.</p></details>
-          <details><summary data-i18n="faq.what_if_a_website">Was, wenn eine Website keinen RSS-Feed hat?</summary><p data-i18n="faq.news_can_still_follow">News kann ihr trotzdem folgen. Der Collector nutzt die Sitemap der Website, wenn sie Datumsangaben enthält, und holt die Beiträge sonst direkt aus der Seite (JSON-LD, article-Elemente oder Links unterhalb des angefragten Pfads).</p></details>
+          <details><summary data-i18n="faq.can_the_server_operator">Kann der Serverbetreiber meine Feeds oder meine Leseliste lesen?</summary><p data-i18n="faq.no_feeds_reading_list">Nein. Feeds, Leseliste und Lesestand werden auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Server speichert für deine Geräte eine versiegelte Datei, benannt nach einem Hash des Zugangs-Tokens – keine Datenbank, nichts Lesbares, das durchsickern könnte. Wie bei jeder Website sieht der Webserver beim Verbinden allerdings deine IP-Adresse.</p></details>
+          <details><summary data-i18n="faq.what_if_i_lose">Was passiert, wenn ich alle meine Geräte verliere?</summary><p data-i18n="faq.then_the_vault_cannot">Dann kann niemand deine synchronisierten Daten öffnen – auch wir nicht. Das ist der Preis echter Ende-zu-Ende-Verschlüsselung. Lust auf ein Backup? Exportiere deine Feeds ab und zu als OPML.</p></details>
+          <details><summary data-i18n="faq.what_is_the_collector">Was ist der Collector?</summary><p data-i18n="faq.the_collector_is_the">Der Teil von News Reader, der deine Quellen abruft. Gib ihm eine beliebige Website- oder Feed-Adresse, und er findet die neuen Beiträge – aus dem Feed der Seite, wenn es einen gibt, sonst aus ihrer Sitemap oder direkt aus der Seite. Entwickler können ihn als kleine Web-API nutzen: <code>GET /api/collect?url=…</code>.</p></details>
+          <details><summary data-i18n="faq.what_if_a_website">Was, wenn eine Website keinen RSS-Feed hat?</summary><p data-i18n="faq.news_can_still_follow">News kann ihr trotzdem folgen. Der Collector liest dann die Sitemap der Website oder holt die neuesten Beiträge direkt aus der Seite.</p></details>
           <details><summary data-i18n="faq.can_i_host_my">Kann ich einen eigenen News Reader unter meiner eigenen Marke betreiben?</summary><p data-i18n="faq.yes_it_is_mit">Ja – er steht unter der MIT-Lizenz. Farben und Schriften liegen in einer Theme-Datei, Name und Icons im Web-App-Manifest. Betreibe ihn für dich, deine Familie, dein Team oder deine Leser, unter deiner eigenen Domain.</p></details>
           <details><summary data-i18n="faq.for_organisations">Eignet sich News Reader für Unternehmen und Behörden?</summary><p data-i18n="faq.for_organisations_text">Ja. Du betreibst ihn auf eigener Infrastruktur – alle Daten bleiben unter deiner Kontrolle und in deinem Rechtsraum. Es gibt keine Benutzerkonten, keine personenbezogenen Profile und keine Datenbank, der Sync ist Ende-zu-Ende-verschlüsselt, und die MIT-Lizenz heißt: keine Kosten pro Arbeitsplatz, keine Abhängigkeit von einem Anbieter. Interne Quellen auf privaten Hosts lassen sich gezielt freischalten.</p></details>
           <details><summary data-i18n="faq.what_do_i_need">Was brauche ich zum Hosten?</summary><p data-i18n="faq.php_with">PHP 8.5+ mit dom, libxml und mbstring (curl empfohlen), einen Webserver mit HTTPS und einen beschreibbaren Ordner var/. Kein Datenbankserver, kein Build-Schritt, keine Hintergrundprozesse. Eine nginx-Konfiguration liegt bei.</p></details>
@@ -756,7 +758,7 @@
     <div class="wrap">
       <span data-i18n="footer.copyright">© <span id="y">2026</span> News Reader · ein Projekt von <a href="https://kreativ-anders.de" rel="noopener">kreativ-anders</a> · MIT-Lizenz</span>
       <span><a href="../app/">News</a> · <a href="#collector">Collector</a> · <a href="../docs/api/">API</a> · <a href="https://github.com/kreativ-anders/news-reader" rel="noopener">GitHub</a></span>
-      <span><a href="./privacy.html" data-i18n="footer.privacy">Datenschutz</a> · <a href="./imprint.html" data-i18n="footer.imprint">Impressum</a> · <a href="https://buy.stripe.com/aFa9ATbxpe2u03T2aies002" rel="noopener" data-i18n="footer.support">Zahl, was du möchtest</a></span>
+      <span><a href="./privacy.html" data-i18n="footer.privacy">Datenschutz</a> · <a href="./imprint.html" data-i18n="footer.imprint">Impressum</a> · <a href="https://buy.stripe.com/aFa9ATbxpe2u03T2aies002" rel="noopener" data-i18n="footer.support">Zahl, was du möchtest</a> · <button type="button" id="motionBtn" class="linkbtn" aria-pressed="false" data-i18n="ui.pause_motion">Animationen anhalten</button></span>
     </div>
   </footer>
 
@@ -781,7 +783,7 @@
       if(auto&&!paused){void tabs[n].offsetWidth;tabs[n].classList.add('run');}
       schedule();
     }
-    function schedule(){clearTimeout(timer);if(auto&&!paused)timer=setTimeout(function(){show((cur+1)%tabs.length)},DUR);}
+    function schedule(){clearTimeout(timer);if(auto&&!paused)timer=setTimeout(function(){if(cur+1>=tabs.length||document.documentElement.classList.contains('still')){auto=false;tabs[cur].classList.remove('run');}else show(cur+1);},DUR);}
     tabs.forEach(function(t,k){
       t.addEventListener('click',function(){auto=false;show(k);});
       t.addEventListener('keydown',function(e){

@@ -47,26 +47,36 @@
 
   <main class="wrap">
     <h1>API</h1>
-    <p>Three JSON endpoints, served by every News Reader installation. No API key. Errors come back as <code>{"error":{"code","message"}}</code> with a 4xx/5xx status.</p>
+    <p>Three endpoints, served by every News Reader installation – JSON for Collector and articles, an encrypted binary blob for sync. No API key. Errors come back as <code>{"error":{"code","message"}}</code>.</p>
 
     <h2>Collector</h2>
     <p>Any website or feed URL → normalized entries. Works for sites without an RSS feed, too.</p>
-    <pre><code>GET /api/collect?url=https://example.com/blog</code></pre>
-    <pre><code>{
-  "source":  { "url": "…", "type": "rss", "strategy": "discovered", "title": "…", "siteUrl": "…", "icon": "…" },
-  "entries": [ { "id": "…", "url": "…", "title": "…", "publishedAt": "…", "summary": "…", "image": "…", "author": "…" } ],
-  "meta":    { "count": 20, "cached": true }
+    <pre tabindex="0" aria-label="Collector request"><code>GET /api/collect?url=https://example.com/blog[&amp;limit=1..100][&amp;refresh=1]</code></pre>
+    <pre tabindex="0" aria-label="Collector response"><code>{
+  "source":  { "url": "…", "type": "rss", "strategy": "discovered", "feedUrl": "…", "title": "…", "siteUrl": "…", "icon": "…" },
+  "entries": [ { "id": "…", "url": "…", "title": "…", "publishedAt": "…", "updatedAt": "…", "summary": "…", "image": "…", "author": "…" } ],
+  "meta":    { "count": 20, "cached": true, "nextRefreshAfter": "…" }
 }</code></pre>
+    <p><code>limit</code> defaults to 100. <code>refresh=1</code> bypasses the cache once it is older than 15 minutes. The scheme defaults to <code>https://</code>.</p>
 
     <h2>Article</h2>
-    <p>A readable copy of one article, e.g. for offline reading.</p>
-    <pre><code>GET /api/article?url=https://example.com/blog/post</code></pre>
-    <pre><code>{ "article": { "url": "…", "title": "…", "byline": "…", "content": "&lt;p&gt;…&lt;/p&gt;", "words": 812 } }</code></pre>
+    <p>A readable copy of one article, e.g. for offline reading. With <code>feed</code> and <code>id</code>, a full text the feed already carries is served without fetching the page.</p>
+    <pre tabindex="0" aria-label="Article request"><code>GET /api/article?url=https://example.com/blog/post[&amp;feed=&lt;feed url&gt;&amp;id=&lt;entry id&gt;]</code></pre>
+    <pre tabindex="0" aria-label="Article response"><code>{ "article": { "url": "…", "title": "…", "byline": "…", "content": "&lt;p&gt;…&lt;/p&gt;", "words": 812, "partial": false } }</code></pre>
+
+    <h2>Status codes</h2>
+    <ul>
+      <li><code>400</code> invalid or forbidden URL (<code>INVALID_URL</code>, <code>UNSUPPORTED_URL</code>, <code>FORBIDDEN_HOST</code>, <code>DNS_FAILED</code>)</li>
+      <li><code>422</code> the source failed or has no posts (<code>NO_FEED_DETECTED</code>, <code>PLATFORM_NO_FEED</code>, <code>UPSTREAM_*</code>, <code>TOO_MANY_REDIRECTS</code>, <code>NOT_AN_ARTICLE</code>, <code>NO_CONTENT</code>)</li>
+      <li><code>429</code> rate limited · <code>503</code> busy – both with <code>Retry-After</code></li>
+    </ul>
 
     <h2>Sync</h2>
-    <p>Stores one end-to-end encrypted blob per device group. The server never sees the key.</p>
-    <pre><code>GET | PUT | DELETE /api/sync
-Authorization: Bearer &lt;token&gt;</code></pre>
+    <p>Stores one end-to-end encrypted blob per vault (one group of paired devices). The server never sees the key.</p>
+    <pre tabindex="0" aria-label="Sync requests"><code>Authorization: Bearer &lt;token&gt;
+GET    /api/sync   → blob + ETag (304 with If-None-Match, 404 if none)
+PUT    /api/sync   If-Match: "&lt;etag&gt;" or If-None-Match: *   (412 conflict, 410 forwarded)
+DELETE /api/sync   → 204</code></pre>
 
     <p>Full details: <a href="https://github.com/kreativ-anders/news-reader#collector-apicollect" rel="noopener">README on GitHub</a>.</p>
   </main>

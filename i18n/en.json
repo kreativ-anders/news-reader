@@ -10,7 +10,9 @@
     "theme": "Theme",
     "theme_auto": "Theme: automatic",
     "theme_light": "Theme: light",
-    "theme_dark": "Theme: dark"
+    "theme_dark": "Theme: dark",
+    "pause_motion": "Pause animations",
+    "play_motion": "Play animations"
   },
   "nav": {
     "skip_to_content": "Skip to content",
@@ -19,7 +21,9 @@
     "collector": "Collector",
     "build_your_own": "Self-host",
     "faq": "FAQ",
-    "open_news": "Open News"
+    "open_news": "Open News",
+    "main_label": "Main",
+    "home_label": "News Reader home"
   },
   "hero": {
     "news_reader": "Open-source RSS reader",
@@ -62,7 +66,7 @@
     "everything_a_reader_needs": "Everything a reader needs. Nothing it doesn't.",
     "no_ads_no_tracking": "No ads, no tracking, no “recommended for you” – just your sources, in one calm place.",
     "phone_and_desktop": "Phone and desktop",
-    "install_news_from_the": "Install News from your browser like an app. Swipe through posts on your phone, fly through them with <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> on your desktop, and share any page to News to follow it.",
+    "install_news_from_the": "Install News from your browser like an app. Swipe through posts on your phone, fly through them with <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> on your desktop – and on Android, share any page to News to follow it.",
     "encrypted_sync_no_account": "Encrypted sync, no account",
     "pair_a_device_by": "Scan a QR code and your devices are paired. Feeds, reading list and progress are locked up before they leave your device.",
     "local_first_amp_offline": "Local-first &amp; offline",
@@ -72,7 +76,7 @@
     "bring_your_feeds": "Bring your feeds along",
     "import_your_opml_export": "Coming from another reader? Import your OPML file and all your sources move in. Export is just as easy – no lock-in, ever.",
     "private_and_light": "Private and light",
-    "no_cookies_no_profiles": "No cookies, no ads, no profiles, no framework. Just a few kilobytes of plain JavaScript and self-hosted fonts – plus cookie-free, anonymous visitor counts."
+    "no_cookies_no_profiles": "No cookies, no ads, no profiles, no framework. Plain JavaScript (about 50 KB compressed) and self-hosted fonts – plus cookie-free, anonymous visitor counts."
   },
   "sync": {
     "sync": "Sync",
@@ -81,11 +85,11 @@
     "end_to_end_encrypted": "End-to-end encrypted",
     "aes_256_gcm_keys": "– AES-256-GCM, with keys that exist only on your devices.",
     "no_database": "No database",
-    "one_opaque_file_per": "– one sealed file per vault. Nothing to query, dump or breach.",
+    "one_opaque_file_per": "– one sealed file per group of devices. Nothing to query, dump or breach.",
     "minimal_surface": "Tiny attack surface",
-    "one_endpoint_three_verbs": "– one endpoint, three verbs, strict size and rate limits.",
+    "one_endpoint_three_verbs": "– a single sync address with strict size and rate limits.",
     "leaves_no_trace": "Leaves no trace",
-    "delete_with_one_click": "– gone with one click; forgotten vaults vanish after 180 days.",
+    "delete_with_one_click": "– delete it with one click; unused sync data disappears after 180 days.",
     "phone_and_laptop_hold": "Phone and laptop hold the key and exchange only an encrypted file through the server, which cannot read it",
     "phone": "Phone",
     "news_app": "News app",
@@ -121,7 +125,8 @@
     "html_article_entries_extracted": "<span class=\"pill\">html-article</span> Entries extracted from the page",
     "fact_cache": "<b>24 h</b> shared cache per source",
     "fact_ssrf": "<b>SSRF-safe</b> – private hosts blocked, every redirect re-checked",
-    "fact_rate": "<b>Rate limited</b> per client"
+    "fact_rate": "<b>Rate limited</b> per client",
+    "variants_label": "Resolution variants"
   },
   "build": {
     "build_your_own": "Self-host · digital sovereignty",
@@ -132,17 +137,18 @@
     "rebrand": "Rebrand",
     "colours_and_fonts_live": "Colours and fonts live in <code>app/theme.css</code>. Swap the icons and the app name in the manifest – done. Your users see your reader, not ours.",
     "deploy": "Deploy",
-    "any_web_server_with": "Any web server with PHP 8.5+ and HTTPS. The bundled nginx config blocks everything except the app and the API.",
+    "any_web_server_with": "A web server with PHP 8.5+ and HTTPS. The included nginx config serves only the site, the app and the API – everything else stays private.",
     "requires_php": "Requires PHP 8.5+ with <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> recommended) and a writable <code>var/</code>. That's it.",
     "sov_label": "Digital sovereignty",
     "sov_data": "Data stays in-house",
-    "sov_data_text": "Feeds, reading lists and sync vaults live on servers you control – your data centre, your cloud region, your jurisdiction.",
+    "sov_data_text": "Feeds, reading lists and sync data live on servers you control – your data centre, your cloud region, your jurisdiction.",
     "sov_gdpr": "GDPR-friendly by design",
     "sov_gdpr_text": "No user accounts, no personal profiles, no database. Sync data is end-to-end encrypted – not even your own admins can read it.",
     "sov_lockin": "No vendor lock-in",
     "sov_lockin_text": "MIT license, OPML in and out, plain PHP. No per-seat fees, no forced upgrades, no roadmap you depend on.",
     "sov_audit": "Auditable and intranet-ready",
-    "sov_audit_text": "Every line is open for your security review. Internal sources on private hosts can be enabled explicitly in one config setting."
+    "sov_audit_text": "Every line is open for your security review. Internal sources on private hosts can be enabled explicitly in one config setting.",
+    "terminal_label": "Installing News Reader"
   },
   "faq": {
     "questions_amp_answers": "Questions &amp; answers",
@@ -155,13 +161,13 @@
     "how_does_sync_work": "How does sync work without an account?",
     "the_first_device_creates": "Your first device creates a random secret key. Other devices join by scanning a QR code or opening the pairing link. From that key, each device derives an access token and an encryption key. The server only ever gets the token and one encrypted file – the key itself never leaves your devices.",
     "can_the_server_operator": "Can the server operator read my feeds or reading list?",
-    "no_feeds_reading_list": "No. Feeds, reading list and progress are encrypted on your device (AES-256-GCM) before they are uploaded. The server stores one sealed file per vault, named after a hash of the access token – no database, nothing readable to leak. Like any website, the web server does see your IP address when you connect.",
+    "no_feeds_reading_list": "No. Feeds, reading list and progress are encrypted on your device (AES-256-GCM) before they are uploaded. The server stores one sealed file for your devices, named after a hash of the access token – no database, nothing readable to leak. Like any website, the web server does see your IP address when you connect.",
     "what_if_i_lose": "What if I lose all my devices?",
-    "then_the_vault_cannot": "Then nobody can open the vault – not even us. That is the price of real end-to-end encryption. Want a backup? Export your feeds as OPML every now and then.",
+    "then_the_vault_cannot": "Then nobody can open your synced data – not even us. That is the price of real end-to-end encryption. Want a backup? Export your feeds as OPML every now and then.",
     "what_is_the_collector": "What is the Collector?",
-    "the_collector_is_the": "The REST endpoint that ships with News Reader: <code>GET /api/collect?url=…</code> turns any website or feed URL into normalized JSON entries. It tries a native feed first, then a declared feed, common feed paths, the sitemap and finally the page&#x27;s HTML.",
+    "the_collector_is_the": "The part of News Reader that fetches your sources. Give it any website or feed address and it finds the new posts – from the site’s feed if there is one, otherwise from its sitemap or the page itself. Developers can use it directly as a small web API: <code>GET /api/collect?url=…</code>.",
     "what_if_a_website": "What if a website has no RSS feed?",
-    "news_can_still_follow": "News can still follow it. The Collector uses the site&#x27;s sitemap if it carries dates, and otherwise picks the posts straight from the page (JSON-LD, article elements or links below the requested path).",
+    "news_can_still_follow": "News can still follow it. The Collector then reads the site’s sitemap or picks the newest posts straight from the page.",
     "can_i_host_my": "Can I host my own News Reader under my own brand?",
     "yes_it_is_mit": "Yes – it is MIT-licensed. Colours and fonts live in one theme file, name and icons in the web app manifest. Run it for yourself, your family, your team or your readers, on your own domain.",
     "for_organisations": "Is News Reader suitable for companies and public institutions?",
@@ -204,10 +210,10 @@
     "logs_text": "With every request, the web server automatically processes the data your browser transmits: IP address, date and time, requested address, HTTP status, amount of data transferred, referrer and user agent. This is technically necessary to deliver the pages and the app and to keep them secure, for example to detect attacks. Log files are kept only as long as these purposes require and are then deleted. If a hosting provider operates the server for us, it acts as a processor bound by our instructions (Art. 28 GDPR). Legal basis: Art. 6(1)(f) GDPR.",
     "pirsch_h": "Visitor statistics with Pirsch Analytics",
     "pirsch_1": "All pages of this website and the News app hosted here use Pirsch Analytics, a cookie-free web analytics service built on privacy by design. To count visitors, Pirsch derives a visitor ID from the IP address, the user agent, the date and a salt using a one-way hash function when a page view arrives.",
-    "pirsch_2": "The IP address is stored neither in full nor in part and is irreversibly anonymised by the hash. Because the date and a per-website salt are included, visitors cannot be recognised for longer than 24 hours and cannot be tracked across websites. A rough location (country, city) is derived from a locally hosted database. Pirsch sets no cookies and stores nothing on your device. Only the page viewed is recorded – never the content of your feeds or your reading list.",
+    "pirsch_2": "The IP address is stored neither in full nor in part and is irreversibly anonymised by the hash. Because the date and a per-website salt are included, visitors cannot be recognised for longer than 24 hours and cannot be tracked across websites. A rough location (country, city) is derived from a locally hosted database. Pirsch sets no cookies and stores nothing on your device. Only the page viewed is recorded, without query parameters or anchors – never the content of your feeds, your reading list, pairing links or addresses you share with the app.",
     "pirsch_3": "Provider: Emvi Software GmbH, Nickelstraße 1b, 33378 Rheda-Wiedenbrück, Germany. Processing takes place on servers in Germany; no data is transferred to third countries. Legal basis: Art. 6(1)(f) GDPR – our legitimate interest in understanding which content is found and used. More: <a href=\"https://docs.pirsch.io/privacy\" rel=\"noopener\">privacy at Pirsch Analytics</a>.",
     "storage_h": "Local settings instead of cookies",
-    "storage_text": "This website sets no cookies. If you choose a language or a colour theme, that choice is saved in your browser’s local storage (<code>nr.lang</code>, <code>nr.theme</code>) and never transmitted. This is strictly necessary to provide the function you asked for (§ 25(2) no. 2 TDDDG). You can delete it at any time in your browser settings.",
+    "storage_text": "This website sets no cookies. If you choose a language or a colour theme, that choice is saved in your browser’s local storage (<code>nr.lang</code>, <code>nr.theme</code>) and never transmitted. The News app also keeps its display settings (<code>news.*</code>) there and stores your feeds, entries, offline copies and sync key in your browser’s database (IndexedDB). None of this is transmitted except as described below – for sync only in encrypted form. This is strictly necessary to provide the functions you asked for (§ 25(2) no. 2 TDDDG). You can delete it at any time in your browser settings.",
     "stripe_h": "Voluntary support via Stripe",
     "stripe_1": "News Reader is free. If you want to support it, the “Pay what you want” link takes you to a payment page hosted by Stripe (Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Grand Canal Dock, Dublin, D02 H210, Ireland). No Stripe script is embedded on this website – data only reaches Stripe once you click the link. Stripe processes the payment details you enter there; we never see full card or bank details. We receive the amount, the time, the name and e-mail address you entered and, depending on the payment method, limited details such as the card brand and the last four digits. After the payment, Stripe sends you back to our thank-you page.",
     "stripe_2": "Legal basis: Art. 6(1)(b) GDPR (carrying out the payment you initiated) and Art. 6(1)(c) GDPR in conjunction with the retention obligations under German commercial and tax law (up to 10 years). Stripe may also process data in the USA; Stripe, Inc. is certified under the EU–US Data Privacy Framework. Details: <a href=\"https://stripe.com/privacy\" rel=\"noopener\">Stripe privacy policy</a>.",
@@ -216,11 +222,11 @@
     "app_h": "Using the News app",
     "app_intro": "News is local-first: your feeds, entries, reading list and reading progress are stored in your browser (IndexedDB) on your device, not on our server. The server only steps in where a browser cannot do the job alone:",
     "collector_h": "Loading feeds (Collector)",
-    "collector_text": "When you follow a website or refresh your feeds, the app sends the source’s address to <code>/api/collect</code>. The server fetches the source on your behalf and returns its entries. Feed contents are cached for all users together for up to 14 days, stored by source address only and without any link to you. To prevent abuse, the server counts requests per client in short time windows; for this it keeps a salted hash of your IP address (for IPv6, of your network prefix) and deletes it automatically after about two days. Legal basis: Art. 6(1)(f) GDPR.",
+    "collector_text": "When you follow a website or refresh your feeds, the app sends the source’s address to <code>/api/collect</code>. The server fetches the source on your behalf and returns its entries. Feed contents are cached for all users together for up to 14 days, stored by source address only and without any link to you; like every request, the request itself appears in the server log files (see above). To prevent abuse, the server counts requests to its interfaces (feeds, offline copies, sync) per client in short time windows; for this it keeps a salted hash of your IP address (for IPv6, of your network prefix) and deletes it automatically after about two days. Legal basis: Art. 6(1)(f) GDPR.",
     "article_h": "Offline copies for your Later list",
-    "article_text": "When you move an entry to Later, the app requests a readable copy of the article from <code>/api/article</code>. The server fetches the page and returns its text, which is then stored on your device. On the server, the copy is cached for up to 14 days by article address only, without any link to you. Legal basis: Art. 6(1)(f) GDPR.",
+    "article_text": "When you move an entry to Later, the app requests a readable copy of the article from <code>/api/article</code>. The server fetches the page and returns its text, which is then stored on your device. On the server, the copy is cached for up to 14 days by article address only, without any link to you; the request itself appears in the server log files like every request. Legal basis: Art. 6(1)(f) GDPR.",
     "sync_h": "End-to-end encrypted sync",
-    "sync_text": "Sync is optional. When you pair devices, your data is encrypted on your device (AES-256-GCM) before it is uploaded. The key never leaves your devices, so we cannot read the content. The server stores one encrypted file per vault, named after a hash of the access token, together with its size and modification time. A vault is deleted when you remove it in the app, and automatically 180 days after it was last used. Legal basis: Art. 6(1)(b) GDPR.",
+    "sync_text": "Sync is optional. When you pair devices, your data is encrypted on your device (AES-256-GCM) before it is uploaded. The key never leaves your devices, so we cannot read the content. The server stores one encrypted file per group of paired devices, named after a hash of the access token, together with its size and modification time. It is deleted when you choose <em>Delete server copy</em> in the app’s settings (unpair your other devices first, or they upload it again), and automatically 180 days after it was last used. Legal basis: Art. 6(1)(b) GDPR.",
     "sources_h": "Content from the sources you follow",
     "sources_text": "Entries and the feed list may contain images and site icons that your browser loads directly from the source website or its image server, and “Read now” opens the article on the original website. In both cases the respective operator receives your IP address and is responsible for that processing. The app sends no referrer.",
     "selfhost_h": "Other News Reader instances",
@@ -228,7 +234,7 @@
     "rights_h": "Your rights",
     "rights_1": "You have the right of access (Art. 15 GDPR), rectification (Art. 16), erasure (Art. 17), restriction of processing (Art. 18), data portability (Art. 20) and to object (Art. 21). To exercise them, contact us using the details above. You may also lodge a complaint with a data protection supervisory authority, for example the one responsible for us: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach, Germany, <a href=\"https://www.lda.bayern.de\" rel=\"noopener\">www.lda.bayern.de</a>.",
     "rights_2": "Statistics and caches contain no data that could be attributed to you (no cookies, no stored IP addresses, recognition for at most 24 hours), so we usually cannot assign individual records to a person.",
-    "rights_3": "Your reading data is on your devices, and the sync vault is encrypted with a key only you hold. You can export your feeds as OPML at any time and delete everything in the app.",
+    "rights_3": "Your reading data is on your devices, and your synced data is encrypted with a key only you hold. You can export your feeds as OPML at any time and delete everything in the app.",
     "updated": "Last updated: September 2026."
   },
   "imprint": {

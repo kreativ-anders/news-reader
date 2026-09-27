@@ -10,7 +10,9 @@
     "theme": "Design",
     "theme_auto": "Design: automatisch",
     "theme_light": "Design: hell",
-    "theme_dark": "Design: dunkel"
+    "theme_dark": "Design: dunkel",
+    "pause_motion": "Animationen anhalten",
+    "play_motion": "Animationen abspielen"
   },
   "nav": {
     "skip_to_content": "Zum Inhalt springen",
@@ -19,7 +21,9 @@
     "collector": "Collector",
     "build_your_own": "Selbst hosten",
     "faq": "FAQ",
-    "open_news": "News öffnen"
+    "open_news": "News öffnen",
+    "main_label": "Hauptmenü",
+    "home_label": "News Reader Startseite"
   },
   "hero": {
     "news_reader": "Open-Source-RSS-Reader",
@@ -62,7 +66,7 @@
     "everything_a_reader_needs": "Alles, was ein Reader braucht. Nichts, was er nicht braucht.",
     "no_ads_no_tracking": "Keine Werbung, kein Tracking, kein „Das könnte dich auch interessieren“ – nur deine Quellen, an einem ruhigen Ort.",
     "phone_and_desktop": "Smartphone und Desktop",
-    "install_news_from_the": "Installiere News direkt aus dem Browser wie eine App. Wisch dich auf dem Smartphone durch die Beiträge, flieg am Desktop mit <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> hindurch – und teile jede Seite an News, um ihr zu folgen.",
+    "install_news_from_the": "Installiere News direkt aus dem Browser wie eine App. Wisch dich auf dem Smartphone durch die Beiträge, flieg am Desktop mit <code>j</code> <code>k</code> <code>o</code> <code>l</code> <code>x</code> hindurch – und teile unter Android jede Seite an News, um ihr zu folgen.",
     "encrypted_sync_no_account": "Verschlüsselter Sync, kein Konto",
     "pair_a_device_by": "QR-Code scannen, schon sind deine Geräte gekoppelt. Feeds, Leseliste und Lesestand werden verschlossen, bevor sie dein Gerät verlassen.",
     "local_first_amp_offline": "Lokal zuerst &amp; offline",
@@ -72,7 +76,7 @@
     "bring_your_feeds": "Nimm deine Feeds mit",
     "import_your_opml_export": "Du kommst von einem anderen Reader? OPML-Datei importieren, und alle deine Quellen ziehen mit um. Der Export ist genauso einfach – kein Lock-in, niemals.",
     "private_and_light": "Privat und leicht",
-    "no_cookies_no_profiles": "Keine Cookies, keine Werbung, keine Profile, kein Framework. Nur ein paar Kilobyte schlichtes JavaScript und selbst gehostete Schriften – plus cookiefreie, anonyme Besucherzählung."
+    "no_cookies_no_profiles": "Keine Cookies, keine Werbung, keine Profile, kein Framework. Schlichtes JavaScript (rund 50 KB komprimiert) und selbst gehostete Schriften – plus cookiefreie, anonyme Besucherzählung."
   },
   "sync": {
     "sync": "Sync",
@@ -81,11 +85,11 @@
     "end_to_end_encrypted": "Ende-zu-Ende-verschlüsselt",
     "aes_256_gcm_keys": "– AES-256-GCM, mit Schlüsseln, die nur auf deinen Geräten existieren.",
     "no_database": "Keine Datenbank",
-    "one_opaque_file_per": "– eine versiegelte Datei pro Tresor. Nichts abzufragen, abzuziehen oder zu knacken.",
+    "one_opaque_file_per": "– eine versiegelte Datei pro Gerätegruppe. Nichts abzufragen, abzuziehen oder zu knacken.",
     "minimal_surface": "Winzige Angriffsfläche",
-    "one_endpoint_three_verbs": "– ein Endpunkt, drei Methoden, strenge Größen- und Ratenlimits.",
+    "one_endpoint_three_verbs": "– eine einzige Sync-Adresse mit strengen Größen- und Ratenlimits.",
     "leaves_no_trace": "Hinterlässt keine Spuren",
-    "delete_with_one_click": "– mit einem Klick weg; vergessene Tresore verschwinden nach 180 Tagen.",
+    "delete_with_one_click": "– mit einem Klick gelöscht; ungenutzte Sync-Daten verschwinden nach 180 Tagen.",
     "phone_and_laptop_hold": "Smartphone und Laptop besitzen den Schlüssel und tauschen über den Server nur eine verschlüsselte Datei aus, die er nicht lesen kann",
     "phone": "Smartphone",
     "news_app": "News-App",
@@ -121,7 +125,8 @@
     "html_article_entries_extracted": "<span class=\"pill\">html-article</span> Einträge aus der Seite extrahiert",
     "fact_cache": "<b>24 Std.</b> gemeinsamer Cache pro Quelle",
     "fact_ssrf": "<b>SSRF-sicher</b> – private Hosts gesperrt, jede Weiterleitung neu geprüft",
-    "fact_rate": "<b>Ratenlimit</b> pro Client"
+    "fact_rate": "<b>Ratenlimit</b> pro Client",
+    "variants_label": "Lösungswege"
   },
   "build": {
     "build_your_own": "Selbst hosten · digitale Souveränität",
@@ -132,17 +137,18 @@
     "rebrand": "Umbenennen",
     "colours_and_fonts_live": "Farben und Schriften stehen in <code>app/theme.css</code>. Icons und App-Namen im Manifest tauschen – fertig. Deine Nutzer sehen deinen Reader, nicht unseren.",
     "deploy": "Ausrollen",
-    "any_web_server_with": "Jeder Webserver mit PHP 8.5+ und HTTPS. Die mitgelieferte nginx-Konfiguration sperrt alles außer App und API.",
+    "any_web_server_with": "Ein Webserver mit PHP 8.5+ und HTTPS. Die mitgelieferte nginx-Konfiguration liefert nur Website, App und API aus – alles andere bleibt privat.",
     "requires_php": "Benötigt PHP 8.5+ mit <code>dom</code>, <code>libxml</code>, <code>mbstring</code> (<code>curl</code> empfohlen) und ein beschreibbares <code>var/</code>. Das war’s.",
     "sov_label": "Digitale Souveränität",
     "sov_data": "Daten bleiben im Haus",
-    "sov_data_text": "Feeds, Leselisten und Sync-Tresore liegen auf Servern, die du kontrollierst – in deinem Rechenzentrum, deiner Cloud-Region, deinem Rechtsraum.",
+    "sov_data_text": "Feeds, Leselisten und Sync-Daten liegen auf Servern, die du kontrollierst – in deinem Rechenzentrum, deiner Cloud-Region, deinem Rechtsraum.",
     "sov_gdpr": "DSGVO-freundlich von Grund auf",
     "sov_gdpr_text": "Keine Benutzerkonten, keine personenbezogenen Profile, keine Datenbank. Sync-Daten sind Ende-zu-Ende-verschlüsselt – nicht einmal eure eigenen Admins können sie lesen.",
     "sov_lockin": "Kein Vendor-Lock-in",
     "sov_lockin_text": "MIT-Lizenz, OPML rein und raus, schlichtes PHP. Keine Kosten pro Arbeitsplatz, keine erzwungenen Upgrades, keine fremde Roadmap.",
     "sov_audit": "Prüfbar und intranettauglich",
-    "sov_audit_text": "Jede Zeile liegt offen für euer Security-Review. Interne Quellen auf privaten Hosts lassen sich mit einer Einstellung gezielt freischalten."
+    "sov_audit_text": "Jede Zeile liegt offen für euer Security-Review. Interne Quellen auf privaten Hosts lassen sich mit einer Einstellung gezielt freischalten.",
+    "terminal_label": "News Reader installieren"
   },
   "faq": {
     "questions_amp_answers": "Fragen &amp; Antworten",
@@ -155,13 +161,13 @@
     "how_does_sync_work": "Wie funktioniert Sync ohne Konto?",
     "the_first_device_creates": "Dein erstes Gerät erzeugt einen zufälligen geheimen Schlüssel. Weitere Geräte kommen dazu, indem sie einen QR-Code scannen oder den Kopplungslink öffnen. Aus diesem Schlüssel leitet jedes Gerät ein Zugangs-Token und einen Verschlüsselungsschlüssel ab. Der Server bekommt nur das Token und eine verschlüsselte Datei – der Schlüssel selbst verlässt nie deine Geräte.",
     "can_the_server_operator": "Kann der Serverbetreiber meine Feeds oder meine Leseliste lesen?",
-    "no_feeds_reading_list": "Nein. Feeds, Leseliste und Lesestand werden auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Server speichert pro Tresor eine versiegelte Datei, benannt nach einem Hash des Zugangs-Tokens – keine Datenbank, nichts Lesbares, das durchsickern könnte. Wie bei jeder Website sieht der Webserver beim Verbinden allerdings deine IP-Adresse.",
+    "no_feeds_reading_list": "Nein. Feeds, Leseliste und Lesestand werden auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Server speichert für deine Geräte eine versiegelte Datei, benannt nach einem Hash des Zugangs-Tokens – keine Datenbank, nichts Lesbares, das durchsickern könnte. Wie bei jeder Website sieht der Webserver beim Verbinden allerdings deine IP-Adresse.",
     "what_if_i_lose": "Was passiert, wenn ich alle meine Geräte verliere?",
-    "then_the_vault_cannot": "Dann kann niemand den Tresor öffnen – auch wir nicht. Das ist der Preis echter Ende-zu-Ende-Verschlüsselung. Lust auf ein Backup? Exportiere deine Feeds ab und zu als OPML.",
+    "then_the_vault_cannot": "Dann kann niemand deine synchronisierten Daten öffnen – auch wir nicht. Das ist der Preis echter Ende-zu-Ende-Verschlüsselung. Lust auf ein Backup? Exportiere deine Feeds ab und zu als OPML.",
     "what_is_the_collector": "Was ist der Collector?",
-    "the_collector_is_the": "Der REST-Endpunkt, der mit News Reader kommt: <code>GET /api/collect?url=…</code> macht aus jeder Website- oder Feed-URL normalisierte JSON-Einträge. Er probiert zuerst einen nativen Feed, dann einen angegebenen Feed, übliche Feed-Pfade, die Sitemap und zuletzt das HTML der Seite.",
+    "the_collector_is_the": "Der Teil von News Reader, der deine Quellen abruft. Gib ihm eine beliebige Website- oder Feed-Adresse, und er findet die neuen Beiträge – aus dem Feed der Seite, wenn es einen gibt, sonst aus ihrer Sitemap oder direkt aus der Seite. Entwickler können ihn als kleine Web-API nutzen: <code>GET /api/collect?url=…</code>.",
     "what_if_a_website": "Was, wenn eine Website keinen RSS-Feed hat?",
-    "news_can_still_follow": "News kann ihr trotzdem folgen. Der Collector nutzt die Sitemap der Website, wenn sie Datumsangaben enthält, und holt die Beiträge sonst direkt aus der Seite (JSON-LD, article-Elemente oder Links unterhalb des angefragten Pfads).",
+    "news_can_still_follow": "News kann ihr trotzdem folgen. Der Collector liest dann die Sitemap der Website oder holt die neuesten Beiträge direkt aus der Seite.",
     "can_i_host_my": "Kann ich einen eigenen News Reader unter meiner eigenen Marke betreiben?",
     "yes_it_is_mit": "Ja – er steht unter der MIT-Lizenz. Farben und Schriften liegen in einer Theme-Datei, Name und Icons im Web-App-Manifest. Betreibe ihn für dich, deine Familie, dein Team oder deine Leser, unter deiner eigenen Domain.",
     "for_organisations": "Eignet sich News Reader für Unternehmen und Behörden?",
@@ -204,10 +210,10 @@
     "logs_text": "Bei jedem Aufruf verarbeitet der Webserver automatisch die Daten, die dein Browser übermittelt: IP-Adresse, Datum und Uhrzeit, aufgerufene Adresse, HTTP-Status, übertragene Datenmenge, Referrer und User-Agent. Das ist technisch nötig, um Seiten und App auszuliefern und abzusichern, etwa um Angriffe zu erkennen. Logdateien werden nur so lange aufbewahrt, wie es diese Zwecke erfordern, und danach gelöscht. Betreibt ein Hosting-Dienstleister den Server für uns, handelt er als weisungsgebundener Auftragsverarbeiter (Art. 28 DSGVO). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.",
     "pirsch_h": "Besucherstatistik mit Pirsch Analytics",
     "pirsch_1": "Alle Seiten dieser Website und die hier gehostete News-App nutzen Pirsch Analytics, eine cookiefreie Webanalyse nach dem Grundsatz Privacy by Design. Zur Zählung bildet Pirsch beim Eingang eines Seitenaufrufs mit einer Einweg-Hashfunktion eine Besucher-ID aus IP-Adresse, User-Agent, Datum und einem Salt.",
-    "pirsch_2": "Die IP-Adresse wird weder vollständig noch teilweise gespeichert und durch den Hash unumkehrbar anonymisiert. Weil Datum und ein Salt pro Website einfließen, sind Besucher nicht länger als 24 Stunden wiederzuerkennen und können nicht über mehrere Websites hinweg verfolgt werden. Über eine lokal betriebene Datenbank wird ein grober Standort (Land, Stadt) bestimmt. Pirsch setzt keine Cookies und speichert nichts auf deinem Gerät. Erfasst wird nur die aufgerufene Seite – niemals der Inhalt deiner Feeds oder deiner Leseliste.",
+    "pirsch_2": "Die IP-Adresse wird weder vollständig noch teilweise gespeichert und durch den Hash unumkehrbar anonymisiert. Weil Datum und ein Salt pro Website einfließen, sind Besucher nicht länger als 24 Stunden wiederzuerkennen und können nicht über mehrere Websites hinweg verfolgt werden. Über eine lokal betriebene Datenbank wird ein grober Standort (Land, Stadt) bestimmt. Pirsch setzt keine Cookies und speichert nichts auf deinem Gerät. Erfasst wird nur die aufgerufene Seite, ohne Parameter und Sprungmarken – niemals der Inhalt deiner Feeds oder deiner Leseliste, Kopplungslinks oder Adressen, die du mit der App teilst.",
     "pirsch_3": "Anbieter: Emvi Software GmbH, Nickelstraße 1b, 33378 Rheda-Wiedenbrück, Deutschland. Die Verarbeitung findet auf Servern in Deutschland statt; eine Übermittlung in Drittländer erfolgt nicht. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO – unser berechtigtes Interesse daran, zu verstehen, welche Inhalte gefunden und genutzt werden. Mehr dazu: <a href=\"https://docs.pirsch.io/privacy\" rel=\"noopener\">Datenschutz bei Pirsch Analytics</a>.",
     "storage_h": "Lokale Einstellungen statt Cookies",
-    "storage_text": "Diese Website setzt keine Cookies. Wählst du eine Sprache oder ein Farbschema, wird diese Wahl im lokalen Speicher deines Browsers abgelegt (<code>nr.lang</code>, <code>nr.theme</code>) und nie übertragen. Das ist für die von dir gewünschte Funktion unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Einträge jederzeit in den Browsereinstellungen löschen.",
+    "storage_text": "Diese Website setzt keine Cookies. Wählst du eine Sprache oder ein Farbschema, wird diese Wahl im lokalen Speicher deines Browsers abgelegt (<code>nr.lang</code>, <code>nr.theme</code>) und nie übertragen. Die News-App legt dort außerdem ihre Anzeigeeinstellungen ab (<code>news.*</code>) und speichert deine Feeds, Einträge, Offline-Kopien und den Sync-Schlüssel in der Datenbank deines Browsers (IndexedDB). Nichts davon wird übertragen, außer wie unten beschrieben – beim Sync nur verschlüsselt. Das ist für die von dir gewünschten Funktionen unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Du kannst die Einträge jederzeit in den Browsereinstellungen löschen.",
     "stripe_h": "Freiwillige Unterstützung über Stripe",
     "stripe_1": "News Reader ist kostenlos. Wer ihn unterstützen möchte, gelangt über den Link „Zahl, was du möchtest“ auf eine von Stripe gehostete Zahlungsseite (Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Grand Canal Dock, Dublin, D02 H210, Irland). Auf dieser Website ist kein Stripe-Skript eingebunden – Daten erreichen Stripe erst, wenn du den Link anklickst. Stripe verarbeitet die Zahlungsdaten, die du dort eingibst; vollständige Karten- oder Kontodaten sehen wir nie. Wir erhalten Betrag, Zeitpunkt, den eingegebenen Namen und die E-Mail-Adresse sowie je nach Zahlungsart begrenzte Angaben wie Kartenmarke und die letzten vier Ziffern. Nach der Zahlung leitet Stripe dich auf unsere Dankeseite zurück.",
     "stripe_2": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Durchführung der von dir veranlassten Zahlung) sowie Art. 6 Abs. 1 lit. c DSGVO in Verbindung mit den handels- und steuerrechtlichen Aufbewahrungspflichten (bis zu 10 Jahre). Stripe verarbeitet Daten gegebenenfalls auch in den USA; Stripe, Inc. ist unter dem EU-US Data Privacy Framework zertifiziert. Details: <a href=\"https://stripe.com/de/privacy\" rel=\"noopener\">Datenschutzerklärung von Stripe</a>.",
@@ -216,11 +222,11 @@
     "app_h": "Nutzung der News-App",
     "app_intro": "News arbeitet lokal: Deine Feeds, Einträge, Leseliste und dein Lesestand liegen im Browser (IndexedDB) auf deinem Gerät, nicht auf unserem Server. Der Server hilft nur dort, wo ein Browser allein nicht weiterkommt:",
     "collector_h": "Feeds laden (Collector)",
-    "collector_text": "Wenn du einer Website folgst oder deine Feeds aktualisierst, schickt die App die Adresse der Quelle an <code>/api/collect</code>. Der Server ruft die Quelle für dich ab und liefert die Einträge zurück. Feed-Inhalte werden für alle Nutzer gemeinsam bis zu 14 Tage zwischengespeichert – nur unter der Adresse der Quelle und ohne Bezug zu dir. Zum Schutz vor Missbrauch zählt der Server Anfragen pro Client in kurzen Zeitfenstern; dafür hält er einen gesalzenen Hash deiner IP-Adresse (bei IPv6: deines Netzpräfixes) vor und löscht ihn nach etwa zwei Tagen automatisch. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.",
+    "collector_text": "Wenn du einer Website folgst oder deine Feeds aktualisierst, schickt die App die Adresse der Quelle an <code>/api/collect</code>. Der Server ruft die Quelle für dich ab und liefert die Einträge zurück. Feed-Inhalte werden für alle Nutzer gemeinsam bis zu 14 Tage zwischengespeichert – nur unter der Adresse der Quelle und ohne Bezug zu dir; wie jede Anfrage erscheint die Anfrage selbst in den Server-Logdateien (siehe oben). Zum Schutz vor Missbrauch zählt der Server Anfragen an seine Schnittstellen (Feeds, Offline-Kopien, Sync) pro Client in kurzen Zeitfenstern; dafür hält er einen gesalzenen Hash deiner IP-Adresse (bei IPv6: deines Netzpräfixes) vor und löscht ihn nach etwa zwei Tagen automatisch. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.",
     "article_h": "Offline-Kopien für „Später“",
-    "article_text": "Verschiebst du einen Eintrag nach „Später“, fordert die App bei <code>/api/article</code> eine lesbare Kopie des Artikels an. Der Server ruft die Seite ab und liefert den Text, der dann auf deinem Gerät gespeichert wird. Auf dem Server wird die Kopie bis zu 14 Tage zwischengespeichert – nur unter der Adresse des Artikels und ohne Bezug zu dir. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.",
+    "article_text": "Verschiebst du einen Eintrag nach „Später“, fordert die App bei <code>/api/article</code> eine lesbare Kopie des Artikels an. Der Server ruft die Seite ab und liefert den Text, der dann auf deinem Gerät gespeichert wird. Auf dem Server wird die Kopie bis zu 14 Tage zwischengespeichert – nur unter der Adresse des Artikels und ohne Bezug zu dir; die Anfrage selbst erscheint wie jede Anfrage in den Server-Logdateien. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.",
     "sync_h": "Ende-zu-Ende-verschlüsselter Sync",
-    "sync_text": "Der Sync ist freiwillig. Koppelst du Geräte, werden deine Daten auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Schlüssel verlässt nie deine Geräte, wir können den Inhalt also nicht lesen. Der Server speichert pro Tresor eine verschlüsselte Datei, benannt nach einem Hash des Zugangs-Tokens, samt Größe und Änderungszeit. Ein Tresor wird gelöscht, wenn du ihn in der App entfernst, und automatisch 180 Tage nach der letzten Nutzung. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.",
+    "sync_text": "Der Sync ist freiwillig. Koppelst du Geräte, werden deine Daten auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Schlüssel verlässt nie deine Geräte, wir können den Inhalt also nicht lesen. Der Server speichert pro Gruppe gekoppelter Geräte eine verschlüsselte Datei, benannt nach einem Hash des Zugangs-Tokens, samt Größe und Änderungszeit. Sie wird gelöscht, wenn du in den Einstellungen der App <em>Serverkopie löschen</em> wählst (entkopple vorher deine anderen Geräte, sonst laden sie sie wieder hoch), und automatisch 180 Tage nach der letzten Nutzung. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.",
     "sources_h": "Inhalte der Quellen, denen du folgst",
     "sources_text": "Einträge und die Feed-Liste können Bilder und Website-Icons enthalten, die dein Browser direkt von der Quell-Website oder deren Bildserver lädt, und „Jetzt lesen“ öffnet den Artikel auf der Original-Website. In beiden Fällen erhält der jeweilige Betreiber deine IP-Adresse und ist für diese Verarbeitung selbst verantwortlich. Die App sendet keinen Referrer.",
     "selfhost_h": "Andere News-Reader-Instanzen",
@@ -228,7 +234,7 @@
     "rights_h": "Deine Rechte",
     "rights_1": "Du hast das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Wende dich dafür an die oben genannten Kontaktdaten. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, etwa bei der für uns zuständigen: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach, <a href=\"https://www.lda.bayern.de\" rel=\"noopener\">www.lda.bayern.de</a>.",
     "rights_2": "Statistik und Zwischenspeicher enthalten keine Daten, die sich dir zuordnen lassen (keine Cookies, keine gespeicherten IP-Adressen, Wiedererkennung höchstens 24 Stunden). Einzelne Datensätze können wir deshalb in der Regel keiner Person zuordnen.",
-    "rights_3": "Deine Lesedaten liegen auf deinen Geräten, und der Sync-Tresor ist mit einem Schlüssel verschlüsselt, den nur du hast. Deine Feeds kannst du jederzeit als OPML exportieren und alles in der App löschen.",
+    "rights_3": "Deine Lesedaten liegen auf deinen Geräten, und deine synchronisierten Daten sind mit einem Schlüssel verschlüsselt, den nur du hast. Deine Feeds kannst du jederzeit als OPML exportieren und alles in der App löschen.",
     "updated": "Stand: September 2026."
   },
   "imprint": {
