@@ -135,3 +135,11 @@ test('every page loads Pirsch analytics and links to the pay-what-you-want page'
   await page.goto(API() + '/');
   await expect(page.locator('a[href^="https://buy.stripe.com/"]')).toHaveCount(2);
 });
+
+test('theme toggle is named by its action and says the current mode', async ({ page }) => {
+  await page.goto(API() + '/de/');
+  const btn = page.locator('#themeBtn');
+  await expect(btn).toHaveAccessibleName('Design wechseln – aktuell automatisch');
+  await btn.click();
+  await expect(btn).toHaveAccessibleName('Design wechseln – aktuell hell');
+});

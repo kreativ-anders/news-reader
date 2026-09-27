@@ -10,7 +10,8 @@ const sel = document.getElementById('langSel'), btn = document.getElementById('t
 let t = (k) => k;
 
 function paintTheme() {
-  const m = getTheme(), label = t('ui.theme_' + m);
+  // INFO: the name says what a click does, the current mode follows (the icon alone shows only the state)
+  const m = getTheme(), label = t('ui.theme_change', { mode: t('ui.theme_' + m) });
   btn.dataset.mode = m;
   btn.setAttribute('aria-label', label);
   btn.title = label;

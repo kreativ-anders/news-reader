@@ -8,9 +8,10 @@
   "ui": {
     "language": "Idioma",
     "theme": "Tema",
-    "theme_auto": "Tema: automático",
-    "theme_light": "Tema: claro",
-    "theme_dark": "Tema: oscuro",
+    "theme_change": "Cambiar tema – ahora {mode}",
+    "theme_auto": "automático",
+    "theme_light": "claro",
+    "theme_dark": "oscuro",
     "pause_motion": "Pausar animaciones",
     "play_motion": "Reproducir animaciones"
   },

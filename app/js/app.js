@@ -809,7 +809,8 @@ function renderFeeds() {
     <section class="panel">
       <h2>${t('feeds.follow_title')}</h2>
       <p id="followText">${t('feeds.follow_text')}</p>
-      <form class="row" id="addForm"><input type="text" id="addUrl" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" enterkeyhint="go" placeholder="${esc(t('feeds.placeholder'))}" required aria-label="${esc(t('feeds.url_label'))}" aria-describedby="followText addResult"><button class="btn btn-primary" type="submit">${t('feeds.follow')}</button></form>
+      <label class="lbl" for="addUrl">${t('feeds.url_label')}</label>
+      <form class="row" id="addForm"><input type="text" id="addUrl" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" enterkeyhint="go" placeholder="${esc(t('feeds.placeholder'))}" required aria-describedby="followText addResult"><button class="btn btn-primary" type="submit">${t('feeds.follow')}</button></form>
       <div class="result" id="addResult" aria-live="polite"></div>
     </section>
     <section class="panel">
@@ -868,7 +869,8 @@ async function renderSettings() {
         <div class="row"><button class="btn btn-primary" type="button" id="createVault"${cryptoAvailable() ? '' : ' disabled'}>${t('settings.create_vault')}</button></div>
         <h2 style="margin-top:20px">${t('settings.join_title')}</h2>
         <p>${t('settings.join_text')}</p>
-        <form class="row" id="joinForm"><input type="text" id="joinKey" placeholder="${esc(t('settings.join_placeholder'))}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="${esc(t('settings.join_placeholder'))}" aria-describedby="syncResult"><button class="btn btn-ghost" type="submit">${t('settings.join')}</button></form>`}
+        <label class="lbl" for="joinKey">${t('settings.join_placeholder')}</label>
+        <form class="row" id="joinForm"><input type="text" id="joinKey" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="syncResult"><button class="btn btn-ghost" type="submit">${t('settings.join')}</button></form>`}
       <div class="result" id="syncResult" aria-live="polite"></div>
     </section>
     ${key ? `<section class="panel" id="devicesPanel">
@@ -894,7 +896,8 @@ async function renderSettings() {
     <section class="panel">
       <h2>${t('settings.server_title')}</h2>
       <p>${t('settings.server_text')}</p>
-      <form class="row keep" id="serverForm"><input type="text" inputmode="url" autocapitalize="off" spellcheck="false" id="serverUrl" value="${esc(custom || '')}" placeholder="${esc(defaultServer())}" aria-label="${esc(t('settings.server_label'))}" aria-describedby="serverResult"><span class="btns"><button class="btn btn-ghost" type="submit">${t('settings.save')}</button><button class="btn btn-ghost" type="button" id="serverTest">${t('settings.test')}</button></span></form>
+      <label class="lbl" for="serverUrl">${t('settings.server_label')}</label>
+      <form class="row keep" id="serverForm"><input type="text" inputmode="url" autocapitalize="off" spellcheck="false" id="serverUrl" value="${esc(custom || '')}" placeholder="${esc(defaultServer())}" aria-describedby="serverResult"><span class="btns"><button class="btn btn-ghost" type="submit">${t('settings.save')}</button><button class="btn btn-ghost" type="button" id="serverTest">${t('settings.test')}</button></span></form>
       <div class="result" id="serverResult" aria-live="polite"></div>
     </section>
     <section class="panel">

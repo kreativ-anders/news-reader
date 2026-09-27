@@ -208,6 +208,7 @@ html{scroll-padding-top:calc(104px + env(safe-area-inset-top))}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .field{display:grid;gap:6px;font-size:.88rem;color:var(--muted);font-weight:600}
 .field select{width:100%}
+.lbl{display:block;margin-bottom:6px;font-size:.88rem;font-weight:600;color:var(--muted)}
 @media (max-width:560px){.grid2{grid-template-columns:1fr}}
 .feedrow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
 .feedrow:first-child{border-top:0}

@@ -157,3 +157,12 @@ test('a long teaser opens with its chevron or a click on the text; a short one h
   await app.go('later'); await app.go('inbox');              // stays open when the list re-renders
   await expect(app.card('A post with a long teaser').getByRole('button', { name: 'Full teaser' })).toHaveAttribute('aria-expanded', 'true');
 });
+
+test('text fields have visible labels', async ({ app, page }) => {
+  await app.go('feeds');
+  await expect(page.getByLabel('Website or feed URL')).toHaveAttribute('id', 'addUrl');
+  await expect(page.locator('label[for="addUrl"]')).toBeVisible();
+  await app.go('settings');
+  for (const id of ['serverUrl', 'joinKey']) await expect(page.locator(`label[for="${id}"]`)).toBeVisible();
+  await expect(page.getByLabel('Pairing link or key')).toHaveAttribute('id', 'joinKey');
+});
