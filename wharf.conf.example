@@ -1,27 +1,18 @@
-# News Reader – Wharf template ({{…}} filled in by Wharf)
+# News Reader – Wharf template. Wharf renders it once per listener (HTTP + HTTPS), so no log_format here (duplicate names are fatal).
 
-# Stripe sends every supporter to /thanks.html – redirect to their browser language (first Accept-Language entry).
-# ?lang=… marks an explicit choice (set by the page script for a saved language) and is never redirected.
+# ?lang=… is an explicit choice and never redirected.
 map "$arg_lang:$http_accept_language" $news_reader_thanks_lang {
   default "";
   "~^:(?<nr_thanks_lang>de|fr|it|es)" $nr_thanks_lang;
 }
 
-# CSP for the static site pages. /app/ has its own (meta) CSP and /api/ sets one in PHP – an empty value sends no header.
-# The hashes cover the inline <script> blocks (JSON-LD needs none). Recompute after changing an inline script:
+# Recompute the inline <script> hashes after changing one:
 #   php -r 'foreach (array_slice($argv, 1) as $f) { preg_match_all("#<script>(.*?)</script>#s", file_get_contents($f), $m); foreach ($m[1] as $b) $h[base64_encode(hash("sha256", $b, true))] = 1; } echo implode("\n", array_keys($h)), "\n";' *.html {de,fr,it,es}/*.html docs/api/index.html
-# and put each result in script-src as 'sha256-<result>'.
 map $uri $news_reader_csp {
   default "default-src 'self'; script-src 'self' 'sha256-9lQjb134mvyOB3xes/iDiL6x7sn/Fna2QxvI5oHQJIg=' 'sha256-MKRoizIuCBWDw/RzCTan+DJeB0qXBl/IcfGW4Ce3Ywo=' 'sha256-TnyechigmvCj/lPGufJH0BfroWr22g6Pdlka/0Dv7X0=' https://api.pirsch.io; connect-src 'self' https://api.pirsch.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
   ~^/app/ "";
   ~^/api/ "";
 }
-
-# API requests are logged without the query string – feed and article URLs must never be stored next to an IP
-map $request_uri $news_reader_path {
-  "~^(?<nr_path>[^?]*)" $nr_path;
-}
-log_format news_reader_noargs '$remote_addr - [$time_local] "$request_method $news_reader_path" $status $body_bytes_sent';
 
 server {
   {{listen}}
@@ -37,7 +28,6 @@ server {
   client_max_body_size 1m;
   server_tokens off;
 
-  # security headers (inherited: no add_header in locations)
   add_header X-Content-Type-Options "nosniff" always;
   add_header X-Frame-Options "DENY" always;
   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
@@ -47,39 +37,35 @@ server {
 
   error_page 404 /404.html;
 
-  # compression
   gzip on;
   gzip_vary on;
   gzip_min_length 512;
   gzip_types text/css text/plain application/javascript application/json
              application/xml image/svg+xml application/manifest+json;
 
-  # never expose internals
   location ^~ /.well-known/ { try_files $uri =404; }
   location ~ ^/(src|var|vendor|tests|tools)(/|$) { return 404; }
   location ~ /\. { return 404; }
   location ~ \.(conf|md|lock|example|dist|ini|env|log|sql|sqlite|vault|tmp)$ { return 404; }
   location ~ ^/(composer|package)\.json$ { return 404; }
 
-  # API via front controller
+  # API query strings hold feed and article URLs – never log them next to an IP.
   location = /api { return 301 /api/$is_args$args; }
   location /api/ {
-    access_log "{{log_dir}}/access.log" news_reader_noargs;
+    access_log off;
     try_files $uri /api/index.php$is_args$args;
   }
 
-  # execute only the front controller
   location = /api/index.php {
-    access_log "{{log_dir}}/access.log" news_reader_noargs;
+    access_log off;
     try_files $uri =404;
     fastcgi_pass {{php}};
     include "{{fastcgi}}";
+    fastcgi_param HTTP_PROXY "";  # httpoxy
     fastcgi_read_timeout 120s;
-    fastcgi_param HTTP_PROXY "";  # httpoxy: a client "Proxy:" header must never become a proxy setting
   }
   location ~ \.php$ { return 404; }
 
-  # landing page: long cache for assets, HTML revalidated
   location ~* \.(png|jpe?g|webp|avif|gif|ico|svg|woff2?)$ {
     expires 30d;
     access_log off;
@@ -89,7 +75,6 @@ server {
     expires 1d;
     try_files $uri =404;
   }
-  # thank-you page after a Stripe payment: language redirect (map above), saved choices are handled by the page itself
   location = /thanks.html {
     expires -1;
     if ($news_reader_thanks_lang) { return 302 /$news_reader_thanks_lang/thanks.html; }

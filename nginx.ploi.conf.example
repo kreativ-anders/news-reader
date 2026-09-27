@@ -1,0 +1,113 @@
+# News Reader – Ploi.io vhost. Paste into Ploi → Site → Manage → Nginx configuration.
+# CHECK the marked lines before saving. Keep every "Ploi … do not remove!" include.
+
+# ?lang=… is an explicit choice and never redirected.
+map "$arg_lang:$http_accept_language" $news_reader_thanks_lang {
+  default "";
+  "~^:(?<nr_thanks_lang>de|fr|it|es)" $nr_thanks_lang;
+}
+
+# Recompute the inline <script> hashes after changing one:
+#   php -r 'foreach (array_slice($argv, 1) as $f) { preg_match_all("#<script>(.*?)</script>#s", file_get_contents($f), $m); foreach ($m[1] as $b) $h[base64_encode(hash("sha256", $b, true))] = 1; } echo implode("\n", array_keys($h)), "\n";' *.html {de,fr,it,es}/*.html docs/api/index.html
+map $uri $news_reader_csp {
+  default "default-src 'self'; script-src 'self' 'sha256-9lQjb134mvyOB3xes/iDiL6x7sn/Fna2QxvI5oHQJIg=' 'sha256-MKRoizIuCBWDw/RzCTan+DJeB0qXBl/IcfGW4Ce3Ywo=' 'sha256-TnyechigmvCj/lPGufJH0BfroWr22g6Pdlka/0Dv7X0=' https://api.pirsch.io; connect-src 'self' https://api.pirsch.io; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
+  ~^/app/ "";
+  ~^/api/ "";
+}
+
+# Ploi Webserver Configuration, do not remove!
+include /etc/nginx/ploi/news-reader.app/before/*;
+
+server {
+  listen 80;
+  listen [::]:80;
+  server_name news-reader.app;
+
+  # CHECK: the site path Ploi created.
+  root /home/ploi/news-reader.app;
+  index index.html index.php;
+
+  include /etc/nginx/ssl/news-reader.app;
+
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_ecdh_curve X25519:prime256v1:secp384r1;
+  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305;
+  ssl_prefer_server_ciphers off;
+  ssl_dhparam /etc/nginx/dhparams.pem;
+
+  charset utf-8;
+  client_max_body_size 1m;
+  server_tokens off;
+
+  # No add_header inside locations: it would drop all of these there.
+  add_header Strict-Transport-Security "max-age=31536000" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+  add_header Cross-Origin-Opener-Policy "same-origin" always;
+  add_header Content-Security-Policy $news_reader_csp always;
+
+  error_page 404 /404.html;
+
+  gzip on;
+  gzip_vary on;
+  gzip_min_length 512;
+  gzip_types text/css text/plain application/javascript application/json
+             application/xml image/svg+xml application/manifest+json;
+
+  # Ploi Configuration, do not remove!
+  include /etc/nginx/ploi/news-reader.app/server/*;
+
+  access_log /var/log/nginx/news-reader.app-access.log;
+  error_log  /var/log/nginx/news-reader.app-error.log error;
+
+  location ^~ /.well-known/ { try_files $uri =404; }
+  location ~ ^/(src|var|vendor|tests|tools)(/|$) { return 404; }
+  location ~ /\. { return 404; }
+  location ~ \.(conf|md|lock|example|dist|ini|env|log|sql|sqlite|vault|tmp)$ { return 404; }
+  location ~ ^/(composer|package)\.json$ { return 404; }
+
+  # API query strings hold feed and article URLs – never log them next to an IP.
+  location = /api { return 301 /api/$is_args$args; }
+  location /api/ {
+    access_log off;
+    try_files $uri /api/index.php$is_args$args;
+  }
+
+  location = /api/index.php {
+    access_log off;
+    try_files $uri =404;
+    # CHECK: must match the site's PHP version in Ploi ("ls /run/php/").
+    fastcgi_pass unix:/run/php/php8.5-fpm.sock;
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+    fastcgi_param DOCUMENT_ROOT   $realpath_root;
+    fastcgi_param HTTP_PROXY "";  # httpoxy
+    fastcgi_hide_header X-Powered-By;
+    fastcgi_read_timeout 120s;
+  }
+  location ~ \.php$ { return 404; }
+
+  location ~* \.(png|jpe?g|webp|avif|gif|ico|svg|woff2?)$ {
+    expires 30d;
+    access_log off;
+    try_files $uri =404;
+  }
+  location ~* \.(xml|txt|webmanifest)$ {
+    expires 1d;
+    try_files $uri =404;
+  }
+  location = /thanks.html {
+    expires -1;
+    if ($news_reader_thanks_lang) { return 302 /$news_reader_thanks_lang/thanks.html; }
+    try_files $uri =404;
+  }
+  location / {
+    expires -1;
+    try_files $uri $uri/ =404;
+  }
+}
+
+# Ploi Webserver Configuration, do not remove!
+include /etc/nginx/ploi/news-reader.app/after/*;
