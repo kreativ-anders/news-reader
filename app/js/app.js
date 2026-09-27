@@ -70,6 +70,8 @@ const ICON = {
   back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>',
   refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg>',
+  download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
   trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
   folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
   chev: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
@@ -387,7 +389,7 @@ function card(it, view) {
   const acts = ACTIONS[view].map(([s, label, icon, cls, key]) =>
     `<button type="button" class="act ${cls}" data-act="${s}" title="${esc(t(label))} (${key})" aria-label="${esc(t(label))}" aria-keyshortcuts="${key}">${icon}${cls === 'main' ? `<span>${t(label)}</span>` : ''}</button>`).join('');
   const words = offline.words(it.id);
-  const saved = offline.has(it.id) ? `<span class="offline" title="${esc(t('reader.saved'))}">${ICON.offline}${words ? `<span>${t('reader.minutes', { n: Math.max(1, Math.round(words / 220)) })}</span>` : `<span class="sr">${t('reader.saved')}</span>`}</span>` : '';
+  const saved = offline.has(it.id) ? `<span class="offline" title="${esc(t('reader.saved'))}">${ICON.offline}<span class="sr">${t('reader.saved')}</span>${words ? `<span>${t('reader.minutes', { n: Math.max(1, Math.round(words / 220)) })}</span>` : ''}</span>` : '';
   const image = S.dupImg.has(it.image) ? '' : httpUrl(it.image);
   const img = image ? `<img class="thumb" src="${esc(image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="120" height="80">` : '';
   const dot = '<span class="sep" aria-hidden="true">·</span>';
@@ -666,8 +668,8 @@ function renderFeeds() {
     </section>
     <section class="panel">
       <h2>${t('feeds.io_title')}</h2>
-      <p>${t('feeds.io_text')} <a class="btn btn-ghost" href="${esc(bookmarklet)}" onclick="return false">+ News</a></p>
-      <div class="row"><label class="btn btn-ghost">${t('feeds.import')}<input type="file" id="opmlIn" accept=".opml,.xml,text/xml,application/xml" hidden></label><button class="btn btn-ghost" type="button" id="opmlOut"${feeds.length ? '' : ' disabled'}>${t('feeds.export')}</button></div>
+      <p id="ioText">${t('feeds.io_text')}</p>
+      <div class="row"><button class="btn btn-ghost" type="button" id="opmlPick">${ICON.upload}<span>${t('feeds.import')}</span></button><input type="file" id="opmlIn" accept=".opml,.xml,text/xml,application/xml" hidden><button class="btn btn-ghost" type="button" id="opmlOut"${feeds.length ? '' : ' disabled'}>${ICON.download}<span>${t('feeds.export')}</span></button><a class="btn btn-ghost" href="${esc(bookmarklet)}" onclick="return false" aria-describedby="ioText">+ News</a></div>
       <div class="result" id="opmlResult" aria-live="polite"></div>
     </section>`;
   if (S.share) {
@@ -713,7 +715,7 @@ async function renderSettings() {
       <h2>${t('settings.sync_title')}</h2>
       ${key ? `
         <p>${t('settings.sync_paired')}</p>
-        <div class="qr" id="qr" aria-label="${esc(t('settings.qr_label'))}"></div>
+        <div class="qr" id="qr" role="img" aria-label="${esc(t('settings.qr_label'))}"></div>
         <div class="row">
           <button class="btn btn-primary" type="button" id="syncNow">${t('settings.sync_now')}</button>
           <button class="btn btn-ghost" type="button" id="copyLink">${t('settings.copy_link')}</button>
@@ -825,6 +827,7 @@ async function drawQr(text) {
     qr.addData(text);
     qr.make();
     box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    box.firstElementChild?.setAttribute('aria-hidden', 'true');
   } catch {
     box.hidden = true;
   }
@@ -861,7 +864,9 @@ function paintStatus(st) {
   $('.txt', pill).textContent = statusText(st);
   const detail = [statusText(st, true)];
   if (st.lastSync) detail.push(t('sync.last', { when: new Date(st.lastSync).toLocaleString(t.lang) }));
-  pill.title = detail.join('\n') + '\n' + t(st.state === 'local' ? 'sync.click_setup' : 'sync.click_sync');
+  const hint = t(st.state === 'local' ? 'sync.click_setup' : 'sync.click_sync');
+  pill.title = detail.join('\n') + '\n' + hint;
+  pill.setAttribute('aria-label', `${statusText(st)} – ${hint}`);
   const d = $('#syncDetail');
   if (d) d.textContent = statusText(st, true);
 }
@@ -970,6 +975,7 @@ document.addEventListener('click', async (ev) => {
       if (!ids.length || !await dialog({ title: t('dlg.clear_done_title'), body: t('dlg.clear_done_body', { n: ids.length }), ok: t('dlg.clear_done_ok'), danger: true })) return;
       return setState(ids, 'dismissed', { animate: false, label: t('toast.cleared', { n: ids.length }) });
     }
+    case 'opmlPick': return $('#opmlIn').click();
     case 'opmlOut': return exportOpml();
     case 'serverTest': return testServer();
     case 'createVault':
@@ -1276,7 +1282,8 @@ function paintPalette() {
   list.innerHTML = pal.results.length
     ? pal.results.map((r, i) => `<li role="option" id="pal-${i}" data-i="${i}" class="k-${r.kind}" aria-selected="${i === 0}">${r.icon}<span class="pl">${esc(r.label)}</span>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</li>`).join('')
     : `<li class="none" role="presentation">${t('pal.empty')}</li>`;
-  $('#palIn').setAttribute('aria-activedescendant', pal.results.length ? 'pal-0' : '');
+  if (pal.results.length) $('#palIn').setAttribute('aria-activedescendant', 'pal-0');
+  else $('#palIn').removeAttribute('aria-activedescendant');
 }
 
 function movePalette(d) {

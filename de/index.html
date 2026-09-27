@@ -543,47 +543,47 @@
         </div>
         <div class="variants-grid">
           <ol class="vtabs" role="tablist" aria-label="Resolution variants" aria-orientation="vertical">
-            <li class="vtab" style="--v:var(--v-rule)">
+            <li class="vtab" role="presentation" style="--v:var(--v-rule)">
               <button role="tab" id="vt-rule" aria-controls="vp-rule" aria-selected="true" tabindex="0">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11M4 17h7"/><path d="M15 4l3 3-3 3M11 14l3 3-3 3"/><circle cx="19" cy="17" r="1.5"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.rule_platform_rules">Regel <small>bekannte Plattformen</small></span><span class="vdesc" data-i18n="collector.rule_desc">Medium, YouTube, Reddit, GitHub, Mastodon &amp; Co.: Bekannte Seiten-URLs führen direkt zum nativen Feed der Plattform – ohne die (oft bot-geschützte) Seite zu laden.</span></span>
                 <span class="vbar" aria-hidden="true"></span>
               </button>
             </li>
-            <li class="vfall" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
-            <li class="vtab" style="--v:var(--v-direct)">
+            <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
+            <li class="vtab" role="presentation" style="--v:var(--v-direct)">
               <button role="tab" id="vt-direct" aria-controls="vp-direct" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.direct_rss_rdf_atom">Direkt <small>RSS · RDF · Atom</small></span><span class="vdesc" data-i18n="collector.the_url_already_is">Die URL ist bereits ein Feed. Wird direkt gelesen – der schnellste und präziseste Weg.</span></span>
                 <span class="vbar" aria-hidden="true"></span>
               </button>
             </li>
-            <li class="vfall" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
-            <li class="vtab" style="--v:var(--v-discovered)">
+            <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
+            <li class="vtab" role="presentation" style="--v:var(--v-discovered)">
               <button role="tab" id="vt-discovered" aria-controls="vp-discovered" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.discovered_lt_link_rel">Entdeckt <small>&lt;link rel&gt;</small></span><span class="vdesc" data-i18n="collector.the_page_declares_its">Die Seite nennt ihren Feed – per &lt;link rel="alternate"&gt; oder einem sichtbaren …/rss.xml-Link. Der Collector folgt ihm.</span></span>
                 <span class="vbar" aria-hidden="true"></span>
               </button>
             </li>
-            <li class="vfall" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
-            <li class="vtab" style="--v:var(--v-guessed)">
+            <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
+            <li class="vtab" role="presentation" style="--v:var(--v-guessed)">
               <button role="tab" id="vt-guessed" aria-controls="vp-guessed" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".6"/><circle cx="12" cy="12" r="9"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.guessed_common_paths">Geraten <small>übliche Pfade</small></span><span class="vdesc" data-i18n="collector.nothing_declared_the_collector">Nichts angegeben? Der Collector prüft die üblichen Verdächtigen: /feed, /rss.xml, /feed.xml, /atom.xml, /index.xml …</span></span>
                 <span class="vbar" aria-hidden="true"></span>
               </button>
             </li>
-            <li class="vfall" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
-            <li class="vtab" style="--v:var(--v-sitemap)">
+            <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
+            <li class="vtab" role="presentation" style="--v:var(--v-sitemap)">
               <button role="tab" id="vt-sitemap" aria-controls="vp-sitemap" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v8M6.5 12h11v4"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.sitemap_robots_txt_sitemap">Sitemap <small>robots.txt → sitemap.xml</small></span><span class="vdesc" data-i18n="collector.sitemap_desc">Immer noch kein Feed? Dann die Sitemap, gefunden über robots.txt und gefiltert auf den angefragten Pfad – sofern ihre Einträge ein Datum tragen. Titel kommen, wo möglich, von der Seite.</span></span>
                 <span class="vbar" aria-hidden="true"></span>
               </button>
             </li>
-            <li class="vfall" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
-            <li class="vtab" style="--v:var(--v-html)">
+            <li class="vfall" role="presentation" aria-hidden="true" data-i18n="collector.nothing_fall_back">nichts? weiter ↓</li>
+            <li class="vtab" role="presentation" style="--v:var(--v-html)">
               <button role="tab" id="vt-html" aria-controls="vp-html" aria-selected="false" tabindex="-1">
                 <span class="vnum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6M14 4l-4 16"/></svg></span>
                 <span class="vtxt"><span class="vname" data-i18n="collector.html_json_ld_article">HTML <small>JSON-LD · article · Links</small></span><span class="vdesc" data-i18n="collector.html_desc">Der letzte Ausweg: Einträge werden aus der Seite selbst gewonnen – JSON-LD, &lt;article&gt;-Elemente oder Links unterhalb des angefragten Pfads.</span></span>
