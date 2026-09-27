@@ -18,6 +18,12 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PHP = process.env.PHP_BIN || 'php';
+const WIN = process.platform === 'win32';
+
+// Detached servers outlive a crashed test process – take them down on the way out.
+const running = new Set();
+process.on('exit', () => { for (const kill of running) kill(); });
+
 const SKIP = new Set(['.git', '.github', 'node_modules', 'tests', 'var', 'test-results', 'playwright-report']);
 
 export function freePort() {
@@ -70,7 +76,14 @@ export async function startPhp({ docroot, router, port, workers = 4 }) {
     cwd: docroot,
     env: { ...process.env, PHP_CLI_SERVER_WORKERS: String(workers) },
     stdio: ['ignore', 'ignore', 'pipe'],
+    // Own process group: killing only the master orphans the PHP_CLI_SERVER_WORKERS children,
+    // which keep stderr open – node --test then never exits.
+    detached: !WIN,
   });
+  const kill = () => {
+    try { WIN ? proc.kill() : process.kill(-proc.pid, 'SIGTERM'); } catch { /* already gone */ }
+  };
+  running.add(kill);
   const log = [];
   proc.stderr.on('data', (d) => {
     const s = String(d);
@@ -81,9 +94,10 @@ export async function startPhp({ docroot, router, port, workers = 4 }) {
   const url = `http://127.0.0.1:${port}`;
   const deadline = Date.now() + 10000;
   for (;;) {
-    if (proc.exitCode !== null) throw new Error(`php -S exited (${proc.exitCode}): ${log.join('')}`);
-    try { await fetch(url + '/'); break; } catch { /* not up yet */ }
-    if (Date.now() > deadline) { proc.kill(); throw new Error(`php -S did not start on ${url}`); }
+    if (proc.exitCode !== null) { kill(); throw new Error(`php -S exited (${proc.exitCode}): ${log.join('')}`); }
+    // Read the body: an unconsumed response crashes undici (assert(!this.paused)) once php -S closes the socket
+    try { await (await fetch(url + '/')).arrayBuffer(); break; } catch { /* not up yet */ }
+    if (Date.now() > deadline) { kill(); throw new Error(`php -S did not start on ${url}`); }
     await new Promise((r) => setTimeout(r, 100));
   }
   return {
@@ -92,9 +106,10 @@ export async function startPhp({ docroot, router, port, workers = 4 }) {
     /** PHP errors/warnings logged by the server so far */
     phpErrors: () => log.join('').split('\n').filter((l) => /PHP (Fatal|Parse|Warning|Deprecated|Notice)/.test(l)),
     stop: () => new Promise((resolve) => {
-      if (proc.exitCode !== null) return resolve();
+      running.delete(kill);
+      if (proc.exitCode !== null) { kill(); return resolve(); }
       proc.once('exit', resolve);
-      proc.kill();
+      kill();
     }),
   };
 }

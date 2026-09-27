@@ -39,7 +39,8 @@
   <meta name="twitter:image" content="https://news-reader.app/og-image.png">
 
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../favicon-32-dark.png" sizes="32x32" type="image/png" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" href="../apple-touch-icon.png">
   <link rel="manifest" href="../app/manifest.webmanifest">
   <link rel="preload" href="../app/fonts/newsreader.woff2" as="font" type="font/woff2" crossorigin>
@@ -99,6 +100,14 @@
                     "acceptedAnswer": {
                         "@type": "Answer",
                         "text": "Pas de compte, pas de pub, pas de pistage et pas d’algorithme qui décide de ce que vous voyez. Votre progression de lecture reste sur vos appareils, la synchro est chiffrée de bout en bout, et vous pouvez tout héberger sur votre propre serveur."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "News utilise-t-il l’IA ?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Non. Il n’y a ni IA ni modèle qui apprend de vos habitudes de lecture – ni sur votre appareil, ni sur le serveur. News suit quelques règles simples : les nouveaux articles arrivent dans la réception, les plus récents d’abord, et seule votre décision les fait avancer. Ce que vous voyez dépend de vos sources, pas d’un profil de vous."
                     }
                 },
                 {
@@ -243,6 +252,9 @@
     .flow kbd{font:600 .74rem var(--mono);border:1px solid var(--line);border-radius:var(--radius);padding:0 5px;color:var(--fg)}
     @media (max-width:880px){.flow{grid-template-columns:1fr 1fr}}
     @media (max-width:520px){.flow{grid-template-columns:1fr}}
+    .rules{display:flex;gap:18px;align-items:flex-start;margin-top:18px}
+    .rules .icon{flex:none;margin:0}
+    .rules h3{margin-bottom:6px}
 
     /* sync */
     .sync-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
@@ -339,6 +351,7 @@
     .final .card{padding:64px 24px;background:radial-gradient(ellipse at top,var(--glow),transparent 70%),var(--card)}
     .final p{max-width:540px;margin:0 auto 30px;color:var(--muted);font-size:1.1rem}
     .final .cta{justify-content:center}
+    .final .support{margin:26px auto 0;font-size:.92rem}
 
 
     @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.syncviz .pkt{display:none}}
@@ -425,6 +438,10 @@
           <li><h3 data-i18n="reader.later">Plus tard</h3><p data-i18n="reader.your_reading_list_on">Votre liste de lecture – sur tous vos appareils et lisible hors ligne, même quand l’article a quitté son flux. <kbd>l</kbd></p></li>
           <li><h3 data-i18n="reader.not_interested">Pas intéressé</h3><p data-i18n="reader.gone_without_guilt_one">Disparu, sans remords. Un glissement sur le mobile, une touche sur l’ordinateur. <kbd>x</kbd></p></li>
         </ol>
+        <div class="card rules">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></div>
+          <div><h3 data-i18n="reader.simple_rules_no_ai">Des règles simples. Pas d’IA.</h3><p data-i18n="reader.simple_rules_no_ai_text">D’autres lecteurs se disent « intelligents » et laissent une IA analyser ce que vous ouvrez, ignorez et enregistrez. News ne vous regarde pas lire. Les articles arrivent du plus récent au plus ancien et ne bougent que lorsque vous décidez – rien n’est classé, résumé ou masqué dans votre dos. Des règles simples et transparentes, pour une tâche simple : lire vos flux.</p></div>
+        </div>
       </div>
     </section>
 
@@ -707,6 +724,7 @@
         <div class="faq">
           <details><summary data-i18n="faq.what_is_news">Qu’est-ce que News ?</summary><p data-i18n="faq.news_is_a_calm">Un lecteur de flux serein pour votre mobile et le navigateur de votre ordinateur. Chaque nouvel article arrive en réception et appelle une décision : lire maintenant, plus tard ou pas intéressé. News s’installe comme une app, fonctionne hors ligne et est gratuit et open source.</p></details>
           <details><summary data-i18n="faq.how_is_it_different">Quelle différence avec les autres lecteurs de flux ?</summary><p data-i18n="faq.no_account_no_ads">Pas de compte, pas de pub, pas de pistage et pas d’algorithme qui décide de ce que vous voyez. Votre progression de lecture reste sur vos appareils, la synchro est chiffrée de bout en bout, et vous pouvez tout héberger sur votre propre serveur.</p></details>
+          <details><summary data-i18n="faq.does_news_use_ai">News utilise-t-il l’IA ?</summary><p data-i18n="faq.does_news_use_ai_text">Non. Il n’y a ni IA ni modèle qui apprend de vos habitudes de lecture – ni sur votre appareil, ni sur le serveur. News suit quelques règles simples : les nouveaux articles arrivent dans la réception, les plus récents d’abord, et seule votre décision les fait avancer. Ce que vous voyez dépend de vos sources, pas d’un profil de vous.</p></details>
           <details><summary data-i18n="faq.how_does_sync_work">Comment fonctionne la synchro sans compte ?</summary><p data-i18n="faq.the_first_device_creates">Votre premier appareil crée une clé secrète aléatoire. Les autres le rejoignent en scannant un QR code ou en ouvrant le lien d’association. À partir de cette clé, chaque appareil dérive un jeton d’accès et une clé de chiffrement. Le serveur ne reçoit que le jeton et un fichier chiffré – la clé elle-même ne quitte jamais vos appareils.</p></details>
           <details><summary data-i18n="faq.can_the_server_operator">L’hébergeur du serveur peut-il lire mes flux ou ma liste de lecture ?</summary><p data-i18n="faq.no_feeds_reading_list">Non. Flux, liste de lecture et progression sont chiffrés sur votre appareil (AES-256-GCM) avant l’envoi. Le serveur stocke un fichier scellé par coffre, nommé d’après un hash du jeton d’accès – pas de base de données, rien de lisible à divulguer. Comme pour tout site web, le serveur voit tout de même votre adresse IP lors de la connexion.</p></details>
           <details><summary data-i18n="faq.what_if_i_lose">Et si je perds tous mes appareils ?</summary><p data-i18n="faq.then_the_vault_cannot">Alors personne ne peut ouvrir le coffre – pas même nous. C’est le prix d’un vrai chiffrement de bout en bout. Envie d’une sauvegarde ? Exportez vos flux en OPML de temps en temps.</p></details>

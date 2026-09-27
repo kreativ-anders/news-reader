@@ -54,7 +54,9 @@
     "later": "Später",
     "your_reading_list_on": "Deine Leseliste – auf jedem Gerät und offline lesbar, auch wenn der Beitrag längst aus dem Feed verschwunden ist. <kbd>l</kbd>",
     "not_interested": "Nicht interessiert",
-    "gone_without_guilt_one": "Weg, ohne schlechtes Gewissen. Ein Wisch auf dem Smartphone, eine Taste am Desktop. <kbd>x</kbd>"
+    "gone_without_guilt_one": "Weg, ohne schlechtes Gewissen. Ein Wisch auf dem Smartphone, eine Taste am Desktop. <kbd>x</kbd>",
+    "simple_rules_no_ai": "Einfache Regeln. Keine KI.",
+    "simple_rules_no_ai_text": "Andere Reader nennen sich „smart“ und lassen eine KI auswerten, was du öffnest, überspringst und speicherst. News schaut dir nicht beim Lesen zu. Beiträge kommen an, die neuesten zuerst, und bewegen sich nur, wenn du entscheidest – nichts wird gewichtet, zusammengefasst oder heimlich ausgeblendet. Durchschaubare Regeln für eine einfache Aufgabe: deine Feeds lesen."
   },
   "features": {
     "everything_a_reader_needs": "Alles, was ein Reader braucht. Nichts, was er nicht braucht.",
@@ -148,6 +150,8 @@
     "news_is_a_calm": "Ein ruhiger Feed-Reader für Smartphone und Desktop-Browser. Jeder neue Beitrag landet im Eingang und bekommt eine Entscheidung: jetzt lesen, später oder nicht interessiert. News lässt sich wie eine App installieren, funktioniert offline und ist kostenlos und Open Source.",
     "how_is_it_different": "Was unterscheidet News von anderen Feed-Readern?",
     "no_account_no_ads": "Kein Konto, keine Werbung, kein Tracking und kein Algorithmus, der entscheidet, was du siehst. Dein Lesestand liegt auf deinen Geräten, der Sync ist Ende-zu-Ende-verschlüsselt, und du kannst das Ganze auf deinem eigenen Server betreiben.",
+    "does_news_use_ai": "Steckt in News eine KI?",
+    "does_news_use_ai_text": "Nein. Es gibt keine KI und kein Modell, das aus deinem Leseverhalten lernt – weder auf deinem Gerät noch auf dem Server. News folgt ein paar einfachen Regeln: Neue Beiträge landen im Eingang, die neuesten zuerst, und nur deine eigene Entscheidung bewegt sie weiter. Was du siehst, hängt von deinen Quellen ab – nicht von einem Profil über dich.",
     "how_does_sync_work": "Wie funktioniert Sync ohne Konto?",
     "the_first_device_creates": "Dein erstes Gerät erzeugt einen zufälligen geheimen Schlüssel. Weitere Geräte kommen dazu, indem sie einen QR-Code scannen oder den Kopplungslink öffnen. Aus diesem Schlüssel leitet jedes Gerät ein Zugangs-Token und einen Verschlüsselungsschlüssel ab. Der Server bekommt nur das Token und eine verschlüsselte Datei – der Schlüssel selbst verlässt nie deine Geräte.",
     "can_the_server_operator": "Kann der Serverbetreiber meine Feeds oder meine Leseliste lesen?",

@@ -54,7 +54,9 @@
     "later": "Más tarde",
     "your_reading_list_on": "Tu lista de lectura – en todos tus dispositivos y disponible sin conexión, incluso cuando la entrada ya salió de su feed. <kbd>l</kbd>",
     "not_interested": "No me interesa",
-    "gone_without_guilt_one": "Fuera, sin remordimientos. Un deslizamiento en el móvil, una tecla en el escritorio. <kbd>x</kbd>"
+    "gone_without_guilt_one": "Fuera, sin remordimientos. Un deslizamiento en el móvil, una tecla en el escritorio. <kbd>x</kbd>",
+    "simple_rules_no_ai": "Reglas simples. Sin IA.",
+    "simple_rules_no_ai_text": "Otros lectores se llaman «inteligentes» y dejan que una IA analice lo que abres, saltas y guardas. News no te mira mientras lees. Las entradas llegan de la más nueva a la más antigua y solo se mueven cuando tú decides – nada se ordena por relevancia, se resume ni se oculta a tus espaldas. Reglas simples y transparentes, para una tarea simple: leer tus feeds."
   },
   "features": {
     "everything_a_reader_needs": "Todo lo que necesita un lector. Nada que no necesite.",
@@ -148,6 +150,8 @@
     "news_is_a_calm": "Un lector de feeds tranquilo para tu móvil y el navegador de tu escritorio. Cada entrada nueva llega a la bandeja y recibe una decisión: leer ahora, más tarde o no me interesa. Se instala como una app, funciona sin conexión y es gratis y de código abierto.",
     "how_is_it_different": "¿En qué se diferencia de otros lectores de feeds?",
     "no_account_no_ads": "Sin cuenta, sin anuncios, sin rastreo y sin algoritmo que decida lo que ves. Tu progreso de lectura vive en tus dispositivos, la sincronización está cifrada de extremo a extremo y puedes ejecutarlo todo en tu propio servidor.",
+    "does_news_use_ai": "¿News usa IA?",
+    "does_news_use_ai_text": "No. No hay IA ni ningún modelo que aprenda de tus hábitos de lectura – ni en tu dispositivo ni en el servidor. News sigue unas pocas reglas simples: las entradas nuevas llegan a la bandeja, las más nuevas primero, y solo tu decisión las mueve. Lo que ves depende de tus fuentes, no de un perfil sobre ti.",
     "how_does_sync_work": "¿Cómo funciona la sincronización sin cuenta?",
     "the_first_device_creates": "Tu primer dispositivo crea una clave secreta aleatoria. Los demás se unen escaneando un código QR o abriendo el enlace de vinculación. A partir de esa clave, cada dispositivo deriva un token de acceso y una clave de cifrado. El servidor solo recibe el token y un archivo cifrado – la clave nunca sale de tus dispositivos.",
     "can_the_server_operator": "¿Puede quien gestiona el servidor leer mis feeds o mi lista de lectura?",

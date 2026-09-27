@@ -266,7 +266,7 @@ function nr_best_scored_node(DOMXPath $xp): ?DOMElement
         $grand = $parent?->parentNode;
         foreach ([[$parent, 1.0], [$grand, 0.5]] as [$node, $w]) {
             if (!$node instanceof DOMElement || in_array($node->localName, ['html', 'body'], true)) continue;
-            $scores[$node] = ($scores->contains($node) ? $scores[$node] : 0) + $score * $w;
+            $scores[$node] = (isset($scores[$node]) ? $scores[$node] : 0) + $score * $w;
         }
     }
     $best = null;

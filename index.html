@@ -103,6 +103,14 @@
                 },
                 {
                     "@type": "Question",
+                    "name": "Does News use AI?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "No. There is no AI and no model learning from your reading habits – not on your device and not on the server. News follows a few simple rules: new posts land in your inbox newest first, and only your own decision moves them on. What you see depends on your sources, not on a profile of you."
+                    }
+                },
+                {
+                    "@type": "Question",
                     "name": "How does sync work without an account?",
                     "acceptedAnswer": {
                         "@type": "Answer",
@@ -243,6 +251,9 @@
     .flow kbd{font:600 .74rem var(--mono);border:1px solid var(--line);border-radius:var(--radius);padding:0 5px;color:var(--fg)}
     @media (max-width:880px){.flow{grid-template-columns:1fr 1fr}}
     @media (max-width:520px){.flow{grid-template-columns:1fr}}
+    .rules{display:flex;gap:18px;align-items:flex-start;margin-top:18px}
+    .rules .icon{flex:none;margin:0}
+    .rules h3{margin-bottom:6px}
 
     /* sync */
     .sync-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
@@ -339,6 +350,7 @@
     .final .card{padding:64px 24px;background:radial-gradient(ellipse at top,var(--glow),transparent 70%),var(--card)}
     .final p{max-width:540px;margin:0 auto 30px;color:var(--muted);font-size:1.1rem}
     .final .cta{justify-content:center}
+    .final .support{margin:26px auto 0;font-size:.92rem}
 
 
     @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}.syncviz .pkt{display:none}}
@@ -425,6 +437,10 @@
           <li><h3 data-i18n="reader.later">Later</h3><p data-i18n="reader.your_reading_list_on">Your reading list – on every device and saved for offline reading, even after the post has left its feed. <kbd>l</kbd></p></li>
           <li><h3 data-i18n="reader.not_interested">Not interested</h3><p data-i18n="reader.gone_without_guilt_one">Gone, no guilt. One swipe on your phone, one key on your desktop. <kbd>x</kbd></p></li>
         </ol>
+        <div class="card rules">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></div>
+          <div><h3 data-i18n="reader.simple_rules_no_ai">Simple rules. No AI.</h3><p data-i18n="reader.simple_rules_no_ai_text">Other readers call themselves “smart” and let an AI study what you open, skip and save. News doesn’t watch you read. Posts arrive newest first and only move when you decide – nothing gets ranked, summarized or hidden behind your back. Simple rules you can see through, for a simple job: reading your feeds.</p></div>
+        </div>
       </div>
     </section>
 
@@ -707,6 +723,7 @@
         <div class="faq">
           <details><summary data-i18n="faq.what_is_news">What is News?</summary><p data-i18n="faq.news_is_a_calm">A calm feed reader for your phone and your desktop browser. Every new post lands in your inbox and gets one decision: read now, later or not interested. It installs like an app, works offline and is free and open source.</p></details>
           <details><summary data-i18n="faq.how_is_it_different">How is it different from other feed readers?</summary><p data-i18n="faq.no_account_no_ads">No account, no ads, no tracking and no algorithm deciding what you see. Your reading progress lives on your devices, sync is end-to-end encrypted, and you can run the whole thing on your own server.</p></details>
+          <details><summary data-i18n="faq.does_news_use_ai">Does News use AI?</summary><p data-i18n="faq.does_news_use_ai_text">No. There is no AI and no model learning from your reading habits – not on your device and not on the server. News follows a few simple rules: new posts land in your inbox newest first, and only your own decision moves them on. What you see depends on your sources, not on a profile of you.</p></details>
           <details><summary data-i18n="faq.how_does_sync_work">How does sync work without an account?</summary><p data-i18n="faq.the_first_device_creates">Your first device creates a random secret key. Other devices join by scanning a QR code or opening the pairing link. From that key, each device derives an access token and an encryption key. The server only ever gets the token and one encrypted file – the key itself never leaves your devices.</p></details>
           <details><summary data-i18n="faq.can_the_server_operator">Can the server operator read my feeds or reading list?</summary><p data-i18n="faq.no_feeds_reading_list">No. Feeds, reading list and progress are encrypted on your device (AES-256-GCM) before they are uploaded. The server stores one sealed file per vault, named after a hash of the access token – no database, nothing readable to leak. Like any website, the web server does see your IP address when you connect.</p></details>
           <details><summary data-i18n="faq.what_if_i_lose">What if I lose all my devices?</summary><p data-i18n="faq.then_the_vault_cannot">Then nobody can open the vault – not even us. That is the price of real end-to-end encryption. Want a backup? Export your feeds as OPML every now and then.</p></details>
