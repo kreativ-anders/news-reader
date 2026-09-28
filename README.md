@@ -260,7 +260,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 
 ## White-label
 
-- Colours, fonts, `--radius` (default `0`): `app/theme.css` (site + app). Palette 3b.1: `#FFA500` · `#000000` · `#FFFFFF` · `#292929`.
+- Colours, fonts, `--radius` / `--radius-lg` (controls / containers, default `6px` / `10px`, `0` for square corners): `app/theme.css` (site + app). Palette 3b.1: `#FFA500` · `#000000` · `#FFFFFF` · `#292929`.
 - Theme: follows the OS; override via site toggle / *Settings → Appearance* (`html[data-theme]`, `localStorage` `nr.theme`; `applyTheme()` also sets `<meta name="theme-color">`).
 - Name and icons: `app/manifest.webmanifest`, `app/index.html`, `app/icons/`, `brand/` (`news-mark[-dark].svg` for logo and favicon, inline `.nr-mark` follows the theme).
 - App icon: one for iOS and Android – `brand/news-icon.svg` (rounded, `icon-192/512.png`) and `brand/news-icon-full.svg` (full bleed, `apple-touch-icon.png` 180 px – in the app `icons/apple-touch-icon-v3.png`, renamed because iOS and the 30-day image cache keep an icon under its old name; give it a new name whenever the design changes – `maskable-512.png`; mark inside the 80 % safe circle). Render all PNGs with `node tools/build-icons.mjs`. Neither iOS nor the manifest supports a separate dark icon for web apps (as of iOS 27), and iOS's dark and tinted Home Screen modes recolour a bright tile themselves – the orange tile with a black mark came out as a grey, embossed mark. So the tile is graphite `#292929` with a white mark and an orange RSS symbol: already dark, it has little for iOS to change. No transparency – iOS fills it with black.

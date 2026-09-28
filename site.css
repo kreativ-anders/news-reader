@@ -20,7 +20,7 @@ h3{font-size:1.28rem;line-height:1.25;margin-bottom:8px}
 /* INFO: the accent is marked by an orange underline in both themes – in light the text itself stays ink (orange text fails 4.5:1 on white) */
 .accent{color:var(--brand-ink);font-style:normal;text-decoration:underline var(--brand);text-decoration-thickness:.09em;text-underline-offset:.13em}
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--brand-ink);margin-bottom:16px}
-.eyebrow::before{content:"";width:8px;height:8px;border-radius:var(--radius);background:var(--brand)}
+.eyebrow::before{content:"";width:8px;height:8px;border-radius:calc(var(--radius) / 3);background:var(--brand)}
 .lead{font-size:1.22rem;color:var(--muted);margin:22px 0 34px;max-width:33em}
 
 /* header */
@@ -57,7 +57,7 @@ header{position:sticky;top:0;z-index:5;backdrop-filter:blur(12px);-webkit-backdr
 button.btn{font-family:inherit;line-height:inherit;cursor:pointer}button.btn-ghost{background:none}
 .btn[hidden],.install-dlg [hidden]{display:none}
 /* INFO: install steps – a modal <dialog>, so focus trap, Escape and focus return come from the browser */
-.install-dlg{width:min(30rem,calc(100% - 32px));margin:auto;padding:0;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--card);color:var(--fg)}
+.install-dlg{width:min(30rem,calc(100% - 32px));margin:auto;padding:0;border:1px solid var(--line-strong);border-radius:var(--radius-lg);background:var(--card);color:var(--fg)}
 .install-dlg::backdrop{background:rgb(0 0 0 / .55)}
 .install-dlg>div{padding:28px}
 .install-dlg h2{font-size:1.6rem;margin-bottom:10px}
@@ -85,11 +85,11 @@ footer a{text-decoration:underline;text-decoration-color:var(--line-strong);text
 .doc a{color:var(--brand-ink);text-underline-offset:3px;overflow-wrap:anywhere}
 .doc strong,.doc b{color:var(--fg)}
 .doc .lead{margin:14px 0 26px}
-.doc .note{border:1px solid var(--line);border-left:3px solid var(--brand);background:var(--card);padding:16px 20px;margin:26px 0}
+.doc .note{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:var(--radius);background:var(--card);padding:16px 20px;margin:26px 0}
 .doc .note p{color:var(--fg)}
 .doc .toc{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
 .doc .toc li{margin:0}
-.doc .toc a{display:block;padding:5px 12px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:.9rem;font-weight:600}
+.doc .toc a{display:block;padding:5px 12px;border:1px solid var(--line);border-radius:var(--radius);color:var(--fg);text-decoration:none;font-size:.9rem;font-weight:600}
 .doc .toc a:hover{border-color:var(--brand)}
 .doc address{font-style:normal;color:var(--fg);line-height:1.7}
 .doc .stand{margin-top:48px;font-size:.9rem}

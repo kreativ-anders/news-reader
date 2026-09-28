@@ -18,8 +18,9 @@
   --brand-ink:#FFA500; --glow:rgba(255,165,0,.12);
   --ok:#7cc88a; --warn:#FFA500; --err:#ff7a66;
 
-  /* INFO: 0 = straight editorial lines; e.g. 8px for a rounder white-label look */
-  --radius:0;
+  /* INFO: echoes the logo's rounded square – controls get --radius, containers the larger --radius-lg; list rows stay square.
+   *       Set both to 0 for straight editorial lines. */
+  --radius:6px; --radius-lg:10px;
 
   --font:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --serif:"Newsreader",Georgia,"Times New Roman",serif;
