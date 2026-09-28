@@ -115,11 +115,13 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 
 **Refresh and sync timers** – feeds refresh automatically every 30 min while visible, skipping feeds whose server copy cannot have changed yet (`meta.nextRefreshAfter`); *Refresh* / `r` forces all and reports the number of new posts. After a manual refresh the buttons pause for 60 s (`COOLDOWN_MS`, per feed for the feed list's *Refresh*; `aria-disabled`, a click explains the wait) – the Collector ignores `refresh=1` for copies younger than 15 min anyway. Sync runs every 5 min while visible and 20 s after a local change (immediately when the tab is hidden or closed).
 
+**App icon number** – the installed app shows the Inbox count on its icon (Badging API; *Settings → App icon*, `news.badge`, default on). Safari/iOS show it only with notification permission – a hint with an *Allow* button asks on click, News never sends notifications. Chromium additionally registers Periodic Background Sync (`badge`, `minInterval` 12 h, the browser may run it less often): `sw.js` reads `kv` (`lastRefresh`, `fetchState`, `server`, `badge`), skips the run within 30 min of a refresh, asks `/api/collect` without `refresh=1` for one feed at a time (only feeds whose copy may have changed and not waiting for a retry), stops at the first 429/503 or network error and sets the badge to the stored Inbox count plus posts newer than `lastRefresh` this device has not seen. It stores nothing; the app refreshes normally on its next start.
+
 **Search and go to** (`/`, Ctrl/Cmd+K, search button): views, folders and feeds; with a query also every known post – title matches first, then newest. Picking a post jumps to its view and selects it.
 
 **Storage**
-- IndexedDB `news`: `records` (feeds, items, devices – synced), `outbox` (unsynced changes; none without a vault), `entries` (per device), `articles` (offline copies), `kv` (`vaultKey`, `deviceId`, `deviceKey`, `server`, `etag`, `lastSync`, `lastRefresh`, `swipe`, `fetchState`, `pubPins`, `revoked`, `lastMaintain`).
-- `localStorage`: `nr.lang`, `nr.theme` (shared with the site), `news.density`, `news.acts`, `news.keys`, `news.feedNav`, `news.folders.closed`, `news.tip.swipe`.
+- IndexedDB `news`: `records` (feeds, items, devices – synced), `outbox` (unsynced changes; none without a vault), `entries` (per device), `articles` (offline copies), `kv` (`vaultKey`, `deviceId`, `deviceKey`, `server`, `etag`, `lastSync`, `lastRefresh`, `swipe`, `fetchState`, `pubPins`, `revoked`, `lastMaintain`, `badge`).
+- `localStorage`: `nr.lang`, `nr.theme` (shared with the site), `news.density`, `news.acts`, `news.keys`, `news.badge`, `news.feedNav`, `news.folders.closed`, `news.tip.swipe`.
 
 **Retention**
 - A new subscription shows the last 14 days, at least the 3 newest posts. For feeds followed longer than 30 days the inbox starts at most 30 days back.

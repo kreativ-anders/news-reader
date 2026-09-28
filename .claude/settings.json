@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"claude-clearinbox | app/js/app.js app/sw.js app/css tests/e2e | $\\(date +%H:%M\\)\" >> .agents/LOCK; grep -rn \"clearInbox\\\\|clear_all\\\\|clear_shown\" tests app/css app/js | grep -v \"app.js:83\" ; grep -n \"\\\\.more\\\\b\\\\|\\\\.more \" app/css/*.css)",
+      "Bash(sed -i '' \"s/document.querySelectorAll\\('#view article'\\)/document.querySelectorAll\\('#view .card'\\)/\" tests/e2e/flow.spec.mjs && grep -rn \"Clear all\\\\|Alle leeren\\\\|clear.*top\\\\|oben\" i18n/en.json app/i18n/en.json | head; npm test 2>&1 | tail -25)"
+    ],
+    "additionalDirectories": [
+      "/Users/manuel/Exchange/GitHub/news-reader/.agents",
+      "/Users/manuel/Exchange/GitHub/news-reader/tests/e2e"
+    ]
+  }
+}

@@ -95,7 +95,10 @@ test('keyboard: j/k select, l later, x not interested, u undo', async ({ app, pa
   await expect(app.cards()).toHaveCount(3);
 });
 
-test('clear inbox dismisses everything shown', async ({ app, page }) => {
+test('clear inbox sits below the list and dismisses everything shown', async ({ app, page }) => {
+  // INFO: users read top to bottom and clear at the end – the button must follow the last post
+  const after = await page.locator('#clearInbox').evaluate((b) => [...document.querySelectorAll('#view .card')].every((a) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING));
+  expect(after).toBe(true);
   await page.locator('#clearInbox').click();
   await expect(app.cards()).toHaveCount(0);
   await expect(app.badge('inbox')).toHaveText('');

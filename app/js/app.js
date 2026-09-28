@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.7';
+const VERSION = '0.8.9';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -75,6 +75,46 @@ function setActs(m) {
   document.documentElement.dataset.acts = m;
 }
 document.documentElement.dataset.acts = getActs();
+
+// INFO: number of Inbox posts on the app icon (installed app). Safari and iOS show it only with notification permission –
+//       News never sends notifications. Chromium also checks the sources in the background (sw.js, periodicsync),
+//       at most every BADGE_SYNC_MS and only as far as the browser allows
+const BADGE_MODES = ['on', 'off'];
+const BADGE_SYNC_MS = 12 * 60 * 60 * 1000;
+const canBadge = () => 'setAppBadge' in navigator;
+const getBadge = () => (store.get('news.badge') === 'off' ? 'off' : 'on');
+// INFO: Chromium shows the number without asking; browsers without periodic sync (Safari, iOS) need the permission
+const badgeNeedsPermission = () => canBadge() && !('PeriodicSyncManager' in window) && 'Notification' in window && Notification.permission !== 'granted';
+let badgeShown = -1;
+function paintBadge(n) {
+  if (!canBadge()) return;
+  if (getBadge() === 'off') n = 0;
+  if (n === badgeShown) return;
+  badgeShown = n;
+  (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+  db.kvSet('badge', n).catch(() => {}); // INFO: base for the background check in sw.js
+}
+async function badgeSync(reg) {
+  if (!reg?.periodicSync) return;
+  try {
+    if (getBadge() === 'off') return await reg.periodicSync.unregister('badge');
+    const perm = await navigator.permissions.query({ name: 'periodic-background-sync' });
+    if (perm.state === 'granted') await reg.periodicSync.register('badge', { minInterval: BADGE_SYNC_MS });
+  } catch { /* INFO: not installed or not allowed – the number then updates while the app runs */ }
+}
+async function setBadge(m) {
+  store.set('news.badge', m);
+  badgeShown = -1;
+  paintBadge(counts().inbox);
+  badgeSync(swReg);
+  if (m === 'on' && badgeNeedsPermission() && Notification.permission === 'default') await Notification.requestPermission().catch(() => {});
+  await badgePanelChanged();
+}
+// INFO: the hint below the choice comes and goes – focus returns to the choice
+async function badgePanelChanged() {
+  await renderSettings();
+  $('#badgeSel')?.focus();
+}
 
 const ICON = {
   now: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
@@ -610,7 +650,7 @@ const viewHeading = () => $('#view h1');
 function renderCounts(c = counts()) {
   $$('[data-count]').forEach((b) => { b.textContent = badge(c[b.dataset.count]); });
   document.title = (c.inbox ? `(${c.inbox}) ` : '') + (S.view === 'inbox' ? 'News' : `${viewName(S.view)} – News`);
-  if (navigator.setAppBadge) navigator.setAppBadge(c.inbox).catch(() => {});
+  paintBadge(c.inbox);
 }
 const viewName = (v) => t(v === 'settings' ? 'app.settings' : v === 'dismissed' ? 'views.dismissed.title' : 'nav.' + v);
 
@@ -831,13 +871,13 @@ function renderInbox() {
   const all = inboxEntries();
   const list = all.slice(0, S.shown);
   viewEl.innerHTML = `<div class="vh">
-      <div><h1 tabindex="-1">${t('inbox.title')}${crumb()}</h1><p>${inboxLine(all.length)}</p></div>
-      <div class="tools">
-        ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>` : ''}
-      </div></div>
+      <div><h1 tabindex="-1">${t('inbox.title')}${crumb()}</h1><p>${inboxLine(all.length)}</p></div></div>
     ${context()}
     ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : `<div class="empty">${ICON.view.inbox}<strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${ICON.refresh}<span>${t('inbox.check')}</span></button></div>`}
-    ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button></div>` : ''}`;
+    ${list.length ? `<div class="more">
+      <button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>
+      ${all.length > list.length ? `<button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button>` : ''}
+    </div>` : ''}`;
 }
 
 function renderItems() {
@@ -957,6 +997,12 @@ async function renderSettings() {
       <p>${t('devices.text')}</p>
       <div id="devices"></div>
       <div class="row"><button class="btn btn-ghost" type="button" id="rotateKey">${t('devices.rotate')}</button></div>
+    </section>` : ''}
+    ${canBadge() ? `<section class="panel" id="badgePanel">
+      <h2>${t('settings.badge_title')}</h2>
+      <p>${t('settings.badge_text')}</p>
+      <div class="grid2"><label class="field"><span>${t('settings.badge')}</span><select id="badgeSel"${getBadge() === 'on' && badgeNeedsPermission() ? ' aria-describedby="badgeHint"' : ''}>${BADGE_MODES.map((m) => opt(m, t('settings.badge_' + m), getBadge())).join('')}</select></label></div>
+      ${getBadge() === 'on' && badgeNeedsPermission() ? `<p id="badgeHint">${t(Notification.permission === 'denied' ? 'settings.badge_blocked' : 'settings.badge_permission')}</p>${Notification.permission === 'default' ? `<div class="row"><button class="btn btn-ghost" type="button" id="badgeAllow">${t('settings.badge_allow')}</button></div>` : ''}` : ''}
     </section>` : ''}
     <section class="panel only-touch">
       <h2>${t('settings.swipe_title')}</h2>
@@ -1283,6 +1329,9 @@ document.addEventListener('click', async (ev) => {
       await loadAll();
       return render();
     case 'syncNow': return sync.run();
+    case 'badgeAllow':
+      await Notification.requestPermission().catch(() => {});
+      return badgePanelChanged();
     case 'rotateKey':
       if (await dialog({ title: t('devices.rotate_title'), body: `<p>${t('devices.rotate_body')}</p>`, ok: t('devices.rotate_ok') })) {
         await rekey(() => sync.rotateKey(), 'devices.rotated');
@@ -1335,6 +1384,7 @@ document.addEventListener('change', async (ev) => {
   if (id === 'densitySel') setDensity(ev.target.value);
   if (id === 'actsSel') setActs(ev.target.value);
   if (id === 'keysSel') store.set('news.keys', ev.target.value);
+  if (id === 'badgeSel') await setBadge(ev.target.value);
   if (id === 'swipeRight' || id === 'swipeLeft') {
     S.swipe = { right: $('#swipeRight').value, left: $('#swipeLeft').value };
     await db.kvSet('swipe', S.swipe);
@@ -1833,6 +1883,7 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
     if (S.view === 'settings') renderSoft();
   });
   navigator.serviceWorker.register('sw.js').then((r) => { swReg = r; }, () => {});
+  navigator.serviceWorker.ready.then(badgeSync);
 }
 
 // INFO: one hint per device on touch screens – swiping is otherwise invisible
