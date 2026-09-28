@@ -32,7 +32,10 @@ test('pairing keys and shared URLs leave the address bar before any other script
   expect(await page.evaluate(() => location.search)).toBe('');
   await expect(page.locator('#addUrl')).toHaveValue(`${FX()}/blog/`);
   await page.goto('about:blank');
+  // INFO: "interactive" fires before any module script – only the inline script can have removed the key by then
+  await page.addInitScript(() => document.addEventListener('readystatechange', () => { if (document.readyState === 'interactive') window.hashAtParse = location.hash; }));
   await page.goto(app.url('#pair=not-a-valid-key'));
+  expect(await page.evaluate(() => window.hashAtParse)).toBe('');
   expect(await page.evaluate(() => location.hash)).toBe('');
   // INFO: while the app is open, a pairing link only changes the hash
   await page.evaluate(() => { location.hash = 'pair=still-not-a-key'; });

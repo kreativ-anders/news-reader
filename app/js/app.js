@@ -10,7 +10,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.9';
+const VERSION = '0.7.10';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -842,7 +842,7 @@ function renderFeeds() {
     <section class="panel">
       <h2>${t('feeds.io_title')}</h2>
       <p id="ioText">${t('feeds.io_text')}</p>
-      <div class="row"><button class="btn btn-ghost" type="button" id="opmlPick">${ICON.upload}<span>${t('feeds.import')}</span></button><input type="file" id="opmlIn" accept=".opml,.xml,text/xml,application/xml" hidden><button class="btn btn-ghost" type="button" id="opmlOut"${feeds.length ? '' : ' disabled'}>${ICON.download}<span>${t('feeds.export')}</span></button><a class="btn btn-ghost" href="${esc(bookmarklet)}" onclick="return false" aria-describedby="ioText">+ News</a></div>
+      <div class="row"><button class="btn btn-ghost" type="button" id="opmlPick">${ICON.upload}<span>${t('feeds.import')}</span></button><button class="btn btn-ghost" type="button" id="opmlOut"${feeds.length ? '' : ' disabled'}>${ICON.download}<span>${t('feeds.export')}</span></button><a class="btn btn-ghost" href="${esc(bookmarklet)}" onclick="return false" aria-describedby="ioText">+ News</a></div>
       <div class="result" id="opmlResult" aria-live="polite"></div>
     </section>`;
   if (S.share) {
@@ -1278,7 +1278,7 @@ document.addEventListener('click', async (ev) => {
 document.addEventListener('change', async (ev) => {
   const id = ev.target.id;
   if (id === 'filter') { go(S.view, ev.target.value, { push: false }); $('#filter')?.focus(); }
-  if (id === 'opmlIn' && ev.target.files[0]) importOpml(ev.target.files[0]);
+  if (id === 'opmlIn' && ev.target.files[0]) { const f = ev.target.files[0]; ev.target.value = ''; importOpml(f); }
   if (id === 'langSel') { setLang(ev.target.value); await useLanguage(ev.target.value); render(); }
   if (id === 'themeSel') setTheme(ev.target.value);
   if (id === 'densitySel') setDensity(ev.target.value);

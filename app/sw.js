@@ -1,5 +1,5 @@
 // INFO: caches the app shell only – the API always goes to the network
-const VERSION = 'news-0.7.9';
+const VERSION = 'news-0.7.10';
 const SHELL = [
   './', 'index.html', 'app.css', 'theme.css', 'manifest.webmanifest',
   'fonts/newsreader.woff2', 'fonts/source-sans-3.woff2',

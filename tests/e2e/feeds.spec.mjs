@@ -1,4 +1,5 @@
 // Following, refreshing, unfollowing feeds; OPML; share target / bookmarklet.
+import { writeFileSync } from 'node:fs';
 import { test, expect, API, FX } from './fixtures.mjs';
 
 test('follow a website → discovered feed, entries in the inbox @mobile', async ({ app, page }) => {
@@ -142,11 +143,24 @@ test('OPML export and import', async ({ app, page, browser }) => {
   const errors = [];
   other.on('pageerror', (e) => errors.push(e.message));
   await other.goto(`${API()}/app/#feeds`);
+  await expect(other.locator('#opmlPick')).toBeVisible();
   await other.locator('#opmlIn').setInputFiles(path);
   await expect(other.locator('.feedrow')).toHaveCount(2, { timeout: 15_000 });
   await expect(other.locator('#opmlResult')).not.toBeEmpty();
   expect(errors).toEqual([]);
   await ctx.close();
+});
+
+test('OPML import still works when the view is redrawn while the file picker is open', async ({ app, page }) => {
+  await app.open();
+  const path = test.info().outputPath('feeds.opml');
+  writeFileSync(path, `<opml version="2.0"><body><outline type="rss" xmlUrl="${FX()}/feeds/rdf.xml"/></body></opml>`);
+  await app.go('feeds');
+  const input = await page.locator('#opmlIn').elementHandle();
+  await app.go('inbox');
+  await app.go('feeds');
+  await input.setInputFiles(path);
+  await expect(page.locator('.feedrow')).toHaveCount(1, { timeout: 15_000 });
 });
 
 test('share target / bookmarklet prefill the follow form', async ({ app, page }) => {

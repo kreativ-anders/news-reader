@@ -5,9 +5,9 @@
   <!-- WARNING: changing the inline script below requires a new sha256 hash in this CSP.
        It also moves pairing keys (#pair=) and shared URLs (?add=) out of the address bar (history, screenshots) before anything else runs.
        The app loads no analytics – keep it that way (reading data and keys must never leave the device unencrypted). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-SwKDXAXHkDtg/gV/b4VIKUvkVilnB21xciAu4uFUz0c='; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' https: http:; connect-src 'self' https:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-mHRy6EVvqhJi9IKXuNfPkqhcE0I5A9ptIcrOV/LxRZQ='; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' https: http:; connect-src 'self' https:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
-  <script>try{var t=localStorage.getItem("nr.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}var l=location,p=/(^|&)pair=/.test(l.hash);if(l.search||p){window.nrIncoming={search:l.search,hash:l.hash};history.replaceState(null,"",l.pathname+(p?"":l.hash))}</script>
+  <script>try{var t=localStorage.getItem("nr.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}var l=location,p=/(^|&)pair=/.test(l.hash.slice(1));if(l.search||p){window.nrIncoming={search:l.search,hash:l.hash};history.replaceState(null,"",l.pathname+(p?"":l.hash))}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>News</title>
   <meta name="description" content="News is a calm, local-first RSS reader: every entry gets one decision – read now, later or not interested. Encrypted sync, no account.">
@@ -64,6 +64,8 @@
       </section>
     </nav>
     <main id="view" tabindex="-1"></main>
+    <!-- INFO: outside #view – a redraw while the file picker is open would detach it and lose the chosen file -->
+    <input type="file" id="opmlIn" accept=".opml,.xml,text/xml,application/xml" hidden>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
