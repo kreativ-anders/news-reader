@@ -23,7 +23,10 @@ svg{display:block}
 .icon-btn{all:unset;box-sizing:border-box;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);cursor:pointer;color:var(--muted);transition:background .15s,color .15s}
 .icon-btn:hover{background:var(--hover);color:var(--fg)}
 .icon-btn svg,.nav svg,.act svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.icon-btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
+.icon-btn[aria-busy="true"] svg,.btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
+:is(.icon-btn,.btn)[aria-busy="true"]{cursor:progress}
+:is(.icon-btn,.btn)[aria-disabled="true"]:not([aria-busy="true"]){opacity:.5;cursor:not-allowed}
+.icon-btn[aria-disabled="true"]:hover{background:none;color:var(--muted)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* INFO: sync status without a frame – like the icon buttons next to it; the icon's shape tells the state, colour only adds to it */
@@ -119,6 +122,8 @@ textarea{width:100%;font:13px var(--mono);resize:vertical}
 .btn-danger:hover{background:var(--err);border-color:var(--err);color:#fff}
 .btn svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .btn[disabled]{opacity:.5;cursor:default}
+.btn-ghost[aria-disabled="true"]:hover{border-color:var(--line-strong)}
+.btn-primary[aria-busy="true"]:hover{background:var(--brand)}
 
 .day{margin-bottom:8px}
 .day-h{position:sticky;top:calc(60px + env(safe-area-inset-top));z-index:5;display:flex;align-items:baseline;gap:8px;padding:10px 12px 6px;background:var(--bg);border-bottom:1px solid var(--line-strong);font:700 .74rem var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -228,7 +233,10 @@ html{scroll-padding-top:calc(104px + env(safe-area-inset-top))}
 .feedrow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
 .feedrow:first-child{border-top:0}
 .feedrow .t{font:600 1.1rem/1.3 var(--serif);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.feedrow .u{font:12px var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;grid-column:1}
+.feedrow .u{font:12px var(--mono);color:var(--muted);grid-column:1;display:flex;align-items:center;gap:4px;min-width:0;justify-self:start;max-width:100%;text-decoration:none}
+.feedrow .u span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feedrow .u:hover span{text-decoration:underline}
+.feedrow .u svg{flex:none;width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .feedrow .st{grid-column:1;display:flex;gap:8px;align-items:center;font-size:.78rem;color:var(--muted);flex-wrap:wrap}
 .feedrow .ops{grid-row:1 / span 3;grid-column:2;display:flex;gap:2px}
 .feedrow.has-fi{grid-template-columns:auto minmax(0,1fr) auto}
@@ -333,4 +341,5 @@ html.reader-open,html.reader-open body{overflow:hidden}
 /* INFO: forced colours drop backgrounds and shadows – selection and current item need a real outline */
 @media (forced-colors:active){
   .card:focus-visible,.card.kb,.palette li[aria-selected="true"],.nav button[aria-current="page"],.subnav button[aria-current="page"]{outline:2px solid Highlight;outline-offset:-2px}
+  :is(.icon-btn,.btn)[aria-disabled="true"]{color:GrayText}
 }

@@ -47,7 +47,9 @@ test('app icon: one design for iOS and Android, opaque where iOS or a mask fills
     assert.equal(i.h, size, p);
     if (opaque) assert.ok(!i.alpha, `${p}: no alpha – iOS fills transparency with black`);
   }
-  for (const f of ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png']) assert.ok(png(f).b.equals(png(`app/icons/${f}`).b), `${f}: site and app/icons differ`);
+  for (const [f, a] of [['apple-touch-icon.png', 'apple-touch-icon-v2.png'], ['icon-192.png'], ['icon-512.png']]) assert.ok(png(f).b.equals(png(`app/icons/${a || f}`).b), `${f}: site and app/icons differ`);
+  assert.ok(!existsSync(join(ROOT, 'app/icons/apple-touch-icon.png')), 'app touch icon keeps a new name – iOS caches the old dark one under the old name');
+  assert.match(read('app/index.html'), /rel="apple-touch-icon" href="icons\/apple-touch-icon-v2\.png"/);
   assert.ok(!existsSync(join(ROOT, 'brand/news-icon-dark.svg')), 'no separate dark app icon – iOS and manifests cannot switch it');
 });
 

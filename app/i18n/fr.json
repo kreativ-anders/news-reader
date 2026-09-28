@@ -70,6 +70,7 @@
     "undo_key": "Annuler (U)",
     "no_feeds": "Suivez d’abord un site – il y aura alors quelque chose à actualiser.",
     "checked_none": "Vérifié – rien de nouveau",
+    "cooldown": "Vérifié à l’instant – réessayez dans une minute",
     "checked_one": "Vérifié – {n} nouvel article",
     "checked_other": "Vérifié – {n} nouveaux articles"
   },
@@ -156,6 +157,7 @@
     "stale_down": "· la source ne répond pas",
     "stale_skipped": "· pas actualisé cette fois",
     "stale_copy": "· copie enregistrée ({when})",
+    "open_url": "Ouvrir l’adresse du flux",
     "refresh": "Actualiser",
     "rename": "Renommer",
     "unfollow": "Ne plus suivre",

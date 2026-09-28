@@ -70,6 +70,7 @@
     "undo_key": "Undo (U)",
     "no_feeds": "Follow a website first – then there’s something to refresh.",
     "checked_none": "Checked – nothing new",
+    "cooldown": "Just checked – you can check again in a minute",
     "checked_one": "Checked – {n} new post",
     "checked_other": "Checked – {n} new posts"
   },
@@ -156,6 +157,7 @@
     "stale_down": "· source isn’t answering",
     "stale_skipped": "· not refreshed this time",
     "stale_copy": "· showing the copy from {when}",
+    "open_url": "Open feed address",
     "refresh": "Refresh",
     "rename": "Rename",
     "unfollow": "Unfollow",

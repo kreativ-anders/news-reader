@@ -70,6 +70,7 @@
     "undo_key": "Annulla (U)",
     "no_feeds": "Segui prima un sito – poi ci sarà qualcosa da aggiornare.",
     "checked_none": "Controllato – niente di nuovo",
+    "cooldown": "Appena controllato – puoi riprovare tra un minuto",
     "checked_one": "Controllato – {n} nuovo articolo",
     "checked_other": "Controllato – {n} nuovi articoli"
   },
@@ -156,6 +157,7 @@
     "stale_down": "· la fonte non risponde",
     "stale_skipped": "· non aggiornato questa volta",
     "stale_copy": "· copia salvata ({when})",
+    "open_url": "Apri l’indirizzo del feed",
     "refresh": "Aggiorna",
     "rename": "Rinomina",
     "unfollow": "Smetti di seguire",

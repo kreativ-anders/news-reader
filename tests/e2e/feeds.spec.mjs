@@ -8,6 +8,11 @@ test('follow a website → discovered feed, entries in the inbox @mobile', async
   await expect(result.locator('.pill')).toHaveAttribute('title', 'discovered');
   await expect(result).toContainText('Fixture Blog');
   await expect(page.locator('.feedrow')).toHaveCount(1);
+  // the row links the address News actually reads, not the page that was entered
+  const link = page.locator('.feedrow .u');
+  await expect(link).toHaveAttribute('href', `${FX()}/feeds/rss.xml`);
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('title', 'Open feed address');
   await app.go('inbox');
   await expect(app.cards()).toHaveCount(4);
   await expect(app.badge('inbox')).toHaveText('4');
@@ -73,6 +78,43 @@ test('refresh all (r) keeps entries and states', async ({ app, page }) => {
   await expect(page.locator('#refreshBtn')).not.toHaveAttribute('aria-busy', 'true');
   await expect(app.cards()).toHaveCount(2);
   await expect(app.badge('later')).toHaveText('1');
+});
+
+test('refresh buttons pause for a minute after a manual refresh – no repeated requests', async ({ app, page }) => {
+  await page.clock.install();
+  await app.open();
+  await app.follow(`${FX()}/feeds/atom.xml`);
+  let calls = 0;
+  await page.route('**/api/collect?**', (route) => { calls++; return route.continue(); });
+  const btn = page.locator('#refreshBtn');
+  await btn.click();
+  await expect(btn).not.toHaveAttribute('aria-busy', 'true');
+  expect(calls).toBe(1);
+  await expect(btn).toHaveAttribute('aria-disabled', 'true');
+  await expect(btn).toHaveAttribute('title', 'Just checked – you can check again in a minute');
+  // aria-disabled keeps the button focusable; Playwright treats it as disabled, so the click is forced
+  await btn.click({ force: true });
+  await expect(btn).toBeFocused();
+  await page.keyboard.press('r');
+  await expect(app.toast()).toContainText('Just checked');
+  expect(calls).toBe(1);
+
+  // one feed has its own pause
+  await app.go('feeds');
+  const one = page.locator('.feedrow [data-feed-act="refresh"]');
+  await one.click();
+  await expect.poll(() => calls).toBe(2);
+  await expect(one).toHaveAttribute('aria-disabled', 'true');
+  await one.click({ force: true });
+  await expect(app.toast()).toContainText('Just checked');
+  expect(calls).toBe(2);
+
+  await page.clock.fastForward(61_000);
+  await expect(btn).not.toHaveAttribute('aria-disabled');
+  await expect(one).not.toHaveAttribute('aria-disabled');
+  await expect(one).toHaveAttribute('title', 'Refresh');
+  await page.keyboard.press('r');
+  await expect.poll(() => calls).toBe(3);
 });
 
 test('a source that turns the server away is fetched from the device – same entries after a refresh', async ({ app, page }) => {
@@ -175,6 +217,7 @@ test('share target / bookmarklet prefill the follow form', async ({ app, page })
 });
 
 test('a saved copy says whether the source failed or was just not asked, and how old it is', async ({ app, page }) => {
+  await page.clock.install();
   await app.open();
   await app.follow(`${FX()}/feeds/atom.xml`);
   const real = await (await fetch(`${API()}/api/collect?url=${encodeURIComponent(FX() + '/feeds/atom.xml')}`)).json();
@@ -190,6 +233,7 @@ test('a saved copy says whether the source failed or was just not asked, and how
   await expect(row).toContainText(/· showing the copy from 3 h/);
 
   lastError = null;
+  await page.clock.fastForward(61_000);
   await row.locator('[data-feed-act="refresh"]').click();
   await expect(row).toContainText('· not refreshed this time');
   await expect(row.locator('.err')).toHaveCount(0);

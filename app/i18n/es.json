@@ -70,6 +70,7 @@
     "undo_key": "Deshacer (U)",
     "no_feeds": "Sigue primero una web – así habrá algo que actualizar.",
     "checked_none": "Comprobado – nada nuevo",
+    "cooldown": "Recién comprobado – puedes volver a intentarlo en un minuto",
     "checked_one": "Comprobado – {n} entrada nueva",
     "checked_other": "Comprobado – {n} entradas nuevas"
   },
@@ -156,6 +157,7 @@
     "stale_down": "· la fuente no responde",
     "stale_skipped": "· no actualizado esta vez",
     "stale_copy": "· copia guardada ({when})",
+    "open_url": "Abrir la dirección del feed",
     "refresh": "Actualizar",
     "rename": "Renombrar",
     "unfollow": "Dejar de seguir",

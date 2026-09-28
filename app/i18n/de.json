@@ -70,6 +70,7 @@
     "undo_key": "Rückgängig (U)",
     "no_feeds": "Folge zuerst einer Website – dann gibt es etwas zu aktualisieren.",
     "checked_none": "Geprüft – nichts Neues",
+    "cooldown": "Gerade erst geprüft – in einer Minute geht’s wieder",
     "checked_one": "Geprüft – {n} neuer Beitrag",
     "checked_other": "Geprüft – {n} neue Beiträge"
   },
@@ -156,6 +157,7 @@
     "stale_down": "· Quelle antwortet gerade nicht",
     "stale_skipped": "· diesmal nicht neu geladen",
     "stale_copy": "· zeige Stand {when}",
+    "open_url": "Feed-Adresse öffnen",
     "refresh": "Aktualisieren",
     "rename": "Umbenennen",
     "unfollow": "Nicht mehr folgen",

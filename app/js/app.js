@@ -11,10 +11,12 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.1';
+const VERSION = '0.8.4';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
+// INFO: the Collector ignores ?refresh=1 for copies younger than 15 minutes – repeated clicks would only cost requests
+const COOLDOWN_MS = 60 * 1000;
 // INFO: matches the Collector's NR_UPSTREAM_PER_CLIENT – more parallel fetches only earn BUSY answers
 const FETCH_PARALLEL = 2;
 const RETRY_MAX_MS = 15 * 60 * 1000;
@@ -89,6 +91,7 @@ const ICON = {
   folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
   chev: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
   view: { inbox: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg>', feeds: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg>', settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>' },
+  ext: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
   doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
 };
 ICON.view.later = ICON.later; ICON.view.done = ICON.done;
@@ -323,6 +326,31 @@ function failState(id, e, now = Date.now()) {
   return { ...st, tries: n, retry: now + Math.min(RETRY_MAX_MS, Math.max(1, e.retryAfter || 60) * 1000 * 2 ** n) };
 }
 
+// INFO: aria-disabled instead of disabled keeps focus on the button; a click while cooling explains the wait
+const cooling = new Map();
+const busyFeeds = new Set();
+const cool = (key) => (cooling.get(key) || 0) > Date.now();
+function coolDown(key) {
+  cooling.set(key, Date.now() + COOLDOWN_MS);
+  paintRequests();
+  setTimeout(() => { if (!cool(key)) cooling.delete(key); paintRequests(); }, COOLDOWN_MS);
+}
+function paintRequests() {
+  $$('#refreshBtn, [data-refresh], [data-feed-act="refresh"]').forEach((b) => {
+    const key = b.dataset.feedAct ? b.closest('[data-feed]').dataset.feed : 'all';
+    const busy = key === 'all' ? S.refreshing : busyFeeds.has(key);
+    const tip = cool(key) && !busy ? t('toast.cooldown') : b.dataset.feedAct ? t('feeds.refresh') : b.id ? t('app.refresh') : '';
+    if (busy) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+    if (busy || cool(key)) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+    if (tip) b.title = tip; else b.removeAttribute('title');
+  });
+}
+function manualRefresh() {
+  if (S.refreshing) return;
+  if (cool('all')) return showToast(t('toast.cooldown'));
+  return refreshAll(true);
+}
+
 let retryTimer = 0;
 function scheduleRetry() {
   clearTimeout(retryTimer);
@@ -337,7 +365,7 @@ async function refreshAll(force = false) {
   if (S.refreshing) return;
   const before = inboxEntries('').length;
   S.refreshing = true;
-  $('#refreshBtn').setAttribute('aria-busy', 'true');
+  paintRequests();
   const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force));
   let failed = 0;
   results.forEach((r, i) => {
@@ -351,8 +379,9 @@ async function refreshAll(force = false) {
   await db.kvSet('lastRefresh', S.lastRefresh);
   await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   S.refreshing = false;
-  $('#refreshBtn').removeAttribute('aria-busy');
+  if (force) coolDown('all');
   if (force) render(); else renderSoft();
+  paintRequests();
   scheduleRetry();
   if (feeds.length && failed === feeds.length && results[0]?.error?.code === 'UNREACHABLE') showToast(results[0].error.message);
   else if (failed) showToast(t('toast.refresh_failed', { n: failed }), () => go('feeds'), t('toast.details'));
@@ -366,9 +395,9 @@ function toEntry(e, feedId, firstSeen) {
   return { id: e.id, feedId, url, title: e.title || url, summary: e.summary || '', image: httpUrl(e.image), author, publishedAt: e.publishedAt || e.updatedAt || null, firstSeen };
 }
 
-// INFO: per device (fetchState), not synced – icon and site only decorate the feed list
+// INFO: per device (fetchState), not synced – icon, site and feedUrl only decorate the feed list
 const sourceMeta = (res) => ({
-  icon: httpUrl(res.source?.icon) || '', site: httpUrl(res.source?.siteUrl) || '',
+  icon: httpUrl(res.source?.icon) || '', site: httpUrl(res.source?.siteUrl) || '', feedUrl: httpUrl(res.source?.feedUrl) || '',
   feed: res.source?.feedUrl ? feedId(res.source.feedUrl) : '', next: Date.parse(res.meta?.nextRefreshAfter || '') || 0,
 });
 
@@ -566,7 +595,7 @@ function dayGroups(list, view, whenOf) {
 const badge = (n) => (n ? (n > 999 ? '999+' : String(n)) : '');
 
 // INFO: a redraw replaces the focused element – remember what it was (id or data attributes) and focus its successor
-const FOCUS_ATTRS = ['data-feed-act', 'data-device-act', 'data-fold', 'data-quiet', 'data-filter', 'data-view', 'data-more', 'data-refresh'];
+const FOCUS_ATTRS = ['data-feed-act', 'data-feed-url', 'data-device-act', 'data-fold', 'data-quiet', 'data-filter', 'data-view', 'data-more', 'data-refresh'];
 function focusSelector(a) {
   if (!a || a === document.body || !a.closest('#view, #srcSec') || a.closest('.card')) return null;
   if (a.id) return '#' + CSS.escape(a.id);
@@ -598,7 +627,7 @@ function renderSoft() {
 
 function render() {
   memo = {};
-  try { renderNow(); } finally { memo = null; }
+  try { renderNow(); paintRequests(); } finally { memo = null; }
 }
 
 function renderNow() {
@@ -807,7 +836,7 @@ function renderInbox() {
         ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>` : ''}
       </div></div>
     ${context()}
-    ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : `<div class="empty">${ICON.view.inbox}<strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${t('inbox.check')}</button></div>`}
+    ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : `<div class="empty">${ICON.view.inbox}<strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${ICON.refresh}<span>${t('inbox.check')}</span></button></div>`}
     ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button></div>` : ''}`;
 }
 
@@ -839,9 +868,11 @@ function renderFeeds() {
     const st = S.fetch.get(f.id) || {};
     const unread = feedStats(f.id).unread;
     const name = esc(feedTitle(f.id));
+    // INFO: the address News actually reads – after discovery it differs from the page the user entered
+    const src = httpUrl(st.feedUrl) || httpUrl(f.data.url) || f.data.url;
     return `<div class="feedrow has-fi" data-feed="${esc(f.id)}">${feedIcon(f.id)}
       <div class="t">${esc(feedTitle(f.id) || f.data.url)}</div>
-      <div class="u">${esc(f.data.url)}</div>
+      <a class="u" data-feed-url href="${esc(src)}" target="_blank" rel="noopener noreferrer" title="${esc(t('feeds.open_url'))}"><span>${esc(src)}</span>${ICON.ext}</a>
       <div class="st">${st.strategy ? strategyPill(st.strategy) : ''}
         <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err" title="${esc(st.error || '')}">· ${esc(errText(st.code, st.error, st.status))}</span>` : ''}${st.stale ? staleText(st) : ''}</div>
       <div class="ops">
@@ -908,7 +939,7 @@ async function renderSettings() {
         <p>${t('settings.sync_paired')}</p>
         <div class="qr" id="qr" role="img" aria-label="${esc(t('settings.qr_label'))}"></div>
         <div class="row">
-          <button class="btn btn-primary" type="button" id="syncNow">${t('settings.sync_now')}</button>
+          <button class="btn btn-primary" type="button" id="syncNow"${sync.status.state === 'syncing' ? ' aria-busy="true"' : ''}>${ICON.refresh}<span>${t('settings.sync_now')}</span></button>
           <button class="btn btn-ghost" type="button" id="copyLink">${t('settings.copy_link')}</button>
           <button class="btn btn-ghost" type="button" id="leaveVault">${t('settings.unpair')}</button>
           <button class="btn btn-danger" type="button" id="wipeVault">${t('settings.wipe')}</button>
@@ -1095,6 +1126,8 @@ function paintStatus(st) {
   pill.setAttribute('aria-label', `${statusText(st)} – ${hint}`);
   const d = $('#syncDetail');
   if (d) d.textContent = statusText(st, true);
+  const now = $('#syncNow');
+  if (now && st.state === 'syncing') now.setAttribute('aria-busy', 'true'); else now?.removeAttribute('aria-busy');
 }
 
 let toastTimer = null;
@@ -1237,7 +1270,7 @@ document.addEventListener('click', async (ev) => {
     render();
     return cardsInView()[first]?.focus({ preventScroll: true });
   }
-  if (el.closest('[data-refresh]')) return refreshAll(true);
+  if (el.closest('[data-refresh]')) return manualRefresh();
   if (el.closest('[data-reload]')) return location.reload();
 
   const feedBtn = el.closest('[data-feed-act]');
@@ -1309,7 +1342,7 @@ document.addEventListener('click', async (ev) => {
     if (sync.status.state === 'local') return go('settings');
     return sync.run();
   }
-  if (el.closest('#refreshBtn')) return refreshAll(true);
+  if (el.closest('#refreshBtn')) return manualRefresh();
 });
 
 document.addEventListener('change', async (ev) => {
@@ -1377,7 +1410,13 @@ async function feedAction(act, id) {
   const f = S.feeds.get(id);
   if (!f) return;
   if (act === 'refresh') {
+    if (busyFeeds.has(id)) return;
+    if (cool(id)) return showToast(t('toast.cooldown'));
+    busyFeeds.add(id);
+    paintRequests();
     try { await refreshFeed(f, true); } catch (e) { S.fetch.set(id, failState(id, e)); }
+    busyFeeds.delete(id);
+    coolDown(id);
     await db.kvSet('fetchState', Object.fromEntries(S.fetch));
     scheduleRetry();
     return render();
@@ -1533,7 +1572,7 @@ document.addEventListener('keydown', (ev) => {
   if (k === 'Enter' && ev.target.closest('button, a')) return;
   const views = ['inbox', 'later', 'done', 'feeds'];
   if (k >= '1' && k <= '4') { go(views[+k - 1]); return; }
-  if (k === 'r') { refreshAll(true); return; }
+  if (k === 'r') { manualRefresh(); return; }
   if (k === 'u' && lastUndo) { const f = lastUndo; lastUndo = null; hideToast(); f(); return; }
   const cards = cardsInView();
   if (!cards.length) return;
