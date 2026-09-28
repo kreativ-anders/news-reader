@@ -20,7 +20,7 @@ test('site.js parses as ES module', () => {
   assert.equal(r.status, 0, r.stderr);
 });
 
-for (const f of ['app/sw.js', 'app/vendor/qrcode.js']) {
+for (const f of ['app/sw.js']) {
   test(`${f} parses as script`, () => {
     const r = check(readFileSync(join(ROOT, f), 'utf8'), 'commonjs');
     assert.equal(r.status, 0, r.stderr);

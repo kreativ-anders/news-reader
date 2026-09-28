@@ -13,7 +13,8 @@ test('pair two devices, sync feeds and item states both ways', async ({ app, pag
   await app.go('settings');
   await page.locator('#createVault').click();
   await expect(page.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
-  await expect(page.locator('#qr svg, #qr canvas, #qr img').first()).toBeVisible();
+  await expect(page.locator('#qr')).toHaveCount(0); // INFO: no QR code – a scanned link opens the browser, not the installed app
+  await expect(page.locator('#copyLink')).toBeVisible();
   const key = await app.kv('vaultKey');
   expect(key).toMatch(/^[A-Za-z0-9_-]{43}$/);
 
@@ -81,6 +82,38 @@ test('join with an invalid key shows an error', async ({ app, page }) => {
   await page.locator('#joinKey').fill('not-a-key');
   await page.locator('#joinForm button[type="submit"]').click();
   await expect(page.locator('#syncResult .err')).toBeVisible();
+  await expect(page.locator('#joinKey')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#joinKey')).toBeFocused();
+});
+
+test('copy the pairing link on one device, paste it on another', async ({ app, page, browser }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await app.open('#settings');
+  await page.locator('#createVault').click();
+  await expect(page.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
+  await page.locator('#copyLink').click();
+  await expect(page.locator('#toast')).toContainText('Pairing link copied');
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  expect(link).toBe(`${API()}/app/#pair=${await app.kv('vaultKey')}`);
+
+  const ctxB = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
+  const pageB = await ctxB.newPage();
+  await pageB.goto(`${API()}/app/#settings`);
+  await pageB.evaluate((text) => navigator.clipboard.writeText(text), link);
+  await pageB.locator('#pasteKey').click();
+  await expect(pageB.locator('#joinKey')).toHaveValue(link);
+  await expect(pageB.locator('#dlg')).toBeVisible();
+  await pageB.locator('#dlgOk').click();
+  await expect(pageB.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
+  await ctxB.close();
+});
+
+test('paste with a denied clipboard asks to paste by hand', async ({ app, page }) => {
+  await app.open('#settings');
+  await page.evaluate(() => { navigator.clipboard.readText = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
+  await page.locator('#pasteKey').click();
+  await expect(page.locator('#syncResult')).toHaveText('Couldn’t read the clipboard – paste the link into the field yourself.');
+  await expect(page.locator('#joinKey')).toBeFocused();
 });
 
 test('unreachable sync server is reported, not thrown', async ({ app, page }) => {

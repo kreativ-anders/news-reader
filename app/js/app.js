@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.4';
+const VERSION = '0.8.6';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -915,7 +915,6 @@ async function renderSettings() {
   const key = await db.kvGet('vaultKey');
   const server = await serverBase();
   const custom = await db.kvGet('server');
-  const pairLink = key ? pairingLink(key, custom) : '';
   const opt = (value, label, cur) => `<option value="${value}"${value === cur ? ' selected' : ''}>${label}</option>`;
   const swipeOpts = (cur) => SWIPE_CHOICES.map((s) => opt(s, t(s === 'none' ? 'act.none' : 'act.' + s), cur)).join('');
   if (S.view !== 'settings') return; // INFO: the user navigated away while the settings were loading
@@ -937,10 +936,9 @@ async function renderSettings() {
       <h2>${t('settings.sync_title')}</h2>
       ${key ? `
         <p>${t('settings.sync_paired')}</p>
-        <div class="qr" id="qr" role="img" aria-label="${esc(t('settings.qr_label'))}"></div>
         <div class="row">
-          <button class="btn btn-primary" type="button" id="syncNow"${sync.status.state === 'syncing' ? ' aria-busy="true"' : ''}>${ICON.refresh}<span>${t('settings.sync_now')}</span></button>
-          <button class="btn btn-ghost" type="button" id="copyLink">${t('settings.copy_link')}</button>
+          <button class="btn btn-primary" type="button" id="copyLink">${t('settings.copy_link')}</button>
+          <button class="btn btn-ghost" type="button" id="syncNow"${sync.status.state === 'syncing' ? ' aria-busy="true"' : ''}>${ICON.refresh}<span>${t('settings.sync_now')}</span></button>
           <button class="btn btn-ghost" type="button" id="leaveVault">${t('settings.unpair')}</button>
           <button class="btn btn-danger" type="button" id="wipeVault">${t('settings.wipe')}</button>
         </div>
@@ -951,7 +949,7 @@ async function renderSettings() {
         <h2 style="margin-top:20px">${t('settings.join_title')}</h2>
         <p>${t('settings.join_text')}</p>
         <label class="lbl" for="joinKey">${t('settings.join_placeholder')}</label>
-        <form class="row" id="joinForm"><input type="text" id="joinKey" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="syncResult"><button class="btn btn-ghost" type="submit">${t('settings.join')}</button></form>`}
+        <form class="row keep" id="joinForm"><input type="text" id="joinKey" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="syncResult"><span class="btns">${navigator.clipboard?.readText ? `<button class="btn btn-ghost" type="button" id="pasteKey">${t('settings.paste')}</button>` : ''}<button class="btn btn-ghost" type="submit">${t('settings.join')}</button></span></form>`}
       <div class="result" id="syncResult" aria-live="polite"></div>
     </section>
     ${key ? `<section class="panel" id="devicesPanel">
@@ -986,10 +984,7 @@ async function renderSettings() {
       <p>${local}</p>
       <div class="row"><button class="btn btn-danger" type="button" id="resetLocal">${t('settings.reset')}</button></div>
     </section>`;
-  if (key) {
-    drawQr(pairLink);
-    renderDevices();
-  }
+  if (key) renderDevices();
 }
 
 const KEYS = [['j k', 'key_jk'], ['↓ ↑', 'key_arrows'], ['o', 'key_o'], ['Enter', 'key_enter'], ['l', 'key_l'], ['x', 'key_x'], ['d', 'key_d'], ['u', 'key_u'], ['r', 'key_r'], ['1–4', 'key_num'], ['/', 'key_search'], ['Ctrl+K', 'key_ctrlk'], ['v', 'key_v'], ['Esc', 'key_esc'], ['?', 'key_help']];
@@ -1035,7 +1030,7 @@ async function deviceAction(act, id) {
   await rekey(() => sync.revoke(id), 'devices.removed');
 }
 
-// INFO: after a key change the pairing link and QR code change, so the whole settings view is redrawn
+// INFO: after a key change the pairing link changes, so the whole settings view is redrawn
 async function rekey(action, doneKey) {
   const btn = $('#rotateKey');
   if (btn) btn.disabled = true;
@@ -1055,27 +1050,6 @@ function pairingLink(key, server) {
   return `${base}#${params}`;
 }
 
-async function drawQr(text) {
-  const box = $('#qr');
-  if (!box) return;
-  try {
-    if (!window.qrcode) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'vendor/qrcode.js';
-        s.onload = resolve; s.onerror = reject;
-        document.head.append(s);
-      });
-    }
-    const qr = window.qrcode(0, 'M');
-    qr.addData(text);
-    qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-    box.firstElementChild?.setAttribute('aria-hidden', 'true');
-  } catch {
-    box.hidden = true;
-  }
-}
 
 async function useLanguage(lang) {
   t = await loadI18n('i18n/', lang);
@@ -1314,6 +1288,12 @@ document.addEventListener('click', async (ev) => {
         await rekey(() => sync.rotateKey(), 'devices.rotated');
       }
       return;
+    case 'pasteKey': {
+      const input = $('#joinKey');
+      try { input.value = (await navigator.clipboard.readText()).trim(); }
+      catch { $('#syncResult').textContent = t('settings.paste_failed'); return input.focus(); }
+      return $('#joinForm').requestSubmit();
+    }
     case 'copyLink': {
       const link = pairingLink(await db.kvGet('vaultKey'), await db.kvGet('server'));
       try { await navigator.clipboard.writeText(link); showToast(t('toast.link_copied')); }
@@ -1401,7 +1381,7 @@ document.addEventListener('submit', async (ev) => {
   if (id === 'joinForm') {
     const raw = $('#joinKey').value.trim();
     const parsed = parsePairing(raw);
-    if (!parsed) { fieldError($('#joinKey'), $('#syncResult'), `<span class="err">${t('settings.join_invalid')}</span>`); return; }
+    if (!parsed) { fieldError($('#joinKey'), $('#syncResult'), `<span class="err">${t('settings.join_invalid')}</span>`); return $('#joinKey').focus(); }
     await joinVault(parsed);
   }
 });

@@ -252,8 +252,6 @@ html{scroll-padding-top:calc(104px + env(safe-area-inset-top))}
 .pill{display:inline-block;font:700 .66rem var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:var(--radius);background:var(--brand);color:var(--on-brand)}
 .err{color:var(--err)}
 .result{margin-top:12px;font-size:.9rem}
-.qr{display:grid;place-items:center;background:#fff;border-radius:var(--radius);padding:12px;width:max-content;max-width:100%;margin:8px 0 12px}
-.qr svg{width:220px;height:220px}
 .kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:.9rem}
 .kv dt{color:var(--muted)}
 .kv dd{font-family:var(--mono);font-size:.82rem;overflow-wrap:anywhere}
