@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.6';
+const VERSION = '0.8.7';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -1295,7 +1295,9 @@ document.addEventListener('click', async (ev) => {
       return $('#joinForm').requestSubmit();
     }
     case 'copyLink': {
-      const link = pairingLink(await db.kvGet('vaultKey'), await db.kvGet('server'));
+      // INFO: plain key to paste into the other device; only a custom server needs the link form, which carries the server along
+      const [key, custom] = [await db.kvGet('vaultKey'), await db.kvGet('server')];
+      const link = custom ? pairingLink(key, custom) : key;
       try { await navigator.clipboard.writeText(link); showToast(t('toast.link_copied')); }
       catch { await dialog({ title: t('dlg.link_title'), body: `<textarea rows="4" readonly aria-label="${esc(t('dlg.link_title'))}">${esc(link)}</textarea>`, cancel: '' }); }
       return;

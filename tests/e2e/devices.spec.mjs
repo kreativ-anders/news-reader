@@ -123,7 +123,7 @@ test('changing the key keeps devices in sync and invalidates old pairing links',
 
   // a stale pairing link no longer grants access
   const d = await pair(browser, oldKey);
-  await expect(d.page.locator('#dlgTitle')).toHaveText('This pairing link is no longer valid', { timeout: 15_000 });
+  await expect(d.page.locator('#dlgTitle')).toHaveText('This sync key is no longer valid', { timeout: 15_000 });
   await expect(d.page.locator('#syncPill')).toHaveAttribute('data-state', 'local');
   expect(await d.app.kv('vaultKey')).toBeNull();
   await b.ctx.close();

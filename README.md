@@ -201,7 +201,8 @@ Headers `X-Article-Source: feed|page`, `X-Collector-Cache`, weak `ETag` (`304` o
 One encrypted blob per vault (one group of paired devices); the server has no schema and no merge logic.
 
 ```
-vault key (32 random bytes, base64url; pairing link app/#pair=<key>[&server=<url>], copied and pasted)
+vault key (32 random bytes, base64url; shown to users as the "sync key" – copied and pasted,
+           or app/#pair=<key>&server=<url> when a custom server has to travel along)
   ├─ HKDF-SHA256 "newsreader-sync-v1 auth" → bearer token
   └─ HKDF-SHA256 "newsreader-sync-v1 enc"  → AES-256-GCM key (never leaves the device)
 ```
@@ -222,7 +223,8 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - Forward after a key change: `"NRF1"` · flags · IV · ciphertext under the old key (AAD `newsreader-sync-v1 forward`), plaintext `{v:1, at, envelopes:[{id,epk,iv,ct}]}`.
 - Client: GET → decrypt (decompression capped at 32 MB) → validate every record (shape per kind, `updatedAt` at most 1 day in the future – invalid records are dropped) → merge (last write wins per record) → PUT full snapshot if newer; retry on `412` (max. 5). On `413` the oldest finished items are pruned and the upload is retried once.
 - Server receives: the bearer token (stored only as its SHA-256 file name), the encrypted blob and its size, timestamps; the client IP in the web-server log and as a salted hash for rate limiting.
-- A pairing link is the key: joining a foreign link merges your data into that vault (and may switch the server). Only confirm links you created yourself. The app moves `#pair=…` out of the address bar before anything else runs.
+- *Copy sync key* copies the bare key, or the pairing link `app/#pair=<key>&server=<url>` when a custom server is set; the join field (with a *Paste* button) accepts both, and opened `#pair=` links still work. There is no QR code: a scanned link opens the browser, and on iOS that storage is separate from the installed app.
+- A sync key or pairing link is the key: joining a foreign one merges your data into that vault (and may switch the server). Only confirm links you created yourself. The app moves `#pair=…` out of the address bar before anything else runs.
 - Paired devices (*Settings → Paired devices*): every device keeps one encrypted `device` record (random id, editable name, platform, paired since, last active – refreshed at most hourly) with its ECDH P-256 public key; the private key is non-extractable. Public keys are pinned on first sight (`pubPins`); a device whose key changes is flagged and gets no new key.
 - Removing a device (or *Change key*) rotates the vault key: full snapshot to the new location, then the old location is replaced (`If-Match`) by an `NRF1` forward holding the new key wrapped for every remaining device (ephemeral ECDH → HKDF-SHA256 → AES-GCM, device id bound in info and AAD). Removed devices (`revoked`) and their public keys are excluded, whatever a merge says. Remaining devices follow automatically; the removed device and stale pairing links find no envelope and unpair. A forward is final: the server refuses to replace or delete it (`410`). Forwards expire with the old vault (180 days after the last read).
 - *Unpair this device* announces itself (`r:1`) before leaving.

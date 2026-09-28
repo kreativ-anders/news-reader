@@ -213,5 +213,5 @@ test('text fields have visible labels', async ({ app, page }) => {
   await expect(page.locator('label[for="addUrl"]')).toBeVisible();
   await app.go('settings');
   for (const id of ['serverUrl', 'joinKey']) await expect(page.locator(`label[for="${id}"]`)).toBeVisible();
-  await expect(page.getByLabel('Pairing link or key')).toHaveAttribute('id', 'joinKey');
+  await expect(page.getByLabel('Sync key')).toHaveAttribute('id', 'joinKey');
 });

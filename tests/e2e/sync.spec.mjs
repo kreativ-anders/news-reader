@@ -86,15 +86,15 @@ test('join with an invalid key shows an error', async ({ app, page }) => {
   await expect(page.locator('#joinKey')).toBeFocused();
 });
 
-test('copy the pairing link on one device, paste it on another', async ({ app, page, browser }) => {
+test('copy the sync key on one device, paste it on another', async ({ app, page, browser }) => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await app.open('#settings');
   await page.locator('#createVault').click();
   await expect(page.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
   await page.locator('#copyLink').click();
-  await expect(page.locator('#toast')).toContainText('Pairing link copied');
+  await expect(page.locator('#toast')).toContainText('Sync key copied');
   const link = await page.evaluate(() => navigator.clipboard.readText());
-  expect(link).toBe(`${API()}/app/#pair=${await app.kv('vaultKey')}`);
+  expect(link).toBe(await app.kv('vaultKey')); // INFO: the bare key – no custom server to carry along
 
   const ctxB = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
   const pageB = await ctxB.newPage();
@@ -108,11 +108,26 @@ test('copy the pairing link on one device, paste it on another', async ({ app, p
   await ctxB.close();
 });
 
+test('with a custom server the copied sync key is the link that carries it', async ({ app, page }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await app.open('#settings');
+  await page.locator('#serverUrl').fill(`${API()}/`);
+  await page.locator('#serverForm button[type="submit"]').click();
+  await page.locator('#createVault').click();
+  await expect(page.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
+  await page.locator('#copyLink').click();
+  await expect(page.locator('#toast')).toContainText('Sync key copied');
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  const p = new URLSearchParams(new URL(text).hash.slice(1));
+  expect(p.get('pair')).toBe(await app.kv('vaultKey'));
+  expect(p.get('server')).toBe(`${API()}/`);
+});
+
 test('paste with a denied clipboard asks to paste by hand', async ({ app, page }) => {
   await app.open('#settings');
   await page.evaluate(() => { navigator.clipboard.readText = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
   await page.locator('#pasteKey').click();
-  await expect(page.locator('#syncResult')).toHaveText('Couldn’t read the clipboard – paste the link into the field yourself.');
+  await expect(page.locator('#syncResult')).toHaveText('Couldn’t read the clipboard – paste the key into the field yourself.');
   await expect(page.locator('#joinKey')).toBeFocused();
 });
 
