@@ -117,7 +117,11 @@
       "text": "Your reading list – on all your devices and ready for offline reading.",
       "empty": "Your reading list is empty.",
       "hint": "Tap “Later” on any post in your inbox to save it here.",
-      "all_done": "Mark all done"
+      "all_done": "Mark all done",
+      "minutes_one": "≈ {n} min to read offline",
+      "minutes_other": "≈ {n} min to read offline",
+      "hours_one": "≈ {n} hour to read offline",
+      "hours_other": "≈ {n} hours to read offline"
     },
     "done": {
       "title": "Done",
@@ -371,7 +375,8 @@
     "rarely": "less than one post a week",
     "read_rate": "you read {p}%",
     "folder_one": "Folder with {n} feed",
-    "folder_other": "Folder with {n} feeds"
+    "folder_other": "Folder with {n} feeds",
+    "last_post": "last post {when}"
   },
   "pal": {
     "placeholder": "Search posts, feeds and views…",

@@ -117,7 +117,11 @@
       "text": "La tua lista di lettura – su tutti i tuoi dispositivi e pronta per la lettura offline.",
       "empty": "La tua lista di lettura è vuota.",
       "hint": "Tocca «Più tardi» su un articolo in arrivo per salvarlo qui.",
-      "all_done": "Segna tutto come fatto"
+      "all_done": "Segna tutto come fatto",
+      "minutes_one": "≈ {n} min da leggere offline",
+      "minutes_other": "≈ {n} min da leggere offline",
+      "hours_one": "≈ {n} ora da leggere offline",
+      "hours_other": "≈ {n} ore da leggere offline"
     },
     "done": {
       "title": "Fatto",
@@ -371,7 +375,8 @@
     "rarely": "meno di un articolo a settimana",
     "read_rate": "ne leggi il {p}%",
     "folder_one": "Cartella con {n} feed",
-    "folder_other": "Cartella con {n} feed"
+    "folder_other": "Cartella con {n} feed",
+    "last_post": "ultimo articolo {when}"
   },
   "pal": {
     "placeholder": "Cerca articoli, feed e viste…",

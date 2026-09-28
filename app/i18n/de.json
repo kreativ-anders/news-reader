@@ -117,7 +117,11 @@
       "text": "Deine Leseliste – auf all deinen Geräten und bereit zum Offline-Lesen.",
       "empty": "Deine Leseliste ist leer.",
       "hint": "Tipp im Eingang bei einem Beitrag auf „Später“, um ihn hier zu sammeln.",
-      "all_done": "Alle erledigt"
+      "all_done": "Alle erledigt",
+      "minutes_one": "≈ {n} Min. offline zu lesen",
+      "minutes_other": "≈ {n} Min. offline zu lesen",
+      "hours_one": "≈ {n} Stunde offline zu lesen",
+      "hours_other": "≈ {n} Stunden offline zu lesen"
     },
     "done": {
       "title": "Erledigt",
@@ -371,7 +375,8 @@
     "rarely": "seltener als ein Beitrag pro Woche",
     "read_rate": "du liest {p} %",
     "folder_one": "Ordner mit {n} Feed",
-    "folder_other": "Ordner mit {n} Feeds"
+    "folder_other": "Ordner mit {n} Feeds",
+    "last_post": "letzter Beitrag {when}"
   },
   "pal": {
     "placeholder": "Beiträge, Feeds und Ansichten suchen…",

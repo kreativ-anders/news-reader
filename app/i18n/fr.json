@@ -117,7 +117,11 @@
       "text": "Votre liste de lecture – sur tous vos appareils et prête pour la lecture hors ligne.",
       "empty": "Votre liste de lecture est vide.",
       "hint": "Touchez « Plus tard » sur un article de la réception pour le garder ici.",
-      "all_done": "Tout marquer comme terminé"
+      "all_done": "Tout marquer comme terminé",
+      "minutes_one": "≈ {n} min de lecture hors ligne",
+      "minutes_other": "≈ {n} min de lecture hors ligne",
+      "hours_one": "≈ {n} heure de lecture hors ligne",
+      "hours_other": "≈ {n} heures de lecture hors ligne"
     },
     "done": {
       "title": "Terminé",
@@ -371,7 +375,8 @@
     "rarely": "moins d’un article par semaine",
     "read_rate": "vous en lisez {p} %",
     "folder_one": "Dossier de {n} flux",
-    "folder_other": "Dossier de {n} flux"
+    "folder_other": "Dossier de {n} flux",
+    "last_post": "dernier article {when}"
   },
   "pal": {
     "placeholder": "Rechercher des articles, flux et vues…",

@@ -117,7 +117,11 @@
       "text": "Tu lista de lectura – en todos tus dispositivos y lista para leer sin conexión.",
       "empty": "Tu lista de lectura está vacía.",
       "hint": "Toca «Más tarde» en cualquier entrada de la bandeja para guardarla aquí.",
-      "all_done": "Marcar todo como hecho"
+      "all_done": "Marcar todo como hecho",
+      "minutes_one": "≈ {n} min para leer sin conexión",
+      "minutes_other": "≈ {n} min para leer sin conexión",
+      "hours_one": "≈ {n} hora para leer sin conexión",
+      "hours_other": "≈ {n} horas para leer sin conexión"
     },
     "done": {
       "title": "Hecho",
@@ -371,7 +375,8 @@
     "rarely": "menos de una entrada por semana",
     "read_rate": "lees el {p} %",
     "folder_one": "Carpeta con {n} feed",
-    "folder_other": "Carpeta con {n} feeds"
+    "folder_other": "Carpeta con {n} feeds",
+    "last_post": "última entrada {when}"
   },
   "pal": {
     "placeholder": "Buscar entradas, feeds y vistas…",

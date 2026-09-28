@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.9';
+const VERSION = '0.8.10';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -797,19 +797,24 @@ function openDrawer() {
 
 const crumb = () => (S.filter ? `<small class="crumb"> · ${esc(filterName(S.filter))}</small>` : '');
 
-// INFO: posting rhythm and how much of a feed you actually read – a basis for unfollowing, instead of follower counts
+// INFO: posting rhythm and how much of a feed you actually read – a basis for unfollowing, instead of follower counts.
+//       The read rate only counts decisions of the last RATE_WINDOW_MS: "not interested" is pruned after 30 days
+//       (sync.js), done/later after 180 – older decisions would tilt the rate towards "read"
+const RATE_WINDOW_MS = KEEP_UNSEEN_MS;
+const QUIET_AFTER_MS = 30 * 864e5;
 function allFeedStats() {
   return memoized('stats', () => {
     const now = Date.now(), m = new Map();
-    const get = (id) => m.get(id) || m.set(id, { recent: 0, oldest: now, read: 0, dropped: 0, unread: 0 }).get(id);
+    const get = (id) => m.get(id) || m.set(id, { recent: 0, oldest: now, last: 0, read: 0, dropped: 0, unread: 0 }).get(id);
     const since = new Map(liveFeeds().map((f) => [f.id, sinceOf(f, now)]));
     for (const e of S.entries.values()) {
       const x = get(e.feedId), ts = entryTime(e);
       if (ts && now - ts < 28 * 864e5) { x.recent++; x.oldest = Math.min(x.oldest, ts); }
+      x.last = Math.max(x.last, ts);
       if (since.has(e.feedId) && stateOf(e.id) === 'new' && ts >= since.get(e.feedId)) x.unread++;
     }
     for (const r of S.items.values()) {
-      if (!r.data.f) continue;
+      if (!r.data.f || now - r.updatedAt > RATE_WINDOW_MS) continue;
       if (r.data.s === 'dismissed') get(r.data.f).dropped++;
       else if (r.data.s !== 'new') get(r.data.f).read++;
     }
@@ -817,27 +822,40 @@ function allFeedStats() {
   });
 }
 
-function feedStats(id) {
-  const x = allFeedStats().get(id) || { recent: 0, oldest: 0, read: 0, dropped: 0, unread: 0 };
-  const span = x.recent ? Math.max(864e5, Date.now() - x.oldest) : 0;
-  const perWeek = span ? x.recent / span * 7 * 864e5 : 0;
-  const { read, dropped } = x;
-  return { perWeek, read, dropped, unread: x.unread, rate: read + dropped >= 5 ? Math.round(read / (read + dropped) * 100) : null };
+// INFO: one feed or several (a folder, all feeds) – posts per week add up, the read rate is over all their decisions
+function feedStats(ids) {
+  const sum = { perWeek: 0, last: 0, read: 0, dropped: 0, unread: 0 };
+  for (const id of [].concat(ids)) {
+    const x = allFeedStats().get(id);
+    if (!x) continue;
+    const span = x.recent ? Math.max(864e5, Date.now() - x.oldest) : 0;
+    if (span) sum.perWeek += x.recent / span * 7 * 864e5;
+    sum.last = Math.max(sum.last, x.last);
+    sum.read += x.read; sum.dropped += x.dropped; sum.unread += x.unread;
+  }
+  const { read, dropped } = sum;
+  return { ...sum, rate: read + dropped >= 5 ? Math.round(read / (read + dropped) * 100) : null };
 }
 
-function statsText(id) {
-  const st = feedStats(id);
-  const parts = [st.perWeek >= 1 ? t('ctx.per_week', { n: Math.round(st.perWeek) }) : t('ctx.rarely')];
+// INFO: a feed that has gone quiet shows when it last posted – easier to spot when tidying up than "less than one a week"
+function rhythmText(st) {
+  if (st.perWeek >= 1) return t('ctx.per_week', { n: Math.round(st.perWeek) });
+  return st.last && Date.now() - st.last > QUIET_AFTER_MS ? t('ctx.last_post', { when: ago(st.last) }) : t('ctx.rarely');
+}
+
+function statsText(ids) {
+  const st = feedStats(ids);
+  const parts = [rhythmText(st)];
   if (st.rate !== null) parts.push(`<span${st.rate < 10 && st.read + st.dropped >= 20 ? ' class="low"' : ''}>${t('ctx.read_rate', { p: st.rate })}</span>`);
   return parts.join(' · ');
 }
 
-// INFO: filtered to one feed: its rhythm and read rate plus rename / folder / unfollow; filtered to a folder: its size
+// INFO: filtered to one feed: its rhythm and read rate plus rename / folder / unfollow; filtered to a folder: the same for all its feeds
 function context() {
   if (!S.filter) return '';
   if (S.filter.startsWith('g:')) {
-    const n = liveFeeds().filter((f) => inFilter(f.id)).length;
-    return `<p class="ctx">${ICON.folder}<span>${t('ctx.folder', { n })}</span></p>`;
+    const ids = liveFeeds().filter((f) => inFilter(f.id)).map((f) => f.id);
+    return `<p class="ctx">${ICON.folder}<span>${t('ctx.folder', { n: ids.length })} · ${statsText(ids)}</span></p>`;
   }
   const f = S.feeds.get(S.filter);
   if (!f || f.data.d) return '';
@@ -880,6 +898,13 @@ function renderInbox() {
     </div>` : ''}`;
 }
 
+// INFO: only saved copies have a word count, so the sum says "offline" – same 220 words a minute as the reader
+function readingTime(list) {
+  const mins = Math.round(list.reduce((sum, it) => sum + offline.words(it.id), 0) / 220);
+  if (!mins) return '';
+  return mins < 60 ? t('views.later.minutes', { n: mins }) : t('views.later.hours', { n: Math.round(mins / 60) });
+}
+
 function renderItems() {
   const v = `views.${S.view}`;
   const all = itemsIn(S.view).filter((it) => inFilter(it.feedId));
@@ -891,7 +916,8 @@ function renderItems() {
   const aside = S.view === 'done' ? `<button class="btn btn-ghost" type="button" data-view="dismissed">${ICON.x}<span>${t('views.done.show_dismissed')}</span></button>`
     : S.view === 'dismissed' ? `<button class="btn btn-ghost" type="button" data-view="done">${ICON.back}<span>${t('nav.done')}</span></button>` : '';
   const tools = clear || aside ? `<div class="tools">${aside}${clear}</div>` : '';
-  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t(v + '.title')}${crumb()}</h1><p>${t(v + '.text')}</p></div>${tools}</div>
+  const time = S.view === 'later' ? readingTime(all) : '';
+  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t(v + '.title')}${crumb()}</h1><p>${t(v + '.text')}${time ? ' · ' + time : ''}</p></div>${tools}</div>
     ${context()}
     ${list.length ? dayGroups(list, S.view, (it) => it.changed) : `<div class="empty">${ICON.view[S.view] || ICON.x}<strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}
     ${all.length > list.length ? `<div class="more"><button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button></div>` : ''}`;
@@ -926,7 +952,7 @@ function renderFeeds() {
   const rows = groups.map((g) => `<h3 class="fold-title">${ICON.folder}<span>${esc(g)}</span></h3>${feeds.filter((f) => f.data.g === g).map(row).join('')}`).join('')
     + (groups.length && feeds.some((f) => !f.data.g) ? `<h3 class="fold-title">${t('feeds.no_folder')}</h3>` : '')
     + feeds.filter((f) => !f.data.g).map(row).join('');
-  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t('feeds.title')}</h1><p>${t('feeds.count', { n: feeds.length })}</p></div></div>
+  viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t('feeds.title')}</h1><p>${t('feeds.count', { n: feeds.length })}${feeds.length ? ' · ' + rhythmText(feedStats(feeds.map((f) => f.id))) : ''}</p></div></div>
     <section class="panel">
       <h2>${t('feeds.follow_title')}</h2>
       <p id="followText">${t('feeds.follow_text')}</p>

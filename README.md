@@ -104,7 +104,7 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 - Narrow screens: the bottom bar starts with *Sources* (highlighted while a filter is on). It opens a modal drawer (`<dialog>`, Esc/backdrop close) with *All feeds* plus the same tree and counts for the current view (from Feeds/Settings: the inbox); focus starts on the current filter.
 - Favicon: Collector `source.icon`, else `/favicon.ico` of `source.siteUrl`, else a monogram. Feed titles drop platform wording (*Stories by X on Medium* → *X*). Names are sorted with the app language's collation.
 - Folders: *Feeds* → folder button (free text, existing folders suggested); synced as `g` in the feed record; OPML import reads the enclosing outline, export nests by folder.
-- Feed context (filtered to one feed, also in *Feeds*): posts per week (last 28 days) and read rate (*later/read now/done* vs. *not interested*, from 5 decisions on), folder / rename / unfollow.
+- Feed context (filtered to one feed, also in *Feeds*): posts per week (last 28 days; below one a week and nothing for 30 days: date of the last post) and read rate (*later/read now/done* vs. *not interested*, decisions of the last 30 days – *not interested* is pruned after that –, from 5 decisions on), folder / rename / unfollow. Filtered to a folder: the same summed over its feeds. The *Feeds* header shows posts per week over all feeds, *Later* the reading time of its offline copies (220 words a minute). Everything is computed on the device from data it already has.
 
 **Feeds**
 - Adding: address field (`https://` optional), Web Share Target (installed app on Android), bookmarklet (`?add=<url>`), OPML import/export. A page and its feed resolve to the same feed – following both is refused.
