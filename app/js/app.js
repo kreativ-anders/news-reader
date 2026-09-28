@@ -1,6 +1,7 @@
 // INFO: item flow   new ──► opened in a new tab ──► done (undo via toast)
 //                    ├──► later ──► opened ──► done (offline: reader, done when scrolled to the end)
-//                    └──► dismissed        done ──► "read again" ──► reading
+//                    └──► dismissed        done ──► "read again" opens it, it stays done
+//       "reading" is a legacy state (older devices may still sync it) – such posts show up in Later.
 //       Feeds and item states are synced records; entries are fetched per device from the Collector.
 
 import * as db from './db.js';
@@ -10,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.7.10';
+const VERSION = '0.8.1';
 
 const PAGE = 150;
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -90,7 +91,7 @@ const ICON = {
   view: { inbox: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg>', feeds: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg>', settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>' },
   doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
 };
-ICON.view.reading = ICON.now; ICON.view.later = ICON.later; ICON.view.done = ICON.done;
+ICON.view.later = ICON.later; ICON.view.done = ICON.done;
 
 let rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto', style: 'short' });
 function ago(ts) {
@@ -290,8 +291,20 @@ async function refreshFeed(feed, force = false) {
   await db.putEntries(fresh, remove);
   fresh.forEach((e) => S.entries.set(e.id, e));
   remove.forEach((id) => S.entries.delete(id));
-  S.fetch.set(feed.id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, stale: !!res.meta?.stale, ...sourceMeta(res) });
+  S.fetch.set(feed.id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, ...staleMeta(res.meta), ...sourceMeta(res) });
   return res;
+}
+
+// INFO: a stale copy either follows a failed refresh (lastError) or means the source was not asked this time
+//       (rate limit, busy) – only the first is the source's fault
+function staleMeta(meta) {
+  if (!meta?.stale) return { stale: false };
+  const e = meta.lastError;
+  return { stale: true, staleCode: e?.code || '', staleStatus: e?.upstreamStatus || 0, staleError: e?.message || '', cachedAt: Date.parse(meta.cachedAt) || 0 };
+}
+function staleText(st) {
+  const why = !st.staleCode ? t('feeds.stale_skipped') : st.staleStatus ? t('feeds.stale_error', { status: st.staleStatus }) : t('feeds.stale_down');
+  return `<span${st.staleCode ? ` class="err" title="${esc(st.staleError)}"` : ''}>${why}</span>${st.cachedAt ? `<span>${t('feeds.stale_copy', { when: ago(st.cachedAt) })}</span>` : ''}`;
 }
 
 // INFO: the Collector caches a source for hours – an automatic refresh skips feeds whose copy cannot have changed yet
@@ -420,9 +433,11 @@ function inboxEntries(filter = S.filter) {
   return filter ? all.filter((e) => inFilter(e.feedId, filter)) : all;
 }
 
+const viewOf = (s) => (s === 'reading' ? 'later' : s);
+
 function itemsIn(s) {
   return memoized('items:' + s, () => [...S.items.values()]
-    .filter((r) => (r.data.s === s && !r.data.h) ? !lingering.has(r.id) || lingersIn(r.id, s) : lingersIn(r.id, s))
+    .filter((r) => (viewOf(r.data.s) === s && !r.data.h) ? !lingering.has(r.id) || lingersIn(r.id, s) : lingersIn(r.id, s))
     .sort((a, b) => (lingering.get(b.id)?.before?.updatedAt ?? b.updatedAt) - (lingering.get(a.id)?.before?.updatedAt ?? a.updatedAt))
     .map((r) => {
       const e = S.entries.get(r.id);
@@ -441,15 +456,13 @@ function itemsIn(s) {
 }
 
 function counts() {
-  const c = { inbox: inboxEntries('').length, reading: 0, later: 0 };
-  for (const r of S.items.values()) if (r.data.s === 'reading' || r.data.s === 'later') c[r.data.s]++;
+  const c = { inbox: inboxEntries('').length, later: itemsIn('later').length };
   return c;
 }
 
 // INFO: [target state, label key, icon, css class, keyboard key]
 const ACTIONS = {
   inbox: [['reading', 'act.reading', ICON.now, 'main', 'o'], ['later', 'act.later', ICON.later, '', 'l'], ['dismissed', 'act.dismissed', ICON.x, 'x', 'x']],
-  reading: [['done', 'act.done', ICON.done, 'main', 'd'], ['later', 'act.later', ICON.later, '', 'l'], ['dismissed', 'act.drop', ICON.x, 'x', 'x']],
   later: [['reading', 'act.reading', ICON.now, 'main', 'o'], ['done', 'act.done', ICON.done, '', 'd'], ['dismissed', 'act.remove', ICON.x, 'x', 'x']],
   done: [['reading', 'act.again', ICON.back, '', 'o'], ['later', 'act.later', ICON.later, '', 'l']],
   dismissed: [['new', 'act.restore', ICON.back, 'main', '']],
@@ -596,13 +609,14 @@ function renderNow() {
     if (b.dataset.view === S.view && !(S.view === 'inbox' && S.filter)) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
+  $('#srcMenu').classList.toggle('on', !!S.filter);
   S.dupImg = repeatedImages();
   const scroll = window.scrollY;
   const active = document.activeElement;
   const refocus = !!active?.closest?.('#view .card');
   const again = focusSelector(active);
   renderFeedNav();
-  const views = { inbox: renderInbox, reading: renderItems, later: renderItems, done: renderItems, dismissed: renderItems, feeds: renderFeeds, settings: renderSettings };
+  const views = { inbox: renderInbox, later: renderItems, done: renderItems, dismissed: renderItems, feeds: renderFeeds, settings: renderSettings };
   views[S.view]();
   markClamped();
   window.scrollTo(0, scroll);
@@ -612,7 +626,7 @@ function renderNow() {
   else if (again && !document.activeElement?.closest?.('#view, #srcSec')) ($(again) || viewHeading() || viewEl).focus({ preventScroll: true });
 }
 
-const FOLDER_VIEWS = ['inbox', 'reading', 'later', 'done', 'dismissed'];
+const FOLDER_VIEWS = ['inbox', 'later', 'done', 'dismissed'];
 let feedNavOpen = store.get('news.feedNav') !== '0';
 let closedFolders = new Set();
 try { closedFolders = new Set(JSON.parse(store.get('news.folders.closed', '[]'))); } catch { /* INFO: broken value */ }
@@ -636,19 +650,13 @@ function folderFeeds(view, n = perFeed(view)) {
   return [...live, ...gone];
 }
 
-// INFO: sources of the current view as a tree: folders first, then feeds without folder. Feeds with nothing in
-//       this view fold away behind "+ n more" per group – with one feed there is nothing to filter.
-function renderFeedNav() {
-  const sec = $('#srcSec'), box = $('#feedNav'), toggle = $('#feedNavToggle');
-  if (!sec) return;
-  const on = FOLDER_VIEWS.includes(S.view);
-  const n = on ? perFeed(S.view) : new Map();
-  const feeds = on ? folderFeeds(S.view, n) : [];
-  sec.hidden = feeds.length < 2;
-  if (sec.hidden) return;
-  toggle.setAttribute('aria-expanded', String(feedNavOpen));
-  box.hidden = !feedNavOpen;
-  if (box.hidden) return;
+// INFO: sources of a view as a tree: folders first, then feeds without folder. Feeds with nothing in
+//       this view fold away behind "+ n more" per group. Empty below `min` feeds – with one there is nothing to filter.
+function feedNavHtml(view, min = 2) {
+  const on = FOLDER_VIEWS.includes(view);
+  const n = on ? perFeed(view) : new Map();
+  const feeds = on ? folderFeeds(view, n) : [];
+  if (feeds.length < min) return '';
 
   const feedBtn = (f) => {
     const c = n.get(f.id) || 0;
@@ -674,7 +682,7 @@ function renderFeedNav() {
     if (f.data.g && !f.data.d) byFolder.set(f.data.g, [...(byFolder.get(f.data.g) || []), f]);
     else loose.push(f);
   }
-  const html = [...byFolder].sort(([a], [b]) => byName(a, b)).map(([g, group]) => {
+  return [...byFolder].sort(([a], [b]) => byName(a, b)).map(([g, group]) => {
     const total = group.reduce((sum, f) => sum + (n.get(f.id) || 0), 0);
     const closed = closedFolders.has(g);
     const cur = S.filter === 'g:' + g ? ' aria-current="page"' : '';
@@ -683,17 +691,39 @@ function renderFeedNav() {
       ${closed ? '' : `<div class="fold-b">${list('g:' + g, group)}</div>`}
     </div>`;
   }).join('') + list('', loose);
-  box.innerHTML = html;
 }
 
-// INFO: feed filter for narrow screens, where the sidebar is hidden – folders as option groups
-function filterSelect() {
-  const feeds = folderFeeds(S.view);
-  const opt = (value, label) => `<option value="${esc(value)}"${S.filter === value ? ' selected' : ''}>${esc(label)}</option>`;
-  const groups = [...new Set(feeds.map((f) => f.data.g).filter(Boolean))].sort(byName);
-  const opts = groups.map((g) => `<optgroup label="${esc(g)}">${opt('g:' + g, t('inbox.folder_all', { name: g }))}${feeds.filter((f) => f.data.g === g).map((f) => opt(f.id, feedTitle(f.id))).join('')}</optgroup>`).join('')
-    + feeds.filter((f) => !f.data.g).map((f) => opt(f.id, feedTitle(f.id))).join('');
-  return `<select id="filter" aria-label="${esc(t('inbox.filter'))}"><option value="">${t('inbox.all_feeds')}</option>${opts}</select>`;
+function renderFeedNav() {
+  if ($('#srcDrawer').open) paintDrawer();
+  const sec = $('#srcSec'), box = $('#feedNav'), toggle = $('#feedNavToggle');
+  if (!sec) return;
+  const html = feedNavHtml(S.view);
+  sec.hidden = !html;
+  if (sec.hidden) return;
+  toggle.setAttribute('aria-expanded', String(feedNavOpen));
+  box.hidden = !feedNavOpen;
+  if (!box.hidden) box.innerHTML = html;
+}
+
+// INFO: narrow screens have no sidebar – the Sources button in the bottom bar opens the same tree as a drawer,
+//       with counts per feed. Outside the post views it filters the inbox.
+const drawerView = () => (FOLDER_VIEWS.includes(S.view) ? S.view : 'inbox');
+function paintDrawer() {
+  const v = drawerView(), box = $('#drawerNav');
+  const total = v === 'inbox' ? inboxEntries('').length : itemsIn(v).length;
+  const a = document.activeElement;
+  const attr = box.contains(a) && ['data-filter', 'data-fold', 'data-quiet'].find((x) => a.hasAttribute(x));
+  const again = attr && `[${attr}="${CSS.escape(a.getAttribute(attr))}"]`;
+  $('#drawerView').textContent = viewName(v);
+  const cur = !S.filter && S.view === v ? ' aria-current="page"' : '';
+  box.innerHTML = `<button type="button" data-filter=""${cur}>${ICON.view[v] || ICON.x}<span class="nm">${t('inbox.all_feeds')}</span><b class="badge">${badge(total)}</b></button>${feedNavHtml(v, 1)}`;
+  if (again) $(again, box)?.focus();
+}
+function openDrawer() {
+  const d = $('#srcDrawer');
+  paintDrawer();
+  d.showModal();
+  ($('[aria-current="page"]', d) || $('[data-filter]', d)).focus();
 }
 
 const crumb = () => (S.filter ? `<small class="crumb"> · ${esc(filterName(S.filter))}</small>` : '');
@@ -774,7 +804,6 @@ function renderInbox() {
   viewEl.innerHTML = `<div class="vh">
       <div><h1 tabindex="-1">${t('inbox.title')}${crumb()}</h1><p>${inboxLine(all.length)}</p></div>
       <div class="tools">
-        ${filterSelect()}
         ${list.length ? `<button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>` : ''}
       </div></div>
     ${context()}
@@ -792,8 +821,7 @@ function renderItems() {
       ? `<button class="btn btn-ghost" type="button" id="laterAllDone">${ICON.done}<span>${t('views.later.all_done')}</span></button>` : '';
   const aside = S.view === 'done' ? `<button class="btn btn-ghost" type="button" data-view="dismissed">${ICON.x}<span>${t('views.done.show_dismissed')}</span></button>`
     : S.view === 'dismissed' ? `<button class="btn btn-ghost" type="button" data-view="done">${ICON.back}<span>${t('nav.done')}</span></button>` : '';
-  const hasFolders = folderFeeds(S.view).length > 0;
-  const tools = hasFolders || clear || aside ? `<div class="tools">${hasFolders ? filterSelect() : ''}${aside}${clear}</div>` : '';
+  const tools = clear || aside ? `<div class="tools">${aside}${clear}</div>` : '';
   viewEl.innerHTML = `<div class="vh"><div><h1 tabindex="-1">${t(v + '.title')}${crumb()}</h1><p>${t(v + '.text')}</p></div>${tools}</div>
     ${context()}
     ${list.length ? dayGroups(list, S.view, (it) => it.changed) : `<div class="empty">${ICON.view[S.view] || ICON.x}<strong>${t(v + '.empty')}</strong>${t(v + '.hint')}</div>`}
@@ -815,7 +843,7 @@ function renderFeeds() {
       <div class="t">${esc(feedTitle(f.id) || f.data.url)}</div>
       <div class="u">${esc(f.data.url)}</div>
       <div class="st">${st.strategy ? strategyPill(st.strategy) : ''}
-        <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err" title="${esc(st.error || '')}">· ${esc(errText(st.code, st.error, st.status))}</span>` : ''}${st.stale ? `<span>${t('feeds.stale')}</span>` : ''}</div>
+        <span>${t('feeds.new', { n: unread })}</span><span>· ${statsText(f.id)}</span>${st.at ? `<span>${t('feeds.checked', { when: ago(st.at) })}</span>` : ''}${st.ok === false ? `<span class="err" title="${esc(st.error || '')}">· ${esc(errText(st.code, st.error, st.status))}</span>` : ''}${st.stale ? staleText(st) : ''}</div>
       <div class="ops">
         <button class="icon-btn" type="button" data-feed-act="folder" title="${esc(t('feeds.folder'))}" aria-label="${esc(t('feeds.folder'))}: ${name}">${ICON.folder}</button>
         <button class="icon-btn" type="button" data-feed-act="refresh" title="${esc(t('feeds.refresh'))}" aria-label="${esc(t('feeds.refresh'))}: ${name}">${ICON.refresh}</button>
@@ -933,7 +961,7 @@ async function renderSettings() {
   }
 }
 
-const KEYS = [['j k', 'key_jk'], ['↓ ↑', 'key_arrows'], ['o', 'key_o'], ['Enter', 'key_enter'], ['l', 'key_l'], ['x', 'key_x'], ['d', 'key_d'], ['u', 'key_u'], ['r', 'key_r'], ['1–5', 'key_num'], ['/', 'key_search'], ['Ctrl+K', 'key_ctrlk'], ['v', 'key_v'], ['Esc', 'key_esc'], ['?', 'key_help']];
+const KEYS = [['j k', 'key_jk'], ['↓ ↑', 'key_arrows'], ['o', 'key_o'], ['Enter', 'key_enter'], ['l', 'key_l'], ['x', 'key_x'], ['d', 'key_d'], ['u', 'key_u'], ['r', 'key_r'], ['1–4', 'key_num'], ['/', 'key_search'], ['Ctrl+K', 'key_ctrlk'], ['v', 'key_v'], ['Esc', 'key_esc'], ['?', 'key_help']];
 const keysHtml = () => `<ul class="keys">${KEYS.map(([k, label]) => `<li>${k.split(' ').map((x) => x.split('–').map((y) => `<kbd>${esc(y)}</kbd>`).join('–')).join('')}${t('settings.' + label)}</li>`).join('')}</ul>`;
 
 // INFO: single-key shortcuts can be switched off (speech input, tremor) – WCAG 2.1.4
@@ -1120,7 +1148,9 @@ function dialog({ title, body, ok = t('dlg.ok'), cancel = t('dlg.cancel'), dange
   });
 }
 
-const VIEWS = ['inbox', 'reading', 'later', 'done', 'dismissed', 'feeds', 'settings'];
+const VIEWS = ['inbox', 'later', 'done', 'dismissed', 'feeds', 'settings'];
+// INFO: old bookmarks and links to the removed Read now view land in Later
+const viewFromHash = (h) => (h === 'reading' ? 'later' : h);
 function go(view, filter = '', { push = true } = {}) {
   const changed = S.view !== view;
   if (changed || S.filter !== filter) { S.view = view; S.filter = filter; S.shown = PAGE; S.kbId = ''; S.kbPos = -1; S.share = ''; window.scrollTo(0, 0); }
@@ -1138,14 +1168,22 @@ window.addEventListener('popstate', () => {
     handleIncoming().then(() => render());
     return;
   }
-  const v = location.hash.slice(1) || 'inbox';
+  const v = viewFromHash(location.hash.slice(1)) || 'inbox';
   if (VIEWS.includes(v)) go(v, '', { push: false });
 });
 
 document.addEventListener('click', async (ev) => {
   const el = ev.target;
+  if (el === $('#srcDrawer')) return $('#srcDrawer').close();
+  if (el.closest('#srcMenu')) return openDrawer();
   const filterBtn = el.closest('[data-filter]');
-  if (filterBtn) return go(S.view, filterBtn.dataset.filter);
+  if (filterBtn) {
+    const drawer = filterBtn.closest('#srcDrawer');
+    if (!drawer) return go(S.view, filterBtn.dataset.filter);
+    const v = drawerView();
+    drawer.close();
+    return go(v, filterBtn.dataset.filter);
+  }
   if (el.closest('#feedNavToggle')) {
     feedNavOpen = !feedNavOpen;
     store.set('news.feedNav', feedNavOpen ? '1' : '0');
@@ -1183,8 +1221,7 @@ document.addEventListener('click', async (ev) => {
     if (act) {
       const s = act.dataset.act;
       if (s === 'reading') {
-        if (openArticle(id) !== 'tab') return;
-        if (S.view === 'done') return setState(id, 'reading');
+        if (openArticle(id) !== 'tab' || S.view === 'done') return;
         return markOpened(id);
       }
       return setState(id, s);
@@ -1277,7 +1314,6 @@ document.addEventListener('click', async (ev) => {
 
 document.addEventListener('change', async (ev) => {
   const id = ev.target.id;
-  if (id === 'filter') { go(S.view, ev.target.value, { push: false }); $('#filter')?.focus(); }
   if (id === 'opmlIn' && ev.target.files[0]) { const f = ev.target.files[0]; ev.target.value = ''; importOpml(f); }
   if (id === 'langSel') { setLang(ev.target.value); await useLanguage(ev.target.value); render(); }
   if (id === 'themeSel') setTheme(ev.target.value);
@@ -1495,8 +1531,8 @@ document.addEventListener('keydown', (ev) => {
     return;
   }
   if (k === 'Enter' && ev.target.closest('button, a')) return;
-  const views = ['inbox', 'reading', 'later', 'done', 'feeds'];
-  if (k >= '1' && k <= '5') { go(views[+k - 1]); return; }
+  const views = ['inbox', 'later', 'done', 'feeds'];
+  if (k >= '1' && k <= '4') { go(views[+k - 1]); return; }
   if (k === 'r') { refreshAll(true); return; }
   if (k === 'u' && lastUndo) { const f = lastUndo; lastUndo = null; hideToast(); f(); return; }
   const cards = cardsInView();
@@ -1516,7 +1552,7 @@ document.addEventListener('keydown', (ev) => {
 // INFO: search and go to – views, folders and feeds without a query, plus every known post title with one.
 //       A post jumps to the view it is in and gets the keyboard selection; dismissed posts open the original.
 const norm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const STATE_VIEW = { new: 'inbox', reading: 'reading', later: 'later', done: 'done', dismissed: 'dismissed' };
+const STATE_VIEW = { new: 'inbox', reading: 'later', later: 'later', done: 'done', dismissed: 'dismissed' };
 let pal = { results: [], sel: 0 };
 let corpus = null;
 
@@ -1535,7 +1571,7 @@ function paletteResults(q) {
   const words = norm(q).split(/\s+/).filter(Boolean);
   const hit = (...xs) => words.every((w) => xs.some((x) => norm(x).includes(w)));
   const out = [];
-  for (const v of ['inbox', 'reading', 'later', 'done', 'feeds', 'settings']) {
+  for (const v of ['inbox', 'later', 'done', 'feeds', 'settings']) {
     const label = t(v === 'settings' ? 'app.settings' : 'nav.' + v);
     if (hit(label)) out.push({ kind: 'view', id: v, label, icon: ICON.view[v] });
   }
@@ -1679,8 +1715,7 @@ const endSwipe = () => {
   const s = dx > 90 ? right : dx < -90 ? left : null;
   if (!s) return;
   if (s === 'reading') {
-    if (openArticle(c.dataset.id) !== 'tab') return;
-    if (S.view === 'done') return setState(c.dataset.id, 'reading', { animate: false });
+    if (openArticle(c.dataset.id) !== 'tab' || S.view === 'done') return;
     return markOpened(c.dataset.id);
   }
   setState(c.dataset.id, s, { animate: false });
@@ -1697,7 +1732,7 @@ async function handleIncoming() {
   const shared = q.get('add') || q.get('url') || extractUrl(q.get('text')) || extractUrl(q.get('title'));
   const hash = new URLSearchParams(inc.hash.slice(1));
   const pair = hash.get('pair');
-  const view = inc.hash.slice(1);
+  const view = viewFromHash(inc.hash.slice(1));
 
   if (shared || pair || q.toString()) history.replaceState(null, '', location.pathname);
 
@@ -1750,7 +1785,7 @@ window.addEventListener('online', () => { sync.run(); scheduleOffline(2000); });
 let offlineTimer = null;
 offline.addEventListener('change', () => {
   clearTimeout(offlineTimer);
-  offlineTimer = setTimeout(() => { if (S.view === 'later' || S.view === 'reading') renderSoft(); }, 400);
+  offlineTimer = setTimeout(() => { if (S.view === 'later') renderSoft(); }, 400);
 });
 window.addEventListener('offline', () => sync.run());
 document.addEventListener('visibilitychange', () => {

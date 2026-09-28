@@ -80,7 +80,7 @@ node tools/build-og-images.mjs --site=https://news-reader.app/
 
 ## App (`app/`)
 
-Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it under *Done*, undo toast) · *Later* · *Not interested*. *Read again* in *Done* → *Read now*. *Later* → *Mark all done* (respects the feed filter). *Done* links to the *Not interested* list, where a post can go back to the inbox. *Clear list* in *Done* hides posts (`h:1`) but keeps them *done*, so the feed's read rate stays correct.
+Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it under *Done*, undo toast) · *Later* · *Not interested*. *Read again* in *Done* opens the post again; it stays *done*. There is no *Read now* view: items in the legacy state `reading` (older devices may still sync it) are listed under *Later*, and `#reading` opens *Later*. *Later* → *Mark all done* (respects the feed filter). *Done* links to the *Not interested* list, where a post can go back to the inbox. *Clear list* in *Done* hides posts (`h:1`) but keeps them *done*, so the feed's read rate stays correct.
 
 **First run** – the empty inbox explains the three decisions, links to *Add your first feed* (focuses the address field), OPML import and pairing. On touch screens a one-time toast explains swiping (`localStorage` `news.tip.swipe`).
 
@@ -99,8 +99,9 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 - The undo toast stays 10 s, pauses on hover/focus; `u` undoes until the next action.
 - The offline reader makes the page behind it `inert`.
 
-**Sources** (sidebar, desktop)
-- Folders and feeds of the current view with counts; feeds with nothing in the view fold behind *+ n more*; hidden with a single feed. Filter = one feed or one folder (narrow screens: a select with option groups).
+**Sources** (sidebar on desktop, drawer on narrow screens)
+- Folders and feeds of the current view with counts; feeds with nothing in the view fold behind *+ n more*; hidden with a single feed. Filter = one feed or one folder.
+- Narrow screens: the bottom bar starts with *Sources* (highlighted while a filter is on). It opens a modal drawer (`<dialog>`, Esc/backdrop close) with *All feeds* plus the same tree and counts for the current view (from Feeds/Settings: the inbox); focus starts on the current filter.
 - Favicon: Collector `source.icon`, else `/favicon.ico` of `source.siteUrl`, else a monogram. Feed titles drop platform wording (*Stories by X on Medium* → *X*). Names are sorted with the app language's collation.
 - Folders: *Feeds* → folder button (free text, existing folders suggested); synced as `g` in the feed record; OPML import reads the enclosing outline, export nests by folder.
 - Feed context (filtered to one feed, also in *Feeds*): posts per week (last 28 days) and read rate (*later/read now/done* vs. *not interested*, from 5 decisions on), folder / rename / unfollow.
@@ -124,11 +125,11 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 - A new subscription shows the last 14 days, at least the 3 newest posts. For feeds followed longer than 30 days the inbox starts at most 30 days back.
 - Entries you never sorted are removed once they left the feed and are older than 30 days.
 - Offline copies of done/dismissed items are dropped after 1 day.
-- Pruning (once a day, also without sync): dismissed and untouched items after 30 days; done items, unfollowed feeds and device records after 180 days; *Later* and *Read now* never.
+- Pruning (once a day, also without sync): dismissed and untouched items after 30 days; done items, unfollowed feeds and device records after 180 days; *Later* (incl. legacy `reading`) never.
 
 **Offline** – the service worker caches the app shell; changes are queued until the server is reachable. Posts moved to *Later* are saved once via `/api/article`; offline they open in a full-screen reader (scrolled to the end → *Done*).
 
-**Input** – swipe (default right = *Later*, left = *Not interested*; configurable), keys `j`/`k`, `↓`/`↑` (once a card is selected), `o`/`Enter`, `l`, `x`, `d`, `u`, `r`, `1`–`5`, `/`, Ctrl/⌘ K, `v`, `Esc`, `?` (overview).
+**Input** – swipe (default right = *Later*, left = *Not interested*; configurable), keys `j`/`k`, `↓`/`↑` (once a card is selected), `o`/`Enter`, `l`, `x`, `d`, `u`, `r`, `1`–`4` (Inbox, Later, Done, Feeds), `/`, Ctrl/⌘ K, `v`, `Esc`, `?` (overview).
 
 ## Collector (`/api/collect`)
 
@@ -161,7 +162,7 @@ Resolution order (`strategy`):
 - `summary`: plain text, max. `NR_SUMMARY_LENGTH`; feed furniture is removed (*The post … appeared first on …*, *Continue reading*, `[…]`, a repeated title). Titles are capped at 500 characters.
 - `author`: Atom `<author><name>` (feed-level as fallback), `dc:creator` / `<author>` (e-mail form → name), JSON-LD `author`; `null` if unknown.
 - `source.siteUrl`: the feed's site link, or the page for HTML strategies. `source.icon`: `<link rel="icon">` of a fetched page (apple-touch-icon as fallback), else Atom `<icon>` / RSS `<image>`; `null` if unknown.
-- `meta.lastError`: set when a refresh failed and the stale copy is served.
+- `meta.lastError`: `{code, message, upstreamStatus?}`, set when a refresh failed and the stale copy is served. A stale copy without `lastError` means the source was not asked this time (rate limit, busy, another request fetching it).
 - Headers: `X-Collector-Cache: HIT | MISS | STALE | REVALIDATED` (the source answered `304` to a conditional refresh), weak `ETag` on cached answers – `If-None-Match` → `304`.
 
 | Status | Codes |

@@ -9,7 +9,7 @@ test.describe('boot', () => {
     await app.open();
     await expect(page).toHaveTitle('News');
     await expect(page.locator('#syncPill')).toHaveAttribute('data-state', 'local');
-    for (const view of ['reading', 'later', 'done', 'feeds', 'settings', 'inbox']) {
+    for (const view of ['later', 'done', 'feeds', 'settings', 'inbox']) {
       await page.locator(`[data-view="${view}"]`).first().click();
       await expect(page.locator('#view')).not.toBeEmpty();
       await expect(page.locator('#view h1, #view .empty').first()).toBeVisible();
@@ -24,9 +24,15 @@ test.describe('boot', () => {
     }
   });
 
-  test('keyboard view switching 1–5', async ({ app, page }) => {
+  test('old links to the removed Read now view open Later', async ({ app, page }) => {
+    await app.open('#reading');
+    await expect(page.locator('[data-view="later"][aria-current="page"]').first()).toBeVisible();
+    await expect(page.locator('[data-view="reading"]')).toHaveCount(0);
+  });
+
+  test('keyboard view switching 1–4', async ({ app, page }) => {
     await app.open();
-    for (const [key, view] of [['2', 'reading'], ['3', 'later'], ['4', 'done'], ['5', 'feeds'], ['1', 'inbox']]) {
+    for (const [key, view] of [['2', 'later'], ['3', 'done'], ['4', 'feeds'], ['1', 'inbox']]) {
       await page.keyboard.press(key);
       await expect(page.locator(`[data-view="${view}"][aria-current="page"]`).first()).toBeVisible();
     }

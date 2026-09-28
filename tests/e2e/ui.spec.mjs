@@ -16,6 +16,55 @@ test('one feed: no sources tree; two feeds: tree with counts', async ({ app, pag
   await expect(page.locator('#feedNav [title="Fixture Atom"] .badge')).toHaveText('3');
 });
 
+test('narrow screens: the Sources drawer lists feeds with counts and filters the view @mobile', async ({ app, page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await app.follow(`${FX()}/feeds/atom.xml`);
+  await app.go('inbox');
+  await expect(page.locator('#filter')).toHaveCount(0);
+  // INFO: five slots in the bottom bar with Later in the middle
+  const slots = await page.locator('.nav > button').evaluateAll((els) => els.filter((e) => e.offsetParent).map((e) => e.id || e.dataset.view));
+  expect(slots).toEqual(['srcMenu', 'inbox', 'later', 'done', 'feeds']);
+
+  await page.locator('#srcMenu').click();
+  const drawer = page.locator('#srcDrawer');
+  await expect(drawer).toBeVisible();
+  await expect(drawer.locator('[data-filter=""]')).toBeFocused();
+  await expect(drawer.locator('[data-filter=""] .badge')).toHaveText('7');
+  await expect(drawer.locator('[title="Fixture Atom"] .badge')).toHaveText('3');
+  // INFO: every count sits in its own row, right of the name – not pinned like the bottom-bar badge
+  const rows = await drawer.locator('[data-filter]').evaluateAll((els) => els.map((b) => {
+    const r = b.getBoundingClientRect(), n = b.querySelector('.nm').getBoundingClientRect(), c = b.querySelector('.badge').getBoundingClientRect();
+    return c.top >= r.top && c.bottom <= r.bottom && c.left >= n.right;
+  }));
+  expect(rows).toEqual(rows.map(() => true));
+  await drawer.locator('[title="Fixture Atom"]').click();
+  await expect(drawer).toBeHidden();
+  await expect(page.locator('#view h1 .crumb')).toContainText('Fixture Atom');
+  await expect(app.cards()).toHaveCount(3);
+  await expect(page.locator('#srcMenu')).toHaveClass(/\bon\b/);
+
+  // Esc closes and returns focus to the button; "All feeds" clears the filter
+  await page.locator('#srcMenu').click();
+  await expect(drawer.locator('[title="Fixture Atom"]')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+  await expect(page.locator('#srcMenu')).toBeFocused();
+  await page.locator('#srcMenu').click();
+  await drawer.locator('[data-filter=""]').click();
+  await expect(app.cards()).toHaveCount(7);
+
+  // from Feeds, the drawer filters the inbox
+  await app.go('feeds');
+  await page.locator('#srcMenu').click();
+  await drawer.locator('[title="Fixture Blog"]').click();
+  await expect(page.locator('[data-view="inbox"]').first()).toBeVisible();
+  await expect(app.cards()).toHaveCount(4);
+});
+
+test('desktop: no Sources button in the sidebar', async ({ app, page }) => {
+  await expect(page.locator('#srcMenu')).toBeHidden();
+});
+
 test('folders: assign, filter by folder, feed context', async ({ app, page }) => {
   await app.follow(`${FX()}/feeds/atom.xml`);
   const row = page.locator('.feedrow', { has: page.locator('.t', { hasText: 'Fixture Atom' }) });

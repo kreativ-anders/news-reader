@@ -164,7 +164,8 @@ if ($result['ok']) {
 
 if ($usable && $cached['age'] < NR_STALE_TTL) {
     nr_unlock($lock);
-    $cached['data']['meta']['lastError'] = ['code' => $result['code'], 'message' => $result['message']];
+    $cached['data']['meta']['lastError'] = ['code' => $result['code'], 'message' => $result['message']]
+        + (isset($result['status']) ? ['upstreamStatus' => $result['status']] : []);
     nr_serve_cached($cached, 'STALE', $limit);
 }
 

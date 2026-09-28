@@ -38,9 +38,35 @@ test('read now opens the original in a new tab and marks it done', async ({ app,
   await expect(app.card('Second post')).toHaveCount(0, { timeout: 10_000 });
   await app.go('done');
   await expect(app.card('Second post')).toBeVisible();
-  // read again → "Read now"
-  await app.card('Second post').locator('[data-act="reading"]').click();
-  await expect(app.badge('reading')).toHaveText('1');
+  // read again opens the original once more – the post stays in Done
+  const [again] = await Promise.all([
+    context.waitForEvent('page'),
+    app.card('Second post').locator('[data-act="reading"]').click(),
+  ]);
+  await again.close();
+  await page.bringToFront();
+  await expect(app.card('Second post')).toBeVisible();
+  await expect(app.badge('later')).toHaveText('');
+});
+
+test('posts in the old "reading" state (synced from older devices) show up in Later', async ({ app, page }) => {
+  const id = await app.card('Second post').getAttribute('data-id');
+  await page.evaluate((id) => new Promise((resolve, reject) => {
+    const req = indexedDB.open('news');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const tx = req.result.transaction('records', 'readwrite');
+      tx.objectStore('records').put({ kind: 'item', id, data: { s: 'reading' }, updatedAt: Date.now() });
+      tx.oncomplete = () => { req.result.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  }), id);
+  await page.reload();
+  await expect(app.badge('later')).toHaveText('1');
+  await app.go('later');
+  await expect(app.card('Second post')).toBeVisible();
+  await app.card('Second post').locator('[data-act="done"]').click();
+  await expect(app.cards()).toHaveCount(0);
 });
 
 test('mark all done in Later', async ({ app, page }) => {

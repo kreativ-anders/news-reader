@@ -173,3 +173,25 @@ test('share target / bookmarklet prefill the follow form', async ({ app, page })
   await app.open(`?text=${encodeURIComponent(`Look at ${shared} please`)}`);
   await expect(page.locator('#addUrl')).toHaveValue(shared);
 });
+
+test('a saved copy says whether the source failed or was just not asked, and how old it is', async ({ app, page }) => {
+  await app.open();
+  await app.follow(`${FX()}/feeds/atom.xml`);
+  const real = await (await fetch(`${API()}/api/collect?url=${encodeURIComponent(FX() + '/feeds/atom.xml')}`)).json();
+  let lastError = { code: 'UPSTREAM_HTTP_ERROR', message: 'The source returned HTTP 404.', upstreamStatus: 404 };
+  await page.route('**/api/collect?**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ ...real, meta: { ...real.meta, cached: true, stale: true, cachedAt: new Date(Date.now() - 3 * 3600e3).toISOString(), ...(lastError && { lastError }) } }),
+  }));
+  const row = page.locator('.feedrow').first();
+  await row.locator('[data-feed-act="refresh"]').click();
+  await expect(row.locator('.err')).toHaveText('· source answered with error 404');
+  await expect(row.locator('.err')).toHaveAttribute('title', /HTTP 404/);
+  await expect(row).toContainText(/· showing the copy from 3 h/);
+
+  lastError = null;
+  await row.locator('[data-feed-act="refresh"]').click();
+  await expect(row).toContainText('· not refreshed this time');
+  await expect(row.locator('.err')).toHaveCount(0);
+  await expect(row).toContainText(/· showing the copy from 3 h/);
+});

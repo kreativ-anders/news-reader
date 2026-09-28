@@ -57,6 +57,35 @@ describe('concurrent fetches of one URL', () => {
   });
 });
 
+describe('stale feed copies', () => {
+  const plant = (url) => {
+    writeFileSync(cacheFile(url), JSON.stringify({
+      source: { inputUrl: url, feedUrl: url, type: 'rss', strategy: 'direct', title: 'Kept' },
+      entries: [{ id: 'e1', url: url + '#1', title: 'Kept entry' }],
+      meta: { fetchedAt: new Date().toISOString() },
+      cachedAt: Math.floor(Date.now() / 1000) - 2 * 86400,
+      schema: SCHEMA,
+    }));
+    return url;
+  };
+
+  it('a failed refresh serves the older copy and says why, with the upstream status', async () => {
+    const r = await s.collect(plant(s.fx.url + '/missing?stale'));
+    assert.equal(r.status, 200, r.text.slice(0, 300));
+    assert.equal(r.header('x-collector-cache'), 'STALE');
+    assert.equal(r.json.meta.stale, true);
+    assert.equal(r.json.entries[0].title, 'Kept entry');
+    assert.deepEqual(r.json.meta.lastError, { code: 'UPSTREAM_HTTP_ERROR', message: 'The source returned HTTP 404.', upstreamStatus: 404 });
+  });
+
+  it('a fetch failure without an HTTP status has no upstreamStatus', async () => {
+    const r = await s.collect(plant('http://127.0.0.1:1/feed?stale'));
+    assert.equal(r.header('x-collector-cache'), 'STALE');
+    assert.equal(r.json.meta.lastError.code, 'UPSTREAM_FETCH_FAILED');
+    assert.ok(!('upstreamStatus' in r.json.meta.lastError));
+  });
+});
+
 describe('stale article copies', () => {
   it('a failed re-fetch keeps and serves the older copy', async () => {
     const url = s.fx.url + '/empty/';

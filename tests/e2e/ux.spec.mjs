@@ -92,7 +92,7 @@ test('single-key shortcuts can be switched off', async ({ app, page }) => {
   await page.locator('#keysSel').selectOption('off');
   await page.keyboard.press('Escape');
   await page.locator('#view h1').focus();
-  await page.keyboard.press('3');
+  await page.keyboard.press('2');
   await expect(page.locator('[data-view="settings"][aria-current="page"]').first()).toBeVisible();
   await page.keyboard.press('Control+k');
   await expect(page.locator('#palette')).toBeVisible();
