@@ -104,6 +104,20 @@ test('clear inbox sits below the list and dismisses everything shown', async ({ 
   await expect(app.badge('inbox')).toHaveText('');
 });
 
+test('the undo toast never covers clear inbox at the end of the list @mobile', async ({ app, page }) => {
+  // INFO: the toast used to float over the last buttons – clearing had to wait until it was gone
+  await page.setViewportSize({ width: 390, height: 520 });
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await app.card('Oldest post').locator('[data-act="later"]').click();
+  await expect(app.toast()).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const [btn, toast] = await Promise.all([page.locator('#clearInbox').boundingBox(), app.toast().boundingBox()]);
+  expect(btn.y + btn.height).toBeLessThanOrEqual(toast.y);
+  await page.locator('#clearInbox').click();
+  await expect(app.cards()).toHaveCount(0);
+  await expect(app.toast()).toContainText('3 posts marked not interested');
+});
+
 test('state survives a reload (IndexedDB)', async ({ app, page }) => {
   await app.card('Second post').locator('[data-act="later"]').click();
   await expect(app.badge('later')).toHaveText('1');

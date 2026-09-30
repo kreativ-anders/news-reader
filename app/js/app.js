@@ -11,10 +11,11 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.11';
+const VERSION = '0.8.12';
 
 const PAGE = 150;
-const AUTO_REFRESH_MS = 30 * 60 * 1000;
+// INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
+const OPEN_REFRESH_MS = 15 * 60 * 1000;
 // INFO: the Collector ignores ?refresh=1 for copies younger than 15 minutes – repeated clicks would only cost requests
 const COOLDOWN_MS = 60 * 1000;
 // INFO: matches the Collector's NR_UPSTREAM_PER_CLIENT – more parallel fetches only earn BUSY answers
@@ -398,15 +399,32 @@ function scheduleRetry() {
   if (at !== Infinity) retryTimer = setTimeout(() => refreshAll(), Math.max(0, at - Date.now()) + 1000);
 }
 
-async function refreshAll(force = false) {
+// INFO: logo + "looking for new posts" and a progress line in the header – on a phone the spinning icon alone was
+//       easy to miss (and does not spin with reduced motion)
+let pulseTimer = 0;
+function pulse(text, ms = 0) {
+  clearTimeout(pulseTimer);
+  $('#pulse').textContent = text;
+  $('.top').classList.toggle('pulsing', !!text);
+  if (text && ms) pulseTimer = setTimeout(() => pulse(''), ms);
+}
+function progress(done, total) {
+  const bar = $('#progress');
+  bar.hidden = !total;
+  if (total) $('i', bar).style.width = `${Math.max(8, Math.round((done / total) * 100))}%`;
+}
+
+async function refreshAll(force = false, auto = false) {
   const all = liveFeeds(), now = Date.now();
-  if (!all.length) { if (force) showToast(t('toast.no_feeds')); return; }
+  if (!all.length) { if (force && !auto) showToast(t('toast.no_feeds')); return; }
   const feeds = all.filter((f) => (force ? !waiting(f, now) : due(f, now)));
   if (S.refreshing) return;
   const before = inboxEntries('').length;
   S.refreshing = true;
   paintRequests();
-  const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force));
+  let done = 0;
+  if (feeds.length) { pulse(t('app.loading')); progress(0, feeds.length); }
+  const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force).finally(() => progress(++done, feeds.length)));
   let failed = 0;
   results.forEach((r, i) => {
     if (!r.ok) {
@@ -420,13 +438,25 @@ async function refreshAll(force = false) {
   await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   S.refreshing = false;
   if (force) coolDown('all');
-  if (force) render(); else renderSoft();
+  if (force && !auto) render(); else renderSoft();
   paintRequests();
   scheduleRetry();
+  progress(0, 0);
+  const n = Math.max(0, inboxEntries('').length - before);
+  if (auto && feeds.length) pulse(n ? t('toast.checked', { n }) : t('toast.checked_none'), 4000);
+  else pulse('');
   if (feeds.length && failed === feeds.length && results[0]?.error?.code === 'UNREACHABLE') showToast(results[0].error.message);
   else if (failed) showToast(t('toast.refresh_failed', { n: failed }), () => go('feeds'), t('toast.details'));
+  else if (auto) return;
   else if (force && later) showToast(t('toast.retry_later', { n: later }));
-  else if (force) { const n = Math.max(0, inboxEntries('').length - before); showToast(n ? t('toast.checked', { n }) : t('toast.checked_none')); }
+  else if (force) showToast(n ? t('toast.checked', { n }) : t('toast.checked_none'));
+}
+
+// INFO: on start and on every return – iOS resumes an installed app without reloading it
+function openRefresh() {
+  if (!liveFeeds().length) return;
+  if (Date.now() - S.lastRefresh > OPEN_REFRESH_MS) return refreshAll(true, true);
+  if (S.lastRefresh && !S.refreshing) pulse(t('inbox.last_checked', { when: ago(S.lastRefresh) }), 3000);
 }
 
 function toEntry(e, feedId, firstSeen) {
@@ -1183,13 +1213,13 @@ function hideToast() {
   const el = $('#toast');
   // INFO: focus inside the toast would fall back to <body>
   if (el.contains(document.activeElement)) (cardsInView()[Math.max(0, S.kbPos)] || viewHeading() || viewEl).focus({ preventScroll: true });
-  el.hidden = true;
+  el.classList.remove('on');
 }
 function armToast() { clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, toastMs); }
 function showToast(msg, action, actionLabel) {
   const el = $('#toast');
   const isUndo = action && !actionLabel;
-  el.hidden = false;
+  el.classList.add('on');
   // INFO: undo stays available with "u" until the next action, even after the toast is gone
   lastUndo = isUndo ? action : null;
   const label = isUndo ? t('toast.undo') : actionLabel;
@@ -1890,8 +1920,8 @@ document.addEventListener('visibilitychange', () => {
   flushOpened();
   sync.run();
   checkUpdate();
-  if (Date.now() - S.lastRefresh > AUTO_REFRESH_MS) refreshAll();
-  else renderSoft();
+  renderSoft();
+  openRefresh();
 });
 setInterval(() => { if (document.visibilityState === 'visible') sync.run(); }, 5 * 60 * 1000);
 
@@ -1934,7 +1964,7 @@ function swipeTip() {
   render();
   offline.load().then(() => { renderSoft(); scheduleOffline(3000); }, () => {});
   sync.run();
-  if (Date.now() - S.lastRefresh > AUTO_REFRESH_MS) refreshAll();
-  else scheduleRetry();
+  scheduleRetry();
+  openRefresh();
   swipeTip();
 })();

@@ -1,6 +1,7 @@
 {
   "app": {
     "tagline": "News Reader",
+    "loading": "Suche nach neuen Beiträgen …",
     "skip": "Zum Inhalt springen",
     "noscript": "News braucht JavaScript, um zu laufen.",
     "refresh": "Feeds aktualisieren (r)",

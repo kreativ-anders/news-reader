@@ -18,12 +18,20 @@ svg{display:block}
 .brand svg{width:32px;height:32px;flex:none}
 .brand small{display:block;font-family:var(--font);font-weight:500;font-size:.7rem;color:var(--muted);letter-spacing:.02em;margin-top:-3px}
 @media (max-width:420px){.brand small{display:none}}
+.brand small.pulse{display:none;color:var(--brand-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top.pulsing .brand small{display:none}
+.top.pulsing .brand small.pulse{display:block}
+.brand>span{min-width:0}
+.progress{position:absolute;left:0;right:0;bottom:-1px;height:2px;pointer-events:none}
+.progress i{display:block;height:100%;width:0;background:var(--brand-ink);transition:width .3s ease-out}
 @media (max-width:360px){.brand>span{display:none}}
 .top-actions{display:flex;align-items:center;gap:6px}
 .icon-btn{all:unset;box-sizing:border-box;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);cursor:pointer;color:var(--muted);transition:background .15s,color .15s}
 .icon-btn:hover{background:var(--hover);color:var(--fg)}
 .icon-btn svg,.nav svg,.act svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.icon-btn[aria-busy="true"] svg,.btn[aria-busy="true"] svg{animation:spin 1s linear infinite}
+/* INFO: own layer – Safari may freeze animations inside the header's backdrop-filter; the colour marks "busy" even with reduced motion */
+.icon-btn[aria-busy="true"] svg,.btn[aria-busy="true"] svg{animation:spin 1s linear infinite;will-change:transform}
+.icon-btn[aria-busy="true"]{color:var(--brand-ink)}
 :is(.icon-btn,.btn)[aria-busy="true"]{cursor:progress}
 :is(.icon-btn,.btn)[aria-disabled="true"]:not([aria-busy="true"]){opacity:.5;cursor:not-allowed}
 .icon-btn[aria-disabled="true"]:hover{background:none;color:var(--muted)}
@@ -42,7 +50,8 @@ svg{display:block}
 @media (max-width:420px){.sync .txt{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.sync{padding:0;width:40px;justify-content:center}}
 .sync .txt{overflow:hidden;text-overflow:ellipsis}
 
-.shell{display:grid;grid-template-columns:220px minmax(0,1fr);max-width:1080px;margin:0 auto;gap:32px;padding:24px 16px 48px}
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);max-width:1080px;margin:0 auto;gap:32px;padding:24px 16px}
+.col{min-width:0}
 .nav{position:sticky;top:84px;align-self:start;display:flex;flex-direction:column;gap:4px}
 .nav button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;color:var(--muted);font-weight:600;font-size:.95rem;transition:background .15s,color .15s}
 .nav button:hover{background:var(--hover);color:var(--fg)}
@@ -90,7 +99,7 @@ dialog.drawer h2{margin:0;font-size:1.2rem}
 @media (prefers-reduced-motion:no-preference){dialog.drawer[open]{animation:drawer-in .18s ease-out}@keyframes drawer-in{from{transform:translateX(-100%)}}}
 
 @media (max-width:760px){
-  .shell{grid-template-columns:1fr;padding:12px 12px calc(var(--nav-h) + 32px + env(safe-area-inset-bottom));gap:0}
+  .shell{grid-template-columns:1fr;padding:12px 12px calc(var(--nav-h) + 12px + env(safe-area-inset-bottom));gap:0}
   .nav{position:fixed;z-index:20;top:auto;left:0;right:0;bottom:0;flex-direction:row;justify-content:space-around;gap:0;height:calc(var(--nav-h) + env(safe-area-inset-bottom));padding:6px 4px env(safe-area-inset-bottom);
     background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line)}
   .nav button{position:relative;flex:1;flex-direction:column;gap:2px;padding:6px 2px;font-size:.68rem;justify-content:center;text-align:center}
@@ -262,10 +271,13 @@ html{scroll-padding-top:calc(104px + env(safe-area-inset-top))}
 code{font-family:var(--mono);font-size:.85em;padding:.1em .35em;border-radius:var(--radius);background:color-mix(in srgb,var(--brand) 10%,transparent)}
 
 .toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.toast{position:fixed;z-index:40;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:14px;max-width:calc(100vw - 24px);padding:10px 10px 10px 16px;border-radius:var(--radius-lg);background:#1C1C1C;color:#FFFFFF;border:1px solid #454545;box-shadow:0 16px 48px rgba(0,0,0,.4);font-size:.9rem}
+/* INFO: the toast keeps its slot below the view even when empty (visibility, not display) – nothing jumps when it comes
+         or goes, and the space below the view equals its sticky offset, so at the end of a list it never covers a button */
+.toast{position:sticky;z-index:30;bottom:calc(24px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:14px;box-sizing:border-box;width:fit-content;max-width:100%;height:48px;margin:24px auto 0;padding:0 6px 0 16px;visibility:hidden;border-radius:var(--radius-lg);background:#1C1C1C;color:#FFFFFF;border:1px solid #454545;box-shadow:0 16px 48px rgba(0,0,0,.4);font-size:.9rem}
 .toast button{all:unset;cursor:pointer;font-weight:700;color:var(--brand);padding:6px 10px;border-radius:var(--radius)}
 .toast button:hover{background:#323232}
-@media (max-width:760px){.toast{bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom))}}
+.toast.on{visibility:visible}
+@media (max-width:760px){.toast{bottom:calc(var(--nav-h) + 12px + env(safe-area-inset-bottom));margin-top:12px}}
 
 dialog{margin:auto;max-height:calc(100dvh - 32px);overflow:auto;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--card);color:var(--fg);padding:22px;width:min(440px,calc(100vw - 32px));box-shadow:0 30px 80px rgba(0,0,0,.45)}
 dialog::backdrop{background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}

@@ -117,6 +117,31 @@ test('refresh buttons pause for a minute after a manual refresh – no repeated 
   await expect.poll(() => calls).toBe(3);
 });
 
+test('opening the app looks for new posts on its own and says so in the header', async ({ app, page }) => {
+  await app.open();
+  await app.follow(`${FX()}/feeds/atom.xml`);
+  const calls = [];
+  let release;
+  const hold = new Promise((r) => { release = r; });
+  await page.route('**/api/collect?**', async (route) => { calls.push(route.request().url()); await hold; return route.continue(); });
+  await page.reload();
+  await expect(page.locator('#pulse')).toHaveText('Looking for new posts…');
+  await expect(page.locator('#progress')).toBeVisible();
+  await expect(page.locator('#refreshBtn')).toHaveAttribute('aria-busy', 'true');
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toContain('refresh=1');
+  release();
+  await expect(page.locator('#pulse')).toHaveText(/^Checked – /);
+  await expect(page.locator('#progress')).toBeHidden();
+  await expect(app.toast()).toBeHidden();
+  await expect(page.locator('#pulse')).toBeHidden({ timeout: 6_000 });
+
+  // within 15 minutes a new start only says when it last checked
+  await page.reload();
+  await expect(page.locator('#pulse')).toContainText('Last checked');
+  expect(calls).toHaveLength(1);
+});
+
 test('a source that turns the server away is fetched from the device – same entries after a refresh', async ({ app, page }) => {
   // INFO: the server answers for https://blocked.example/ as it does for the fixture's blocked root (403 + clientTry);
   //       the site itself is played by routes: its root refuses, its WordPress API answers browsers (CORS)
