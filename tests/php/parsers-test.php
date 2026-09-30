@@ -145,6 +145,13 @@ test('HTML listing: links below the path (header, pagination, tags, short titles
     assert_not_null($l['entries'][1]['publishedAt'], '<time> inside the link');
 });
 
+test('HTML listing: sibling pages of a listing file (/essays/articles.html → /essays/first.html)', function () use ($B) {
+    $l = nr_parse_html_listing(nr_load_html(fixture('essays/articles.html')), "$B/essays/articles.html");
+    assert_same('html-links', $l['strategy']);
+    assert_same(["$B/essays/second.html", "$B/essays/first.html", "$B/essays/third.html"], array_column($l['entries'], 'url'));
+    assert_same('The First Essay Title', $l['entries'][1]['title']);
+});
+
 test('HTML listing: nothing found → null', function () use ($B) {
     assert_null(nr_parse_html_listing(nr_load_html(fixture('empty/index.html')), "$B/empty/"));
 });
@@ -167,6 +174,11 @@ test('article path heuristics', function () {
     assert_true(nr_is_article_path('/2026/09/hello-world', ''));
     assert_true(nr_is_article_path('/blog/hello-world', ''));
     assert_false(nr_is_article_path('/imprint', ''));
+    assert_true(nr_is_article_path('/essay.html', '/articles.html'));
+    assert_false(nr_is_article_path('/articles.html', '/articles.html'));
+    assert_false(nr_is_article_path('/index.html', '/articles.html'));
+    assert_false(nr_is_article_path('/essay.php', '/articles.html'));
+    assert_false(nr_is_article_path('/sub/essay.html', '/articles.html'));
 });
 
 test('date parsing', function () {

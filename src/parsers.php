@@ -670,6 +670,13 @@ function nr_is_article_path(string $path, string $basePath): bool
     if (preg_match('#/(page|tag|tags|category|categories|author|authors|topic|topics|search|feed|rss)(/|$)#i', $path)) return false;
     if (preg_match('#\.(xml|json|jpg|jpeg|png|gif|svg|webp|pdf|zip|css|js)$#i', $path)) return false;
 
+    // INFO: a listing that is a file (/articles.html) links its posts as siblings (/essay.html) – same folder, same type
+    if (preg_match('#^(.*/)[^/]+(\.(?:s?html?|php|aspx?))$#i', $basePath, $m)) {
+        return str_starts_with($path, $m[1])
+            && preg_match('#^[^/]+' . preg_quote($m[2], '#') . '$#i', substr($path, strlen($m[1]))) === 1
+            && preg_match('#/(index|default)\.[a-z]+$#i', $path) !== 1;
+    }
+
     if ($basePath !== '') {
         if (!str_starts_with($path, $basePath . '/')) return false;
         $rest = substr($path, strlen($basePath) + 1);
