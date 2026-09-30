@@ -38,6 +38,43 @@ function nr_cache_write(string $url, array $data, string $ns = ''): void
     }
 }
 
+// INFO: Collector entries are shared per source: entries live under the address they were fetched from (the feed,
+//       else the page), and every requested URL keeps a record {key, source} that points there. Only fetched
+//       addresses become keys and only the record holds what the requested page said about itself (title, icon),
+//       so a page cannot plant anything for another source (README → Collector → Cache).
+function nr_collect_key(array $source): string
+{
+    $feed = in_array($source['type'] ?? '', ['rss', 'rdf', 'atom'], true) ? ($source['feedUrl'] ?? null) : null;
+    return is_string($feed) ? $feed : (string)$source['url'];
+}
+
+// INFO: [key, cached] – cached is the shared entry with this URL's source, an error cached for this URL, or null
+function nr_collect_read(string $url): array
+{
+    $rec = nr_cache_read($url, 'src');
+    $source = $rec['data']['source'] ?? null;
+    $key = is_string($rec['data']['key'] ?? null) && is_array($source) ? $rec['data']['key'] : $url;
+    $cached = nr_cache_read($key);
+    if ($cached === null || isset($cached['data']['error'])) return [$key, $cached];
+    if (!is_array($source)) return [$url, null];
+    $cached['data']['source'] = ['inputUrl' => $url] + $source;
+    return [$key, $cached];
+}
+
+function nr_collect_write(string $url, array $data): void
+{
+    $key = nr_collect_key($data['source']);
+    nr_cache_write($key, array_diff_key($data, ['source' => 0]));
+    nr_cache_write($url, ['key' => $key, 'source' => $data['source']], 'src');
+}
+
+// INFO: an error belongs to the requested URL – its record goes, so the error is what the next request finds
+function nr_collect_write_error(string $url, array $error, int $ttl): void
+{
+    @unlink(nr_cache_path($url, 'json', 'src'));
+    nr_cache_write($url, ['error' => $error, 'ttl' => $ttl]);
+}
+
 // INFO: per-URL lock so that concurrent requests do not hit the source in parallel. Waits at most $wait
 //       seconds (0 = not at all) – a blocking flock() would tie up PHP workers for as long as a slow source
 //       takes, and that time does not count against max_execution_time.

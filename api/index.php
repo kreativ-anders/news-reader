@@ -90,7 +90,7 @@ if (($invalid = nr_validate_target($url)) !== null) {
 
 if ($method === 'POST') nr_collect_client($url, $limit);
 
-$cached = nr_cache_read($url);
+[$key, $cached] = nr_collect_read($url);
 $usable = $cached !== null && !isset($cached['data']['error']);
 
 if ($cached !== null) {
@@ -109,12 +109,12 @@ if ($wait = nr_rate_hit_wide('collect', NR_RATE_COLLECT_MISS, NR_RATE_COLLECT_MI
 }
 
 // INFO: one refresh per URL at a time – others get stale data or wait (bounded) for the result
-$lock = nr_lock($url, 0);
+$lock = nr_lock($key, 0);
 if ($lock === false) {
     if ($usable) nr_serve_cached($cached, 'STALE', $limit);
-    $lock = nr_lock($url, NR_LOCK_WAIT);
+    $lock = nr_lock($key, NR_LOCK_WAIT);
     if ($lock === false) nr_busy();
-    $fresh = nr_cache_read($url);
+    [, $fresh] = nr_collect_read($url);
     if ($fresh !== null && $fresh['age'] < nr_cache_ttl($fresh, NR_CACHE_TTL, NR_ERROR_TTL)) {
         nr_unlock($lock);
         nr_serve_cached($fresh, 'HIT', $limit);
@@ -142,7 +142,7 @@ if ($usable && !empty($cached['data']['upstream']) && is_string($feedUrl)) {
         $data['meta']['fetchedAt'] = nr_iso(time());
         $data['upstream'] = nr_fetch_validators($res['finalUrl']) ?: $data['upstream'];
         unset($data['meta']['lastError']);
-        nr_cache_write($url, $data);
+        nr_collect_write($url, $data);
         nr_unlock($lock);
         nr_serve_cached(['data' => ['cachedAt' => time()] + $data, 'age' => 0], 'REVALIDATED', $limit);
     }
@@ -157,7 +157,7 @@ if ($result['ok']) {
         $validators = nr_fetch_validators($source['feedUrl']);
         if ($validators) $result['payload']['upstream'] = $validators;
     }
-    nr_cache_write($url, $result['payload']);
+    nr_collect_write($url, $result['payload']);
     nr_unlock($lock);
     nr_serve_cached(['data' => $result['payload'] + ['cachedAt' => time()], 'age' => 0], 'MISS', $limit);
 }
@@ -181,7 +181,7 @@ if ($blocked) $error['clientTry'] = nr_client_try($url);
 //       failure even more briefly – otherwise every request waiting for the lock would try the dead source again
 $errorTtl = nr_error_ttl($error, NR_ERROR_TTL);
 if ($blocked || in_array($result['code'], ['NO_FEED_DETECTED', 'PLATFORM_NO_FEED'], true) || ($errorTtl < NR_ERROR_TTL && !$usable)) {
-    nr_cache_write($url, ['error' => $error, 'ttl' => $errorTtl]);
+    nr_collect_write_error($url, $error, $errorTtl);
 }
 nr_unlock($lock);
 

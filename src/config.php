@@ -30,7 +30,7 @@ const NR_TIME_BUDGET        = 60;         // INFO: wall-clock seconds for all up
 const NR_MAX_REDIRECTS      = 5;
 const NR_MAX_CHILD_SITEMAPS = 3;
 const NR_SUMMARY_LENGTH     = 300;
-const NR_CACHE_SCHEMA       = 3;          // INFO: bump when the entry format changes – older cache files are ignored
+const NR_CACHE_SCHEMA       = 4;          // INFO: bump when the entry format changes – older cache files are ignored
 const NR_USER_AGENT         = 'NewsReader-Collector/' . NR_VERSION . ' (+https://news-reader.app)';
 
 // INFO: Collector fallback for sources that turn the server away (401/403) – the app fetches error.clientTry

@@ -45,6 +45,35 @@ describe('cached errors', () => {
   });
 });
 
+describe('one entry per source', () => {
+  it('addresses that lead to the same feed share its entry, each with its own source', async () => {
+    const feedUrl = s.fx.url + '/feeds/rss.xml';
+    const direct = await s.collect(feedUrl);
+    assert.equal(direct.header('x-collector-cache'), 'MISS');
+    const page = await s.collect(s.fx.url + '/pretender/');
+    assert.equal(page.json.source.strategy, 'discovered');
+    assert.equal(page.json.source.icon, s.fx.url + '/pretender/icon.png');
+
+    const content = JSON.parse(readFileSync(cacheFile(feedUrl), 'utf8'));
+    assert.ok(!('source' in content), 'the shared entry holds no source');
+    assert.equal(JSON.parse(readFileSync(cacheFile(s.fx.url + '/pretender', 'src'), 'utf8')).key, feedUrl);
+
+    const again = await s.collect(feedUrl);
+    assert.equal(again.header('x-collector-cache'), 'HIT');
+    assert.equal(again.json.meta.cachedAt, page.json.meta.cachedAt, 'the feed is served from the entry the page refreshed');
+    assert.equal(again.json.source.inputUrl, feedUrl);
+    assert.equal(again.json.source.icon, s.fx.url + '/blog/icon.png', 'a page cannot plant its icon for the feed');
+    assert.deepEqual(again.json.entries, page.json.entries);
+  });
+
+  it('full text is found through any address of the feed', async () => {
+    const page = await s.collect(s.fx.url + '/pretender/');
+    const e = page.json.entries[0];
+    const r = await s.get(`/api/article?url=${encodeURIComponent(e.url)}&feed=${encodeURIComponent(s.fx.url + '/pretender/')}&id=${e.id}`);
+    assert.equal(r.header('x-article-source'), 'feed');
+  });
+});
+
 describe('concurrent fetches of one URL', () => {
   it('a waiting request gives up after NR_LOCK_WAIT with 503 BUSY', async () => {
     const url = s.fx.url + '/slow';
@@ -59,8 +88,13 @@ describe('concurrent fetches of one URL', () => {
 
 describe('stale feed copies', () => {
   const plant = (url) => {
+    writeFileSync(cacheFile(url, 'src'), JSON.stringify({
+      key: url,
+      source: { inputUrl: url, url, feedUrl: url, type: 'rss', strategy: 'direct', title: 'Kept' },
+      cachedAt: Math.floor(Date.now() / 1000) - 2 * 86400,
+      schema: SCHEMA,
+    }));
     writeFileSync(cacheFile(url), JSON.stringify({
-      source: { inputUrl: url, feedUrl: url, type: 'rss', strategy: 'direct', title: 'Kept' },
       entries: [{ id: 'e1', url: url + '#1', title: 'Kept entry' }],
       meta: { fetchedAt: new Date().toISOString() },
       cachedAt: Math.floor(Date.now() / 1000) - 2 * 86400,

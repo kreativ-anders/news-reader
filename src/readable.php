@@ -434,7 +434,7 @@ function nr_article_handle(): never
 
 function nr_article_from_feed(string $url, string $feed, string $id): void
 {
-    $cachedFeed = nr_cache_read($feed);
+    [, $cachedFeed] = nr_collect_read($feed);
     $norm = nr_normalize_url($url);
     foreach ($cachedFeed['data']['entries'] ?? [] as $e) {
         if (empty($e['content'])) continue;
