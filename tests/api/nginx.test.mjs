@@ -41,7 +41,7 @@ for (const file of ['nginx.ploi.conf.example', 'nginx.conf.example', 'wharf.conf
       writeFileSync(join(dir, 'fastcgi_params'), '');
       const temps = ['client_body', 'proxy', 'fastcgi', 'uwsgi', 'scgi'].map((t) => `${t}_temp_path "${dir}/${t}";`).join(' ');
       writeFileSync(join(dir, 'nginx.conf'), `pid "${dir}/nginx.pid"; error_log "${dir}/error.log"; daemon off; events {}
-http { types { text/html html; text/css css; text/javascript js mjs; application/json json; image/svg+xml svg; image/png png; } ${temps}
+http { access_log "${dir}/access.log"; types { text/html html; text/css css; text/javascript js mjs; application/json json; image/svg+xml svg; image/png png; } ${temps}
 ${localConfig(file, dir, port, other)}
 }`);
       execFileSync(NGINX, ['-t', '-q', '-p', dir, '-c', join(dir, 'nginx.conf')], { stdio: 'pipe' });
