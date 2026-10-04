@@ -1,4 +1,5 @@
 // Sync hardening: forged device records, the upload size limit, local-only housekeeping.
+// Gherkin: gherkin/sync.feature, gherkin/devices.feature, gherkin/retention.feature
 import { test, expect, API, App } from './fixtures.mjs';
 
 async function paired(browser, key) {

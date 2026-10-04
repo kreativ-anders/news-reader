@@ -94,7 +94,7 @@ server {
         try_files $uri =404;
     }
 
-    location ~ ^/(src|var|vendor|tests|tools)(/|$) {
+    location ~ ^/(src|var|vendor|tests|tools|gherkin)(/|$) {
         return 404;
     }
 

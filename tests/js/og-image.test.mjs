@@ -1,4 +1,5 @@
 // Share images: every site language points og:image and twitter:image at its own 1200×630 PNG in the repo.
+// Gherkin: gherkin/site.feature
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

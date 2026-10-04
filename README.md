@@ -8,6 +8,7 @@ api/index.php   front controller → /api/collect · /api/article · /api/sync
 src/            resolver, parsers, http (SSRF-safe fetch), cache, readable, sync, ratelimit, gc, rules
 var/            cache/ · sync/ · rate/ – written by PHP, never served
 index.html …    project site (+ generated de/ fr/ it/ es/), docs/api/, i18n/
+gherkin/        behaviour spec – descriptive features + executable/ (run by the tests), never served
 ```
 
 | Endpoint | Purpose |
@@ -26,7 +27,7 @@ index.html …    project site (+ generated de/ fr/ it/ es/), docs/api/, i18n/
 ## Requirements
 
 - PHP 8.5+ with `dom`, `libxml`, `mbstring`; `curl` recommended (fallback: stream wrapper with `openssl` + `allow_url_fopen`). Older PHP versions get `500 SERVER_MISCONFIGURED`.
-- nginx (both example configs block `/src`, `/var`, `/tests`, `/tools`, dotfiles, config/doc files and `*.vault`). **Other web servers:** replicate these deny rules – `var/` must never be served.
+- nginx (both example configs block `/src`, `/var`, `/tests`, `/tools`, `/gherkin`, dotfiles, config/doc files and `*.vault`). **Other web servers:** replicate these deny rules – `var/` must never be served.
 - Behind a reverse proxy: configure nginx `real_ip`, otherwise rate limits see the proxy.
 - TLS trust: `NR_CA_BUNDLE` if set; otherwise the Windows certificate store (unless `curl.cainfo` is set) or PHP's defaults.
 
@@ -280,15 +281,17 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 | Suite | Command | Covers |
 |---|---|---|
 | PHP unit + rules | `npm run test:php` | parsers, SSRF checks, URL helpers, sanitizer, article extraction, sync helpers, DoS limits; every platform rule's `examples` |
-| API | `npm run test:api` | `/api/collect` (all strategies, errors, cache, 304), `/api/article`, `/api/sync` protocol, rate limits, fetch slots, SSRF with production config, blocked paths |
-| JS | `npm run test:js` | syntax, `feedId()` stability (sync format), OPML, translations, record validation, pruning, service-worker shell, manifests |
+| API | `npm run test:api` | `/api/collect` (all strategies, errors, cache, 304), `/api/article`, `/api/sync` protocol (executable feature), rate limits, fetch slots, SSRF with production config, blocked paths |
+| JS | `npm run test:js` | syntax, executable features (`feedId()` stability, record validation, pruning, URL guard), OPML, translations, service-worker shell, manifests, Gherkin ↔ code/tests links |
 | E2E | `npm run test:e2e` | Playwright/Chromium desktop + mobile: every view and language, onboarding, item flow, keyboard, swipe, OPML, share target, two-device sync incl. hardening, offline reader, service worker, site pages – any JS exception or `console.error` fails |
+
+**Behaviour spec** – `gherkin/` describes what the app, the API and the site do as Gherkin scenarios; `gherkin/README.md` is the index. Features in `gherkin/executable/` run step by step in `npm run test:js` / `test:api` through a small dependency-free runner (`tests/support/gherkin.mjs`, `*.bdd.test.mjs`). `tests/js/gherkin.test.mjs` fails when a feature names a missing file, a test marker (`// Gherkin: gherkin/<x>.feature`) points nowhere, a feature has no covering test, a module is in no feature's `# Source:`, or the index is out of date.
 
 CI runs on PHP 8.5 (the minimum), treats deprecations in the lint as errors, adds one run without ext-curl and fails if the site pages, `de/ fr/ it/ es/`, the canonicals of `app/` and `docs/api/` or `sitemap.xml` were not regenerated. Local: PHP 8.5+, Node 22+, `npm ci && npx playwright install chromium && npm test`. Known bugs are added as `{ todo: true }` tests (reported, not failing).
 
 ## Contributing
 
-Keep the suites green, add a test for every fix, regenerate the language pages when site texts change, keep `README.md`, `docs/api/`, `llms.txt` and the site texts in line with the code. Conventions for code and texts: [`CLAUDE.md`](CLAUDE.md).
+Keep the suites green, add a test for every fix, keep `gherkin/` in line with the behaviour, regenerate the language pages when site texts change, keep `README.md`, `docs/api/`, `llms.txt` and the site texts in line with the code. Conventions for code and texts: [`CLAUDE.md`](CLAUDE.md).
 
 ## License
 

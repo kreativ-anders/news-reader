@@ -1,4 +1,5 @@
 // Production configuration (strict profile): SSRF protection, rate limits, blocked paths.
+// Gherkin: gherkin/server_protection.feature
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { describe, it } from 'node:test';
@@ -51,7 +52,7 @@ describe('rate limits (production config)', () => {
 });
 
 describe('never served', () => {
-  for (const path of ['/src/config.php', '/src/sync.php', '/var/rate/.salt', '/tools/build-i18n.php', '/.gitignore', '/.git/config']) {
+  for (const path of ['/src/config.php', '/src/sync.php', '/var/rate/.salt', '/tools/build-i18n.php', '/gherkin/sync.feature', '/.gitignore', '/.git/config']) {
     it(path, async () => {
       const r = await s.get(path);
       assert.equal(r.status, 404);

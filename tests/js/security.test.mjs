@@ -1,28 +1,14 @@
-// INFO: regression tests for the security review – URL guard, escaping, Content Security Policy of the app
+// INFO: regression tests for the security review – Content Security Policy of the app, URL guard used everywhere
+// Gherkin: gherkin/privacy.feature
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { esc, httpUrl, hostOf } from '../../app/js/util.js';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 
-test('httpUrl lets only http(s) through', () => {
-  for (const bad of ['javascript:alert(1)', ' JavaScript:alert(1)', 'java\nscript:alert(1)', 'data:text/html,x', 'vbscript:x', 'file:///etc/passwd', '//evil.example', '/relative', '', null, undefined, 42]) {
-    assert.equal(httpUrl(bad), '', String(bad));
-  }
-  assert.equal(httpUrl('https://example.org/a?b=1#c'), 'https://example.org/a?b=1#c');
-  assert.equal(httpUrl('HTTP://Example.org'), 'http://example.org/');
-});
-
-test('esc covers every HTML-significant character', () => {
-  assert.equal(esc(`<a href="x" onclick='y'>&</a>`), '&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;&amp;&lt;/a&gt;');
-  assert.equal(esc(null), '');
-  assert.equal(hostOf('https://www.example.org/x'), 'example.org');
-  assert.equal(hostOf('not a url'), '');
-});
-
+// INFO: esc(), httpUrl() and hostOf() are specified in gherkin/executable/safe_output.feature
 test('app CSP: strict policy, and the inline script hash matches', () => {
   const html = readFileSync(join(ROOT, 'app/index.html'), 'utf8');
   const csp = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)?.[1];

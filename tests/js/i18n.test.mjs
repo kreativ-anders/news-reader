@@ -1,4 +1,5 @@
 // Translations: valid JSON, English complete, no stray keys, placeholders intact, every used key exists.
+// Gherkin: gherkin/settings.feature, gherkin/site.feature
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

@@ -1,4 +1,5 @@
 // Landing site: every language page loads, is consistent for SEO and has no broken local links.
+// Gherkin: gherkin/site.feature, gherkin/privacy.feature
 import { test, expect, API } from './fixtures.mjs';
 
 const LANGS = ['en', 'de', 'fr', 'it', 'es'];

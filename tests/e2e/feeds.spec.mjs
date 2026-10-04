@@ -1,4 +1,5 @@
 // Following, refreshing, unfollowing feeds; OPML; share target / bookmarklet.
+// Gherkin: gherkin/feeds.feature, gherkin/refresh.feature
 import { writeFileSync } from 'node:fs';
 import { test, expect, API, FX } from './fixtures.mjs';
 

@@ -1,4 +1,5 @@
 // Files the browser needs: service worker shell, manifests, icons, versions.
+// Gherkin: gherkin/offline.feature
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

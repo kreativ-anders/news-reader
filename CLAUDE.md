@@ -1,6 +1,6 @@
 # CLAUDE.md – rules for working on News Reader
 
-Local-first RSS reader: PWA in `app/`, PHP front controller `api/index.php` + `src/`, static site with generated language copies. `README.md` is the technical reference; read the relevant section before changing behaviour.
+Local-first RSS reader: PWA in `app/`, PHP front controller `api/index.php` + `src/`, static site with generated language copies. `README.md` is the technical reference, `gherkin/` the behaviour spec (index: `gherkin/README.md`); read the relevant section and feature before changing behaviour.
 
 ## Principles
 
@@ -18,6 +18,13 @@ Local-first RSS reader: PWA in `app/`, PHP front controller `api/index.php` + `s
 - App rendering: `render()` builds the view from state `S`; derived lists go through `memoized()`. Background redraws use `renderSoft()` so input is never lost. Keep work per render linear in the number of entries.
 - New server error codes need a friendly text (`ERRC` in `app/js/app.js` → `errc.*` keys).
 
+## Behaviour spec (Gherkin)
+
+- **Spec moves with the code, in the same change.** Any change to user-visible or API behaviour updates the matching `gherkin/*.feature`; code without its scenario is incomplete. New behaviour is a scenario first – never "later".
+- **Find the slice:** feature → its `# Source:` files → its tests (`grep -rn "Gherkin: gherkin/<x>.feature" tests`). Edit only that set.
+- **Pure rules go executable:** new logic without UI (sync format, validation, limits, URL handling) gets scenarios in `gherkin/executable/*.feature` and thin `s.step(…)` definitions in its `*.bdd.test.mjs` – the spec is the test. Do not add a Gherkin package; the runner is `tests/support/gherkin.mjs`.
+- `tests/js/gherkin.test.mjs` fails when spec, code and tests drift apart and names the broken link – read its message before hunting. Rules for headers and markers: `gherkin/README.md`.
+
 ## UX and accessibility
 
 - Voice: plain and friendly, informal *du/tu* (French *vous*); no jargon in the app or on the site's user sections. Technical terms belong in README, API docs and the Collector/Self-host sections.
@@ -34,15 +41,19 @@ Local-first RSS reader: PWA in `app/`, PHP front controller `api/index.php` + `s
 
 | Change | Also update |
 |---|---|
+| any behaviour (app, API, site) | its scenarios in `gherkin/*.feature`; the covering test carries `// Gherkin: <feature>` |
+| a new module in `app/js/`, `src/` or a moved/renamed file | `# Source:` / `# Implementation:` headers of the features that name it |
+| a new feature file | its row in `gherkin/README.md`, a test with the marker |
 | any app file | `VERSION` in `app/js/app.js` **and** `app/sw.js` |
 | inline `<script>` in `app/index.html` | its sha256 in the `<meta>` CSP |
 | inline `<script>` of a site page | CSP hashes in `nginx.conf.example` and `wharf.conf.example` |
 | cache entry format | `NR_CACHE_SCHEMA` |
 | API behaviour, limits, codes, headers | `README.md`, `docs/api/index.html`, `llms.txt` |
 | what is stored or sent | `privacy.*` in `i18n/*.json` (all languages), README *Storage* |
-| user-facing features | site texts / FAQ (plain words), app help texts |
+| user-facing features | site texts / FAQ (plain words), app help texts, `gherkin/*.feature` |
+| a top-level folder that must not be public | deny rule in all `*.conf.example` and `tests/support/router.php` |
 
 ## Before you finish
 
-- `npm test` (PHP, JS, API, E2E) must be green; add a test for every fix or new behaviour (`tests/php`, `tests/api`, `tests/js`, `tests/e2e`). Tests run offline against `tests/fixtures/`.
+- `npm test` (PHP, JS, API, E2E) must be green; add a test for every fix or new behaviour (`tests/php`, `tests/api`, `tests/js`, `tests/e2e`), linked to its feature with `// Gherkin:`. Tests run offline against `tests/fixtures/`.
 - Several agents may work in parallel: follow `.agents/COORDINATION.md` (LOCK before editing, log when done). Never commit, stash, reset or switch branches unless asked.

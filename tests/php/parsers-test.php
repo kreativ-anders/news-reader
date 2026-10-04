@@ -1,4 +1,5 @@
 <?php
+// Gherkin: gherkin/collector.feature
 /** Feed / HTML / sitemap parsing (src/parsers.php) – pure functions, no network. */
 declare(strict_types=1);
 

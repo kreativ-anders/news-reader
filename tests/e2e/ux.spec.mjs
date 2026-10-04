@@ -1,4 +1,5 @@
 // Onboarding, history, privacy of incoming links, "Not interested" list, clearing Done, keyboard switch, error texts.
+// Gherkin: gherkin/item_flow.feature, gherkin/keyboard_accessibility.feature, gherkin/privacy.feature, gherkin/feeds.feature
 import { test, expect, FX } from './fixtures.mjs';
 
 const item = (page, id) => page.evaluate((key) => new Promise((resolve, reject) => {

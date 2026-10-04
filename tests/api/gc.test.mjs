@@ -1,4 +1,5 @@
 // Time-based cleanup (src/gc.php): retention periods hold without cron (lab profile).
+// Gherkin: gherkin/collector_cache.feature, gherkin/sync_server.feature
 import assert from 'node:assert/strict';
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, utimesSync, writeFileSync } from 'node:fs';

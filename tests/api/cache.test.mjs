@@ -1,4 +1,5 @@
 // Shared URL cache: cached errors, bounded lock waits, stale copies (lab profile).
+// Gherkin: gherkin/collector_cache.feature
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';

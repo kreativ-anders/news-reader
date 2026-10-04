@@ -1,4 +1,5 @@
 // ETag/304 for cached responses, conditional upstream refresh, cache size budget (lab profile).
+// Gherkin: gherkin/collector_cache.feature
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -1,4 +1,5 @@
 <?php
+// Gherkin: gherkin/server_protection.feature
 /** SSRF protection and URL helpers (src/http.php) – no network. */
 declare(strict_types=1);
 

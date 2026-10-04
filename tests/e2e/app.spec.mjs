@@ -1,4 +1,5 @@
 // News boots, every view renders, languages and themes work – without a single JS error.
+// Gherkin: gherkin/settings.feature, gherkin/offline.feature, gherkin/keyboard_accessibility.feature
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect, API } from './fixtures.mjs';

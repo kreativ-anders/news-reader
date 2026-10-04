@@ -1,4 +1,5 @@
 // Rate limits of the Collector and the article endpoint (lab profile with tiny limits).
+// Gherkin: gherkin/server_protection.feature
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { describe, it } from 'node:test';

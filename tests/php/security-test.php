@@ -1,4 +1,5 @@
 <?php
+// Gherkin: gherkin/server_protection.feature
 // INFO: regression tests for the security review (XML/gzip bombs, link schemes, SSRF edge cases, rate-limit grouping)
 declare(strict_types=1);
 

@@ -1,4 +1,5 @@
 // Reading list UI: sources sidebar with folders, feed context, day groups, authors, search palette, shortcuts, layout.
+// Gherkin: gherkin/reading_list.feature, gherkin/sources.feature, gherkin/search.feature, gherkin/keyboard_accessibility.feature
 import { test, expect, FX } from './fixtures.mjs';
 
 test.beforeEach(async ({ app }) => {

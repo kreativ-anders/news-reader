@@ -1,4 +1,5 @@
 <?php
+// Gherkin: gherkin/collector.feature
 // INFO: feed titles with markup and JSON-LD order (formerly known issues in tests/api/collector.test.mjs)
 declare(strict_types=1);
 

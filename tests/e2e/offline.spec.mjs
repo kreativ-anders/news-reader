@@ -1,4 +1,5 @@
 // Offline reading: "Later" items are saved as readable copies and open in the reader without network.
+// Gherkin: gherkin/offline.feature
 import { test, expect, FX } from './fixtures.mjs';
 
 test('later item is saved and opens in the offline reader', async ({ app, page, context }) => {

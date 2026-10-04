@@ -1,4 +1,5 @@
 // End-to-end encrypted sync between two devices (two browser contexts) through the real PHP server.
+// Gherkin: gherkin/sync.feature
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect, API, FX, App } from './fixtures.mjs';

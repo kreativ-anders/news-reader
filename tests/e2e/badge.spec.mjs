@@ -1,4 +1,5 @@
 // Number on the app icon: the setting, the permission hint for Safari/iOS, and the background check in the service worker.
+// Gherkin: gherkin/app_badge.feature
 import { test, expect, FX } from './fixtures.mjs';
 
 // INFO: records what the app asks the icon to show (0 = cleared)

@@ -1,4 +1,5 @@
 <?php
+// Gherkin: gherkin/articles.feature
 /** Offline copies: sanitizer and article extraction (src/readable.php) – no network. */
 declare(strict_types=1);
 

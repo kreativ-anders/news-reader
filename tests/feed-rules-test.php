@@ -1,4 +1,5 @@
 <?php
+// Gherkin: gherkin/collector.feature
 // INFO: offline test for the platform rules (no network): php tests/feed-rules-test.php
 declare(strict_types=1);
 

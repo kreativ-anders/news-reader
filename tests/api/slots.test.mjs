@@ -1,4 +1,5 @@
 // Upstream fetch slots: slow sources must not tie up every PHP worker (lab profile, one slot).
+// Gherkin: gherkin/server_protection.feature
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { servers, assertError } from './helpers.mjs';

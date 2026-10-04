@@ -1,4 +1,5 @@
 // Paired devices: list, rename, remove with key rotation (lock-out), manual key change, self-announced unpair.
+// Gherkin: gherkin/devices.feature
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect, API, FX, App } from './fixtures.mjs';

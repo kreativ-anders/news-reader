@@ -2,7 +2,7 @@
 /**
  * Router for PHP's built-in web server – mirrors nginx.conf.example for the tests:
  *   /api/*                     → api/index.php (front controller)
- *   /src, /var, /tools, /tests → 404 (never served)
+ *   /src, /var, /tools, /tests, /gherkin → 404 (never served)
  *   dotfiles, *.vault, *.php   → 404
  *   everything else            → static file (directories serve index.html)
  *
@@ -19,7 +19,7 @@ if (preg_match('#^/api(/|$)#', $path)) {
     return true;
 }
 
-if (preg_match('#^/(src|var|tools|tests|node_modules)(/|$)#', $path)
+if (preg_match('#^/(src|var|tools|tests|gherkin|node_modules)(/|$)#', $path)
     || preg_match('#/\.#', $path)
     || preg_match('#\.(vault|php|md|example|lock)$#i', $path)) {
     http_response_code(404);

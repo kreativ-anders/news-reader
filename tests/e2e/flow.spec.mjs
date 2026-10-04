@@ -1,4 +1,5 @@
 // The item flow: inbox → read now / later / not interested → done, undo, keyboard, swipe.
+// Gherkin: gherkin/item_flow.feature
 import { test, expect, FX } from './fixtures.mjs';
 
 test.beforeEach(async ({ app }) => {

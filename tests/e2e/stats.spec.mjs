@@ -1,4 +1,5 @@
 // Small numbers from data the device already has: posting rhythm, read rate, quiet feeds, reading time.
+// Gherkin: gherkin/sources.feature
 import { test, expect, FX } from './fixtures.mjs';
 
 test.beforeEach(async ({ app }) => {

@@ -1,4 +1,5 @@
 <?php
+// Gherkin: gherkin/sync_server.feature
 /** Sync helpers (src/sync.php) that do not need a request – the protocol itself is covered by tests/api/sync.test.mjs. */
 declare(strict_types=1);
 
