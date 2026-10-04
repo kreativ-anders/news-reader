@@ -49,8 +49,8 @@ Every module in `app/js/`, `app/sw.js`, `src/` and `api/index.php` must appear i
 | `collector_cache.feature` | Shared cache per source, stale copies, errors, locks, ETag, budget | API `cache`, `revalidate`, `gc` |
 | `articles.feature` | `/api/article` extraction, sanitising, errors | API `article`; PHP `readable` |
 | `sync_server.feature` | Sync data storage, races, CORS, expiry, limits | API `sync`, `gc`; PHP `sync` |
-| `server_protection.feature` | SSRF, bounds, fetch slots, rate limits, blocked paths, API headers | API `security`, `ratelimit`, `slots`; PHP `http`, `security` |
-| `site.feature` | Language pages, thanks redirect, theme, install, events, preview | E2E `site`; JS `og-image`, `i18n` |
+| `server_protection.feature` | SSRF, bounds, fetch slots, rate limits, blocked paths, API headers | API `security`, `ratelimit`, `slots`, `nginx`; PHP `http`, `security` |
+| `site.feature` | Language pages, thanks redirect, 404 page per language, theme, install, events, preview | E2E `site`; API `nginx`, `security`; JS `og-image`, `i18n` |
 | `executable/feed_identity.feature` | `normalizeUrl`, `extractUrl`, pinned `feedId`, `cleanTitle` | **runs** `tests/js/feed-identity.bdd.test.mjs` |
 | `executable/vault_records.feature` | `validRecord` – which records from other devices are taken | **runs** `tests/js/vault-records.bdd.test.mjs` |
 | `executable/pruning.feature` | `prunable` periods, `slim` sync records | **runs** `tests/js/pruning.bdd.test.mjs` |

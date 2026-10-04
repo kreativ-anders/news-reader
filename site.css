@@ -1,4 +1,4 @@
-/* INFO: shared by all site pages (index, privacy, imprint, thanks) – colours and fonts come from app/theme.css */
+/* INFO: shared by all site pages (index, privacy, imprint, thanks, 404) – colours and fonts come from app/theme.css */
 :root{--max:1120px}
 *{box-sizing:border-box;margin:0}
 html{scroll-behavior:smooth;scroll-padding-top:80px}
@@ -73,7 +73,7 @@ footer a{text-decoration:underline;text-decoration-color:var(--line-strong);text
 .support{margin-top:26px;font-size:.92rem;color:var(--muted)}
 .support a{color:var(--brand-ink);text-underline-offset:3px}
 
-/* legal and info pages: privacy, imprint, thanks */
+/* legal and info pages: privacy, imprint, thanks, 404 */
 .doc{max-width:780px;padding-top:64px;padding-bottom:96px}
 .doc h1{font-size:clamp(2.2rem,5vw,3.2rem);margin-bottom:10px}
 .doc h2{font-size:clamp(1.45rem,2.6vw,1.8rem);margin:52px 0 12px;scroll-margin-top:84px}
@@ -97,6 +97,12 @@ footer a{text-decoration:underline;text-decoration-color:var(--line-strong);text
 .doc.thanks .lead{margin-left:auto;margin-right:auto}
 .doc.thanks .cta{justify-content:center;margin-top:30px}
 .doc.thanks .heart{width:56px;height:56px;margin:0 auto 22px;color:var(--brand)}
+.doc.notfound{text-align:center;max-width:640px;padding-top:96px}
+.doc.notfound .code{font:600 clamp(4rem,12vw,6rem)/1 var(--serif);color:var(--brand-ink);margin:0 0 12px}
+.doc.notfound .cta{justify-content:center;margin-top:30px}
+.doc.notfound .links{list-style:none;padding:0;margin:36px 0 0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px}
+.doc.notfound .links li{margin:0}
+.doc.notfound .langs{margin-top:36px;color:var(--muted);font-size:.95rem}
 
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .doc address{margin:12px 0}

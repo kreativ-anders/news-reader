@@ -1,4 +1,4 @@
-# Source: index.html, site.js, track.js, tools/build-i18n.php, i18n/en.json, app/js/i18n.js, thanks.html
+# Source: index.html, site.js, track.js, tools/build-i18n.php, i18n/en.json, app/js/i18n.js, thanks.html, 404.html, nginx.ploi.conf.example
 # Implementation: site.js
 @site
 Feature: The project site explains News in five languages
@@ -19,6 +19,15 @@ Feature: The project site explains News in five languages
     When I arrive at /thanks.html after a payment
     Then a saved language choice wins, else the browser language
     And "?lang=en" keeps English
+
+  Scenario: A missing page explains itself in the visitor's language
+    When I open an address that does not exist or is never served, like /gherkin
+    Then the server answers 404 with the News Reader page instead of a bare server error
+    And it is in the language of the address (/de/…), else of my browser, else English
+    And it links to the start page, the app, the FAQ, the API docs, privacy and imprint in that language
+    And it lists the start pages of the other languages
+    And it is not indexed by search engines
+    But unknown API addresses still answer with JSON "NOT_FOUND"
 
   Scenario: Theme is shared with the app
     When I toggle the theme on the site

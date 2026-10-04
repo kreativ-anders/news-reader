@@ -45,6 +45,22 @@ Feature: Every new post gets one decision
     When I choose "Clear all" below the Inbox list
     Then every post shown moves to Not interested
 
+  Scenario: The end of a filtered Inbox shows which source comes next
+    Given the Inbox is filtered to a folder or a feed
+    And another source still has new posts
+    When I reach the end of the list
+    Then "Up next" names the next source with new posts and its count, in the order of the Sources list
+    And the clear button names the filter, like "Clear Tech"
+
+  Scenario: Clearing a folder leads on to the next one instead of claiming Inbox zero
+    Given the Inbox is filtered to a folder
+    And other folders or feeds still have new posts
+    When I clear the folder
+    Then the Inbox says nothing new is left in that folder and how many posts still wait in the whole Inbox
+    And it offers "Next" with the next source and its count, and "Show whole Inbox"
+    And focus is on "Next", so Enter moves on – the app never switches by itself
+    And after the last source "Inbox zero" shows
+
   Scenario: Mark all done in Later respects the feed filter
     Given Later is filtered to one feed
     When I choose "Mark all done"

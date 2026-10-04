@@ -6,6 +6,13 @@ map "$arg_lang:$http_accept_language" $news_reader_thanks_lang {
   "~^:(?<nr_thanks_lang>de|fr|it|es)" $nr_thanks_lang;
 }
 
+# Error page in the visitor's language: language of the address (/de/…), else the first browser language, else English.
+map "$uri:$http_accept_language" $news_reader_404 {
+  default /404.html;
+  "~^/(?<nr_404_path>de|fr|it|es)/" /$nr_404_path/404.html;
+  "~^[^:]*:(?<nr_404_browser>de|fr|it|es)" /$nr_404_browser/404.html;
+}
+
 # Recompute the inline <script> hashes after changing one:
 #   php -r 'foreach (array_slice($argv, 1) as $f) { preg_match_all("#<script>(.*?)</script>#s", file_get_contents($f), $m); foreach ($m[1] as $b) $h[base64_encode(hash("sha256", $b, true))] = 1; } echo implode("\n", array_keys($h)), "\n";' *.html {de,fr,it,es}/*.html docs/api/index.html
 map $uri $news_reader_csp {
@@ -35,7 +42,7 @@ server {
   add_header Cross-Origin-Opener-Policy "same-origin" always;
   add_header Content-Security-Policy $news_reader_csp always;
 
-  error_page 404 /404.html;
+  error_page 404 $news_reader_404;
 
   gzip on;
   gzip_vary on;

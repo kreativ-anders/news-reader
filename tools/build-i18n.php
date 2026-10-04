@@ -13,8 +13,10 @@ if (PHP_SAPI !== 'cli') {
 
 const LANGS   = ['en', 'de', 'fr', 'it', 'es'];          // INFO: first = x-default, served at "/"
 const LOCALES = ['en' => 'en_US', 'de' => 'de_DE', 'fr' => 'fr_FR', 'it' => 'it_IT', 'es' => 'es_ES'];
-const PAGES   = ['index.html' => true, 'privacy.html' => true, 'imprint.html' => true, 'thanks.html' => false]; // INFO: page => listed in sitemap
+const PAGES   = ['index.html' => true, 'privacy.html' => true, 'imprint.html' => true, 'thanks.html' => false, '404.html' => null]; // INFO: page => listed in sitemap; null = error page (see below)
 const EXTRA_PAGES = ['app/', 'docs/api/'];                // INFO: path relative to --site, file = <path>index.html
+// INFO: nginx serves the error page at any missing address (error_page), so its links are absolute and point into its language;
+//       it has no canonical, no alternates and no sitemap entry (noindex)
 
 $root = dirname(__DIR__);
 $opts = getopt('', ['site::']);
@@ -34,6 +36,7 @@ foreach (PAGES as $page => $listed) {
     $urls = [];
     foreach (LANGS as $i => $lang) $urls[$lang] = $site . ($i === 0 ? '' : "$lang/") . ($page === 'index.html' ? '' : $page);
     if ($listed) $sitemapUrls[] = $urls;
+    $errorPage = $listed === null;
 
     $alternates = '';
     foreach (LANGS as $lang) {
@@ -42,7 +45,7 @@ foreach (PAGES as $page => $listed) {
     $alternates .= "  <link rel=\"alternate\" hreflang=\"x-default\" href=\"{$urls[LANGS[0]]}\">\n";
 
     $updated = translate_attributes(translate_elements($source, $tEn), $tEn);
-    $updated = set_alternates($updated, $alternates, $page);
+    if (!$errorPage) $updated = set_alternates($updated, $alternates, $page);
     $updated = set_canonical($updated, $urls[LANGS[0]]);
     $updated = preg_replace('/(<meta property="og:url" content=")[^"]*(")/', '${1}' . $urls[LANGS[0]] . '${2}', $updated, 1);
     $updated = preg_replace('/(<meta (?:property="og:image"|name="twitter:image") content=")[^"]*(")/', '${1}' . $site . 'og-image.png${2}', $updated);
@@ -57,7 +60,9 @@ foreach (PAGES as $page => $listed) {
         $html = $updated;
         $html = translate_elements($html, $t);
         $html = translate_attributes($html, $t);
-        $html = preg_replace('/<html lang="[^"]*" data-root="[^"]*">/', "<html lang=\"$lang\" data-root=\"../\">", $html, 1);
+        $html = $errorPage
+            ? localize_absolute_urls(preg_replace('/<html lang="[^"]*"/', "<html lang=\"$lang\"", $html, 1), "/$lang/")
+            : preg_replace('/<html lang="[^"]*" data-root="[^"]*">/', "<html lang=\"$lang\" data-root=\"../\">", $html, 1);
         $html = set_canonical($html, $urls[$lang]);
         $html = preg_replace('/(<meta property="og:url" content=")[^"]*(")/', '${1}' . $urls[$lang] . '${2}', $html, 1);
         $html = preg_replace('/(<meta property="og:locale" content=")[^"]*(")/', '${1}' . LOCALES[$lang] . '${2}', $html, 1);
@@ -183,6 +188,15 @@ function translate_attributes(string $html, callable $t): string
         }
         return $tag;
     }, $html);
+}
+
+// INFO: error page – links to the start page (and its sections) and the legal pages lead into the page's language;
+//       links with hreflang (the language list) stay as they are
+function localize_absolute_urls(string $html, string $prefix): string
+{
+    return preg_replace_callback('/<a\s[^>]*>/', fn($m) => str_contains($m[0], 'hreflang=')
+        ? $m[0]
+        : preg_replace('/(\shref=")\/((?:#[\w-]+|privacy\.html|imprint\.html)?")/', '${1}' . $prefix . '${2}', $m[0]), $html);
 }
 
 // INFO: pages in /<lang>/ live one level deeper – relative href/src get a prefix.

@@ -27,7 +27,7 @@ gherkin/        behaviour spec – descriptive features + executable/ (run by th
 ## Requirements
 
 - PHP 8.5+ with `dom`, `libxml`, `mbstring`; `curl` recommended (fallback: stream wrapper with `openssl` + `allow_url_fopen`). Older PHP versions get `500 SERVER_MISCONFIGURED`.
-- nginx (both example configs block `/src`, `/var`, `/tests`, `/tools`, `/gherkin`, dotfiles, config/doc files and `*.vault`). **Other web servers:** replicate these deny rules – `var/` must never be served.
+- nginx (the example configs block `/src`, `/var`, `/tests`, `/tools`, `/gherkin`, dotfiles, config/doc files and `*.vault`, and answer every 404 with `404.html` in the language of the address, else the first browser language – `error_page 404 $news_reader_404`). **Other web servers:** replicate these deny rules and the error page – `var/` must never be served.
 - Behind a reverse proxy: configure nginx `real_ip`, otherwise rate limits see the proxy.
 - TLS trust: `NR_CA_BUNDLE` if set; otherwise the Windows certificate store (unless `curl.cainfo` is set) or PHP's defaults.
 
@@ -61,13 +61,13 @@ Cleanup needs no cron: every request checks the time of the last run (`var/{cach
 
 ## Deploy and update
 
-The generated language pages are committed. Re-run the build only after changing `index.html`, `privacy.html`, `imprint.html`, `thanks.html` or `i18n/*.json`, or to build for your own domain:
+The generated language pages are committed. Re-run the build only after changing `index.html`, `privacy.html`, `imprint.html`, `thanks.html`, `404.html` or `i18n/*.json`, or to build for your own domain:
 
 ```
 php tools/build-i18n.php --site=https://news-reader.app/
 ```
 
-It writes the English text from `i18n/en.json` into the site pages, generates `<lang>/<page>`, refreshes `hreflang`, canonical, FAQ structured data and `sitemap.xml` (index/privacy/imprint per language + `app/` + `docs/api/`; `thanks.html` is `noindex`). Links starting with `./` stay in the page's language, other relative links point to the root. CLI only. Never edit `de/ fr/ it/ es/` by hand.
+It writes the English text from `i18n/en.json` into the site pages, generates `<lang>/<page>`, refreshes `hreflang`, canonical, FAQ structured data and `sitemap.xml` (index/privacy/imprint per language + `app/` + `docs/api/`; `thanks.html` is `noindex`). `404.html` is the error page: absolute links into its language, no canonical, no sitemap entry. Links starting with `./` stay in the page's language, other relative links point to the root. CLI only. Never edit `de/ fr/ it/ es/` by hand.
 
 The share images (1200×630) are committed too: `og-image.png` (English) and `og-image-<lang>.png`, one per language, with the hero headline and `meta.og_image_tagline`. The build points each page's `og:image` / `twitter:image` at its image. Re-render them after changing the headline, the tagline, the domain or `brand/news-icon.svg`, then run the build (uses the Playwright Chromium from the test tooling – `npm ci` and `npx playwright install chromium` first):
 
@@ -102,6 +102,7 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 
 **Sources** (sidebar on desktop, drawer on narrow screens)
 - Folders and feeds of the current view with counts; feeds with nothing in the view fold behind *+ n more*; hidden with a single feed. Filter = one feed or one folder.
+- Filtered Inbox: at the end of the list *Up next* names the next source with new posts (order of the Sources list – folders by name, then feeds without folder; a feed filter walks feeds; wraps around). Clearing a filtered Inbox shows *Nothing new left in …* with the rest of the Inbox, focus on *Next* (Enter moves on, no automatic switch) and *Show whole Inbox*; *Inbox zero* only when nothing is left anywhere.
 - Narrow screens: the bottom bar starts with *Sources* (highlighted while a filter is on). It opens a modal drawer (`<dialog>`, Esc/backdrop close) with *All feeds* plus the same tree and counts for the current view (from Feeds/Settings: the inbox); focus starts on the current filter.
 - Favicon: Collector `source.icon`, else `/favicon.ico` of `source.siteUrl`, else a monogram. Feed titles drop platform wording (*Stories by X on Medium* → *X*). Names are sorted with the app language's collation.
 - Folders: *Feeds* → folder button (free text, existing folders suggested); synced as `g` in the feed record; OPML import reads the enclosing outline, export nests by folder.
@@ -254,7 +255,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - Files: `i18n/<lang>.json` (site), `app/i18n/<lang>.json` (app). Nested keys; `en.json` is complete and the source of all text; other languages fall back to English per key.
 - `{name}` placeholders (numbers are formatted for the language); plurals `key_one` / `key_other` via `Intl.PluralRules` when `n` is passed.
 - Markup: `data-i18n="key"` (innerHTML), `data-i18n-attr="aria-label:key;title:key"`.
-- Site: one static URL per language (`/` = `en`, `x-default`), no redirects – except `thanks.html` (Stripe return URL): saved choice → browser language, in the page script and in nginx (`Accept-Language` map; `?lang=en` = explicit English). *Open News* on a language page carries that language into the app. App (`/app/`, one URL for all languages): saved choice (`localStorage` `nr.lang`) → browser languages → English.
+- Site: one static URL per language (`/` = `en`, `x-default`), no redirects – except `thanks.html` (Stripe return URL): saved choice → browser language, in the page script and in nginx (`Accept-Language` map; `?lang=en` = explicit English). Missing addresses get `404.html` in the language of the address (`/de/…`), else the first browser language (nginx `map $news_reader_404`, mirrored by `tests/support/router.php`); its language switch leads to `<lang>/404.html`. *Open News* on a language page carries that language into the app. App (`/app/`, one URL for all languages): saved choice (`localStorage` `nr.lang`) → browser languages → English.
 - The site header shows all section links (second, scrollable row on narrow screens); animations stop by themselves and can be paused (footer).
 - Site events (`track.js`, one delegated listener; values are fixed and language-neutral, never visitor input): *Open app*, *Self-host*, *GitHub*, *Support*, *API docs* `{position, lang}` · *Install app* `{position, way}` (`prompt` = the browser’s own dialog, else the steps shown: `ios`, `mac`, `android`, `chrome`) · *FAQ* `{question}` · *Collector strategy* `{strategy}` · *Language* `{from, to}` · *Theme* `{mode}` · *Animations* `{state}` · *Not found* (404 page, via `<body data-track-view>`).
 - Voice: app and site user sections are friendly and plain (informal *du/tu*; French *vous*), no jargon; *Collector*/*Self-host* sections and this README are technical.
@@ -283,6 +284,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 | PHP unit + rules | `npm run test:php` | parsers, SSRF checks, URL helpers, sanitizer, article extraction, sync helpers, DoS limits; every platform rule's `examples` |
 | API | `npm run test:api` | `/api/collect` (all strategies, errors, cache, 304), `/api/article`, `/api/sync` protocol (executable feature), rate limits, fetch slots, SSRF with production config, blocked paths |
 | JS | `npm run test:js` | syntax, executable features (`feedId()` stability, record validation, pruning, URL guard), OPML, translations, service-worker shell, manifests, Gherkin ↔ code/tests links |
+| nginx | part of `npm run test:api` | the three example configs under a real nginx (skipped without one): localized 404 page, blocked paths |
 | E2E | `npm run test:e2e` | Playwright/Chromium desktop + mobile: every view and language, onboarding, item flow, keyboard, swipe, OPML, share target, two-device sync incl. hardening, offline reader, service worker, site pages – any JS exception or `console.error` fails |
 
 **Behaviour spec** – `gherkin/` describes what the app, the API and the site do as Gherkin scenarios; `gherkin/README.md` is the index. Features in `gherkin/executable/` run step by step in `npm run test:js` / `test:api` through a small dependency-free runner (`tests/support/gherkin.mjs`, `*.bdd.test.mjs`). `tests/js/gherkin.test.mjs` fails when a feature names a missing file, a test marker (`// Gherkin: gherkin/<x>.feature`) points nowhere, a feature has no covering test, a module is in no feature's `# Source:`, or the index is out of date.

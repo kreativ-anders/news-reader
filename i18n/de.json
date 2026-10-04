@@ -292,5 +292,16 @@
     "lead": "Deine Unterstützung ist angekommen. News Reader bleibt für alle kostenlos und quelloffen – und dein Beitrag fließt direkt in die Weiterentwicklung.",
     "receipt": "Die Quittung schickt dir Stripe per E-Mail. Fragen zur Zahlung oder eine Rechnung benötigt? <a href=\"https://kreativ-anders.de/kontakt\" rel=\"noopener\">Schreib uns einfach</a>.",
     "back": "Zurück zur Startseite"
+  },
+  "notfound": {
+    "meta_title": "Seite nicht gefunden – News Reader",
+    "title": "Stopp die Presse – diese Seite gibt es nicht.",
+    "lead": "Vielleicht ist die Adresse vertippt, oder die Seite ist umgezogen. Diese Seiten sind immer da:",
+    "home": "Zur Startseite",
+    "faq": "Fragen und Antworten",
+    "selfhost": "Eigenen Server betreiben",
+    "api": "API-Dokumentation",
+    "source": "Quellcode auf GitHub",
+    "languages": "Andere Sprachen"
   }
 }

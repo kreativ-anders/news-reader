@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.12';
+const VERSION = '0.8.13';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -749,6 +749,21 @@ function folderFeeds(view, n = perFeed(view)) {
   return [...live, ...gone];
 }
 
+// INFO: the next source with new posts in the order of the Sources list (folders by name, then feeds without
+//       folder; a feed filter walks feeds), wrapping around – clearing one folder leads on to the next
+function nextSource(filter = S.filter) {
+  if (!filter) return null;
+  const n = perFeed('inbox');
+  const feeds = liveFeeds();
+  const inFolder = (g) => feeds.filter((f) => f.data.g === g);
+  const loose = feeds.filter((f) => !f.data.g).map((f) => ({ id: f.id, n: n.get(f.id) || 0 }));
+  const steps = filter.startsWith('g:')
+    ? [...folders().map((g) => ({ id: 'g:' + g, n: inFolder(g).reduce((sum, f) => sum + (n.get(f.id) || 0), 0) })), ...loose]
+    : [...folders().flatMap(inFolder).map((f) => ({ id: f.id, n: n.get(f.id) || 0 })), ...loose];
+  const i = steps.findIndex((s) => s.id === filter);
+  return [...steps.slice(i + 1), ...steps.slice(0, Math.max(i, 0))].find((s) => s.n) || null;
+}
+
 // INFO: sources of a view as a tree: folders first, then feeds without folder. Feeds with nothing in
 //       this view fold away behind "+ n more" per group. Empty below `min` feeds – with one there is nothing to filter.
 function feedNavHtml(view, min = 2) {
@@ -918,14 +933,26 @@ function renderInbox() {
   }
   const all = inboxEntries();
   const list = all.slice(0, S.shown);
+  const next = nextSource();
+  const name = S.filter ? esc(filterName(S.filter)) : '';
+  const clear = list.length < all.length ? t('inbox.clear_shown') : S.filter ? t('inbox.clear_named', { name }) : t('inbox.clear_all');
   viewEl.innerHTML = `<div class="vh">
       <div><h1 tabindex="-1">${t('inbox.title')}${crumb()}</h1><p>${inboxLine(all.length)}</p></div></div>
     ${context()}
-    ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : `<div class="empty">${ICON.view.inbox}<strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${ICON.refresh}<span>${t('inbox.check')}</span></button></div>`}
+    ${list.length ? dayGroups(list.map((e) => ({ ...e, time: entryTime(e) })), 'inbox', (it) => it.time) : next ? sourceDone(name, next) : `<div class="empty">${ICON.view.inbox}<strong>${t('inbox.zero')}</strong>${S.lastRefresh ? t('inbox.last_checked', { when: ago(S.lastRefresh) }) : ''}<br><button class="btn btn-ghost" type="button" data-refresh>${ICON.refresh}<span>${t('inbox.check')}</span></button></div>`}
     ${list.length ? `<div class="more">
-      <button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${t(list.length < all.length ? 'inbox.clear_shown' : 'inbox.clear_all')}</button>
+      <button class="btn btn-ghost" type="button" id="clearInbox" title="${esc(t('inbox.clear_hint'))}">${clear}</button>
       ${all.length > list.length ? `<button class="btn btn-ghost" type="button" data-more>${t('inbox.more', { n: all.length - list.length })}</button>` : ''}
-    </div>` : ''}`;
+    </div>${next && all.length === list.length ? `<p class="next-up">${t('inbox.next_up')} <button class="link" type="button" data-filter="${esc(next.id)}">${sourceLabel(next)}</button></p>` : ''}` : ''}`;
+}
+
+const sourceLabel = (s) => `${s.id.startsWith('g:') ? ICON.folder : feedIcon(s.id)}<span>${esc(filterName(s.id))}</span> <b class="badge">${badge(s.n)}</b>`;
+
+// INFO: a filtered Inbox can be empty while other sources still wait – "Inbox zero" only when nothing is left anywhere
+function sourceDone(name, next) {
+  const rest = inboxEntries('').length;
+  return `<div class="empty">${ICON.view.inbox}<strong>${t('inbox.zero_filtered', { name })}</strong>${t('inbox.rest', { n: rest })}
+    <span class="row"><button class="btn btn-primary next-src" type="button" id="nextSource" data-filter="${esc(next.id)}">${t('inbox.next')} ${sourceLabel(next)}</button><button class="btn btn-ghost" type="button" data-filter="">${t('inbox.show_all')}</button></span></div>`;
 }
 
 // INFO: only saved copies have a word count, so the sum says "offline" – same 220 words a minute as the reader
@@ -1362,7 +1389,9 @@ document.addEventListener('click', async (ev) => {
     }
     case 'clearInbox': {
       const ids = inboxEntries().slice(0, S.shown).map((e) => e.id);
-      return setState(ids, 'dismissed', { animate: false });
+      await setState(ids, 'dismissed', { animate: false });
+      // INFO: Enter right after clearing a folder moves on to the next one – a choice, not an automatic jump
+      return $('#nextSource')?.focus();
     }
     case 'clearDone': {
       const ids = itemsIn('done').filter((it) => inFilter(it.feedId)).map((it) => it.id);

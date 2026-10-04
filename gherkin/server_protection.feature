@@ -41,6 +41,7 @@ Feature: The server is safe to run on the open internet
 
     Scenario: Blocked paths
       Then /src, /var, /tests, /tools, /gherkin, dotfiles, config and doc files and sync data files are never served
+      And they answer with the site's 404 page like any missing address (see site.feature)
 
     Scenario: API answers are inert
       Then API answers carry "Content-Security-Policy: default-src 'none'" and "nosniff" and set no cookies

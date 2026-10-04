@@ -14,6 +14,19 @@ map "$arg_lang:$http_accept_language" $news_reader_thanks_lang {
 }
 
 # -----------------------------------------------------------------------------
+# Error page in the visitor's language
+#
+# Language of the address (/de/…), else the first browser language, else
+# English. Without error_page nginx shows its own bare 404 page.
+# -----------------------------------------------------------------------------
+
+map "$uri:$http_accept_language" $news_reader_404 {
+    default /404.html;
+    "~^/(?<nr_404_path>de|fr|it|es)/" /$nr_404_path/404.html;
+    "~^[^:]*:(?<nr_404_browser>de|fr|it|es)" /$nr_404_browser/404.html;
+}
+
+# -----------------------------------------------------------------------------
 # Content Security Policy
 #
 # Recompute the inline <script> hashes after changing one:
@@ -51,6 +64,10 @@ server {
     charset utf-8;
     client_max_body_size 1m;
     server_tokens off;
+
+    # Unknown and blocked addresses get the site's 404 page (see map above);
+    # the API answers its own JSON errors (no fastcgi_intercept_errors).
+    error_page 404 $news_reader_404;
 
     # -------------------------------------------------------------------------
     # Security headers

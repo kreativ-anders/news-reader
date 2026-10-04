@@ -105,6 +105,35 @@ test('clear inbox sits below the list and dismisses everything shown', async ({ 
   await expect(app.badge('inbox')).toHaveText('');
 });
 
+test('clearing a folder leads on to the next source, Inbox zero only at the end', async ({ app, page }) => {
+  await app.follow(`${FX()}/feeds/atom.xml`);
+  for (const [title, folder] of [['Fixture Atom', 'Tech'], ['Fixture Blog', 'News']]) {
+    await page.locator('.feedrow', { has: page.locator('.t', { hasText: title }) }).locator('[data-feed-act="folder"]').click();
+    await page.locator('#folderIn').fill(folder);
+    await page.locator('#folderIn').press('Enter');
+  }
+  await app.go('inbox');
+  await page.locator('#feedNav [data-filter="g:Tech"]').click();
+  // INFO: the flow wraps around – after Tech comes News, the first folder by name
+  await expect(page.locator('.next-up [data-filter="g:News"]')).toContainText('News');
+  await expect(page.locator('#clearInbox')).toHaveText('Clear Tech');
+
+  await page.locator('#clearInbox').click();
+  await expect(app.cards()).toHaveCount(0);
+  await expect(page.locator('#view .empty strong')).toHaveText('Nothing new left in Tech.');
+  await expect(page.locator('#view .empty')).toContainText('4 posts are still waiting');
+  await expect(page.locator('#nextSource')).toBeFocused();
+  await expect(page.locator('#nextSource .badge')).toHaveText('4');
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#view h1 .crumb')).toContainText('News');
+  await expect(app.cards()).toHaveCount(4);
+  await expect(page.locator('.next-up')).toHaveCount(0);
+  await page.locator('#clearInbox').click();
+  await expect(page.locator('#view .empty strong')).toHaveText('Inbox zero. Nice!');
+  await expect(page.locator('#nextSource')).toHaveCount(0);
+});
+
 test('the undo toast never covers clear inbox at the end of the list @mobile', async ({ app, page }) => {
   // INFO: the toast used to float over the last buttons – clearing had to wait until it was gone
   await page.setViewportSize({ width: 390, height: 520 });

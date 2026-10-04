@@ -224,6 +224,15 @@ html{scroll-padding-top:calc(104px + env(safe-area-inset-top))}
 .empty.onboard>span:not(.row){display:block;max-width:34em;margin:0 auto 10px}
 .empty.onboard .row{justify-content:center;margin-top:8px}
 .empty.onboard .row .btn{margin-top:0}
+.empty>.row{justify-content:center;margin-top:18px}
+.empty>.row .btn{margin-top:0}
+.next-src>span,.next-up button>span{min-width:0;max-width:16em;overflow:hidden;text-overflow:ellipsis}
+.next-src .badge{color:inherit;margin-left:0}
+.next-up{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px;margin-top:10px;font-size:.86rem;color:var(--muted)}
+.next-up button{display:inline-flex;align-items:center;gap:6px;padding:4px 6px;border:0;background:none;color:var(--brand-ink);font:inherit;font-weight:650;cursor:pointer}
+.next-up button>span{text-decoration:underline;text-underline-offset:2px}
+.next-up button>svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.next-up .badge{margin-left:0}
 /* INFO: settings that only matter for one kind of input */
 @media (hover:hover) and (pointer:fine){.only-touch{display:none}}
 @media (hover:none){.only-keys{display:none}}

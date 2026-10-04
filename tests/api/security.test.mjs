@@ -59,4 +59,15 @@ describe('never served', () => {
       assert.ok(!r.text.includes('<?php'));
     });
   }
+
+  it('the 404 answer is the site page in the visitor\'s language; the API keeps its JSON errors', async () => {
+    const lang = async (path, al) => (await s.get(path, al ? { headers: { 'Accept-Language': al } } : {})).text.match(/<html lang="([a-z]+)"/)?.[1];
+    assert.equal(await lang('/gherkin/sync.feature'), 'en');
+    assert.equal(await lang('/gherkin', 'de-DE,de;q=0.9'), 'de');
+    assert.equal(await lang('/fr/no-such-page', 'de'), 'fr');
+    assert.equal(await lang('/no-such-page', 'en-US,es;q=0.8'), 'en');
+    const api = await s.get('/api/no-such-endpoint');
+    assert.equal(api.status, 404);
+    assert.equal(api.json?.error?.code, 'NOT_FOUND');
+  });
 });

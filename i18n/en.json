@@ -292,5 +292,16 @@
     "lead": "Your support has arrived. News Reader stays free and open source for everyone – and your contribution goes straight into its further development.",
     "receipt": "Stripe sends your receipt by e-mail. Questions about your payment, or need an invoice? Just <a href=\"https://kreativ-anders.de/kontakt\" rel=\"noopener\">send us a message</a>.",
     "back": "Back to the start page"
+  },
+  "notfound": {
+    "meta_title": "Page not found – News Reader",
+    "title": "Stop the press – this page doesn't exist.",
+    "lead": "The address may be mistyped, or the page has moved. These places are always there:",
+    "home": "Go to the start page",
+    "faq": "Questions and answers",
+    "selfhost": "Run your own server",
+    "api": "API documentation",
+    "source": "Source code on GitHub",
+    "languages": "Other languages"
   }
 }

@@ -5,7 +5,8 @@ import { setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme, THEMES } 
 
 const root = document.documentElement.dataset.root || './';
 const pageLang = document.documentElement.lang || 'en';
-const page = location.pathname.split('/').pop() || '';
+// INFO: 404.html is served at any address – it names its own page instead of the last path segment
+const page = document.documentElement.dataset.page ?? (location.pathname.split('/').pop() || '');
 const sel = document.getElementById('langSel'), btn = document.getElementById('themeBtn'), motion = document.getElementById('motionBtn');
 let t = (k) => k;
 
