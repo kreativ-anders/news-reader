@@ -1,6 +1,8 @@
 // INFO: stores – records (synced feeds/items), outbox (unsynced changes), entries (per device),
 //       kv (local settings incl. vault key), articles (offline copies, per device)
 
+import { httpUrl } from './util.js';
+
 export const DB_NAME = 'news';
 const DB_VERSION = 2;
 
@@ -149,6 +151,29 @@ export async function applyRemote(records, skip = () => false) {
   return applied;
 }
 
+// INFO: unsorted posts from the sync data (sync.js carried()) become local entries – only for followed feeds, and
+//       never over a decision or an entry this device fetched itself. Returns the records that were added.
+export async function addCarried(records, minTime) {
+  if (!records.length) return [];
+  const db = await open();
+  const tx = db.transaction(['records', 'entries'], 'readwrite');
+  const rs = tx.objectStore('records'), es = tx.objectStore('entries');
+  const [all, known] = await Promise.all([done(rs.getAll()), done(es.getAllKeys())]);
+  const live = new Set(all.filter((r) => r.kind === 'feed' && !r.data?.d).map((r) => r.id));
+  const skip = new Set([...known, ...all.filter((r) => r.kind === 'item').map((r) => r.id)]);
+  const added = [];
+  for (const r of records) {
+    const { f, u, t, i, p } = r.data;
+    const url = httpUrl(u);
+    if (skip.has(r.id) || !live.has(f) || !url || r.updatedAt < minTime) continue;
+    skip.add(r.id);
+    es.put({ id: r.id, feedId: f, url, title: t || url, summary: '', image: httpUrl(i), author: '', publishedAt: typeof p === 'string' ? p : null, firstSeen: r.updatedAt });
+    added.push(r);
+  }
+  await txDone(tx);
+  return added;
+}
+
 export async function putEntries(entries, removeIds = []) {
   return write(['entries'], (tx) => {
     const s = tx.objectStore('entries');
@@ -179,7 +204,7 @@ const optNum = (v) => v == null || num(v);
 const optFlag = (v) => v == null || v === 0 || v === 1 || v === false || v === true;
 const SCHEMA = {
   feed: (d) => str(d.url) && optStr(d.title) && optStr(d.g) && optNum(d.since) && optNum(d.added) && optFlag(d.d),
-  item: (d) => ITEM_STATES.includes(d.s) && optStr(d.t) && optStr(d.u) && optStr(d.i) && optStr(d.f) && (optStr(d.p) || num(d.p)),
+  item: (d) => ITEM_STATES.includes(d.s) && optStr(d.t) && optStr(d.u) && optStr(d.i) && optStr(d.f) && (optStr(d.p) || num(d.p)) && optFlag(d.c),
   device: (d) => optStr(d.name) && optStr(d.platform) && optStr(d.pub) && optNum(d.since) && optNum(d.seen) && optFlag(d.r),
 };
 

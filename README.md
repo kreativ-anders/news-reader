@@ -122,7 +122,7 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 **Search and go to** (`/`, Ctrl/Cmd+K, search button): views, folders and feeds; with a query also every known post – title matches first, then newest. Picking a post jumps to its view and selects it.
 
 **Storage**
-- IndexedDB `news`: `records` (feeds, items, devices – synced), `outbox` (unsynced changes; none without a vault), `entries` (per device), `articles` (offline copies), `kv` (`vaultKey`, `deviceId`, `deviceKey`, `server`, `etag`, `lastSync`, `lastRefresh`, `swipe`, `fetchState`, `pubPins`, `revoked`, `lastMaintain`, `badge`).
+- IndexedDB `news`: `records` (feeds, items, devices – synced), `outbox` (unsynced changes; none without a vault), `entries` (per device), `articles` (offline copies), `kv` (`vaultKey`, `deviceId`, `deviceKey`, `server`, `etag`, `lastSync`, `carryAt`, `carrySent`, `lastRefresh`, `swipe`, `fetchState`, `pubPins`, `revoked`, `lastMaintain`, `badge`).
 - `localStorage`: `nr.lang`, `nr.theme` (shared with the site), `news.density`, `news.acts`, `news.keys`, `news.badge`, `news.feedNav`, `news.folders.closed`, `news.tip.swipe`.
 
 **Retention**
@@ -223,7 +223,7 @@ Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVAL
 - Auth `Authorization: Bearer <token>`; file `var/sync/<2 hex>/<sha256(token)>.vault`; atomic writes under a per-vault stripe lock (global lock only when a vault is created).
 - Blob: `"NRS1"` · flags (bit 0 = gzip) · 12-byte IV · ciphertext (AAD `newsreader-sync-v1`). Plaintext `{v:1, at, records:[{kind,id,data,updatedAt}]}`:
   - `feed` → `{url,title,since,added,d?,g?}` (`d:1` = unfollowed, `g` = folder)
-  - `item` → `{s,t,u,f,p,i?,h?}` (state, title, url, feed, published, image, `h:1` = cleared from *Done*); in the vault dismissed items carry only `{s,f,t,u}`, untouched ones only `{s}`
+  - `item` → `{s,t,u,f,p,i?,h?}` (state, title, url, feed, published, image, `h:1` = cleared from *Done*); in the vault dismissed items carry only `{s,f,t,u}`, untouched ones only `{s}`. Unsorted posts of the last 14 days (newest 1 000, with a date not after the device first saw them) travel as `{s:"new",c:1,f,u,p,t?,i?}` with `updatedAt` = published time – built from `entries` at upload, never stored as a record; the receiver adds them to `entries` (followed feeds, no decision, no own entry). A decision made after seeing the post always wins, also on older versions that merge them as plain records. Because a source only lists its newest posts, a device that checks it later would otherwise miss the older ones
   - `device` → `{name,platform,since,seen,pub,r?}`
 - Forward after a key change: `"NRF1"` · flags · IV · ciphertext under the old key (AAD `newsreader-sync-v1 forward`), plaintext `{v:1, at, envelopes:[{id,epk,iv,ct}]}`.
 - Client: GET → decrypt (decompression capped at 32 MB) → validate every record (shape per kind, `updatedAt` at most 1 day in the future – invalid records are dropped) → merge (last write wins per record) → PUT full snapshot if newer; retry on `412` (max. 5). On `413` the oldest finished items are pruned and the upload is retried once.

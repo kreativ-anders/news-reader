@@ -35,6 +35,12 @@ Feature: Paired devices share feeds and decisions, end-to-end encrypted
     When the app syncs
     Then a message says so and the app keeps working
 
+  Scenario: Posts I have not sorted yet reach my other devices
+    Given device A collected posts over several days that its sources no longer list
+    When device B syncs
+    Then B's Inbox shows the same unsorted posts of the last 14 days
+    And a decision made on any device wins over them (see executable/pruning.feature)
+
   Scenario: The newest change of a record wins
     Given two devices changed the same post
     When they sync

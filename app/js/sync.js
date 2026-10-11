@@ -21,6 +21,10 @@ const MAX_PLAIN_BYTES = 32 << 20;
 const TOO_LARGE_TARGET = 800_000;
 const DEVICE_TOUCH_MS = 3600e3;
 const DEVICE_NAME_MAX = 60;
+// INFO: unsorted posts of this age travel with the sync data, so a device that missed them (the source only lists
+//       its newest posts) still shows them in the Inbox; = the Inbox window of a new feed (INITIAL_WINDOW_MS)
+const CARRY_MS = 14 * 864e5;
+const CARRY_MAX = 1000;
 
 export class Sync extends EventTarget {
   constructor() {
@@ -148,7 +152,8 @@ export class Sync extends EventTarget {
       const blob = await decrypt(keys.aes, new Uint8Array(await res.arrayBuffer()));
       if (blob.forward) return this.follow(blob.data);
       remote = Array.isArray(blob.data?.records) ? blob.data.records : [];
-      changed.push(...await db.applyRemote(remote, (r) => prunable(r, now)));
+      changed.push(...await db.applyRemote(remote, (r) => isCarried(r) || prunable(r, now)));
+      changed.push(...await db.addCarried(remote.filter((r) => isCarried(r) && db.validRecord(r, now)), now - CARRY_MS));
     } else if (res.status !== 404) {
       throw await httpError(res);
     }
@@ -157,28 +162,35 @@ export class Sync extends EventTarget {
     await this.touchDevice(now);
     const sent = await db.getAll('outbox');
 
+    // INFO: new posts mark 'carryAt' (no outbox entry each) – acknowledged like the outbox, only if unchanged
+    const carryAt = await db.kvGet('carryAt', 0);
+    const carrySent = carryAt <= await db.kvGet('carrySent', 0);
     let dirty;
     let records = null;
+    let carry = null;
     if (res.status === 304) {
-      dirty = sent.length > 0;
+      dirty = sent.length > 0 || !carrySent;
     } else {
       const inVault = new Map(remote.filter((r) => db.validRecord(r, now)).map((r) => [`${r.kind}\u0000${r.id}`, r.updatedAt]));
       records = await db.prune((r) => prunable(r, now));
-      dirty = records.some((r) => !(inVault.get(`${r.kind}\u0000${r.id}`) >= r.updatedAt));
+      carry = carried(await db.getAll('entries'), records, now);
+      dirty = [...records, ...carry].some((r) => !(inVault.get(`${r.kind}\u0000${r.id}`) >= r.updatedAt));
     }
 
     if (!dirty) {
       if (records) await this.pinKeys(records);
       await db.kvSet('etag', remoteEtag);
       await db.outboxAck(sent);
+      await db.kvSet('carrySent', carryAt);
       return true;
     }
 
     records ??= await db.prune((r) => prunable(r, now));
+    carry ??= carried(await db.getAll('entries'), records, now);
     await this.pinKeys(records);
     const conditional = remoteEtag ? { 'If-Match': remoteEtag } : { 'If-None-Match': '*' };
-    let put = await putSnapshot(endpoint, keys, records, now, conditional);
-    // INFO: vault over the server limit – drop the oldest finished items and try once more
+    let put = await putSnapshot(endpoint, keys, [...records, ...carry], now, conditional);
+    // INFO: vault over the server limit – drop the oldest finished items and the unsorted posts, try once more
     if (put.status === 413) {
       records = await shrink(records, put.size);
       put = await putSnapshot(endpoint, keys, records, now, conditional);
@@ -191,6 +203,7 @@ export class Sync extends EventTarget {
     if (!put.ok) throw await httpError(put);
     await db.kvSet('etag', put.headers.get('ETag') || (await put.json()).etag);
     await db.outboxAck(sent);
+    await db.kvSet('carrySent', carryAt);
     return true;
   }
 
@@ -443,8 +456,9 @@ export function prunable(r, now) {
 }
 
 // INFO: what the vault carries – dismissed items only what the feed stats and the search need, "new" only the state
+//       (unsorted posts from carried() keep what the Inbox shows)
 export function slim(r) {
-  if (r.kind !== 'item') return r;
+  if (r.kind !== 'item' || isCarried(r)) return r;
   const { s, f, t, u } = r.data;
   if (s === 'new') return { ...r, data: { s } };
   if (s !== 'dismissed') return r;
@@ -453,6 +467,30 @@ export function slim(r) {
   if (t) data.t = t;
   if (u) data.u = u;
   return { ...r, data };
+}
+
+// INFO: an unsorted post in the sync data ("new" + c:1) – built from the local entries at upload, never a local
+//       record, so it cannot override a decision. updatedAt = published time, which a decision made after seeing the
+//       post always beats – also on older devices that merge it as a plain record (last write wins).
+export const isCarried = (r) => r?.kind === 'item' && r.data?.s === 'new' && r.data.c === 1;
+
+// INFO: entries of followed feeds without a decision, with a believable date inside CARRY_MS – newest CARRY_MAX
+export function carried(entries, records, now) {
+  const decided = new Set(), live = new Set();
+  for (const r of records) {
+    if (r.kind === 'item') decided.add(r.id);
+    else if (r.kind === 'feed' && !r.data.d) live.add(r.id);
+  }
+  const out = [];
+  for (const e of entries) {
+    const ts = Date.parse(e.publishedAt || '');
+    if (!live.has(e.feedId) || decided.has(e.id) || !e.url || !(ts <= now && ts <= (e.firstSeen || now)) || now - ts >= CARRY_MS) continue;
+    const data = { s: 'new', c: 1, f: e.feedId, u: e.url, p: e.publishedAt };
+    if (e.title && e.title !== e.url) data.t = e.title;
+    if (e.image) data.i = e.image;
+    out.push({ kind: 'item', id: e.id, updatedAt: ts, data });
+  }
+  return out.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, CARRY_MAX);
 }
 
 async function putSnapshot(endpoint, keys, records, now, conditional) {

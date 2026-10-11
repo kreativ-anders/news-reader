@@ -139,3 +139,39 @@ test('unreachable sync server is reported, not thrown', async ({ app, page }) =>
   await page.locator('#createVault').click();
   await expect(page.locator('#syncPill')).toHaveAttribute('data-state', /unreachable|error/, { timeout: 25_000 });
 });
+
+// INFO: device B checks the source later – it lists nothing any more, the posts come from A through the sync data
+test('unsorted posts reach a paired device that the source no longer lists them to', async ({ app, page, browser }) => {
+  await app.open();
+  await app.follow(`${FX()}/feeds/atom.xml`);
+  await app.go('inbox');
+  await expect(app.cards()).toHaveCount(3);
+  await app.go('settings');
+  await page.locator('#createVault').click();
+  await expect(page.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
+  const key = await app.kv('vaultKey');
+
+  const ctxB = await browser.newContext();
+  await ctxB.route('**/api/collect?**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ source: { title: 'Fixture Atom', strategy: 'feed' }, entries: [], meta: {} }),
+  }));
+  const pageB = await ctxB.newPage();
+  const b = new App(pageB);
+  await pageB.goto(`${API()}/app/#pair=${key}`);
+  await pageB.locator('#dlgOk').click();
+  await expect(pageB.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
+  await b.go('inbox');
+  await expect(b.cards()).toHaveCount(3, { timeout: 15_000 });
+  await expect(pageB.locator('#refreshBtn')).not.toHaveAttribute('aria-busy', 'true', { timeout: 15_000 });
+
+  // a decision on B wins over the carried post on A
+  await b.card('Atom entry three').locator('[data-act="dismissed"]').click();
+  await expect(b.cards()).toHaveCount(2);
+  await pageB.locator('#syncPill').click();
+  await expect.poll(() => b.pending(), { timeout: 15_000 }).toBe(0);
+  await page.locator('#syncPill').click();
+  await app.go('inbox');
+  await expect(app.cards()).toHaveCount(2, { timeout: 15_000 });
+  await ctxB.close();
+});

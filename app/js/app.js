@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.13';
+const VERSION = '0.8.14';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -335,6 +335,8 @@ async function refreshFeed(feed, force = false) {
   await db.putEntries(fresh, remove);
   fresh.forEach((e) => S.entries.set(e.id, e));
   remove.forEach((id) => S.entries.delete(id));
+  // INFO: new posts go into the next upload, so paired devices show them too (sync.js carried())
+  if (fresh.some((e) => !known.has(e.id))) db.kvSet('carryAt', now).then(() => sync.schedule(), () => {});
   S.fetch.set(feed.id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, ...staleMeta(res.meta), ...sourceMeta(res) });
   return res;
 }

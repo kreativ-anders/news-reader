@@ -36,6 +36,10 @@ Feature: Records from the sync data are checked before they are used
       When an "item" record arrives with data {"s":"new"}
       Then the record is accepted
 
+    Scenario: An unsorted post another device carries along
+      When an "item" record arrives with data {"s":"new","c":1,"f":"f1","t":"T","u":"https://x","p":"2026-01-01T00:00:00Z"}
+      Then the record is accepted
+
     Scenario: A device
       When a "device" record arrives with data {"name":"Phone","platform":"iPhone","since":1,"seen":2,"pub":"abc","r":1}
       Then the record is accepted
@@ -58,6 +62,7 @@ Feature: Records from the sync data are checked before they are used
         | item   | {"s":"done","t":5}      |
         | item   | {"s":"done","u":{}}     |
         | item   | {"s":"done","f":["f"]}  |
+        | item   | {"s":"new","c":"yes"}   |
         | feed   | {}                      |
         | feed   | {"url":5}               |
         | feed   | {"url":"u","since":"x"} |
