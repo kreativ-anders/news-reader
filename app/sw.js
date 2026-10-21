@@ -1,11 +1,11 @@
 // INFO: caches the app shell only – the API always goes to the network
-const VERSION = 'news-0.8.14';
+const VERSION = 'news-0.8.15';
 const SHELL = [
   './', 'index.html', 'app.css', 'theme.css', 'manifest.webmanifest',
   'fonts/newsreader.woff2', 'fonts/source-sans-3.woff2',
   'js/app.js', 'js/db.js', 'js/sync.js', 'js/feeds.js', 'js/i18n.js', 'js/offline.js', 'js/util.js',
   'i18n/en.json', 'i18n/de.json', 'i18n/fr.json', 'i18n/it.json', 'i18n/es.json',
-  'icons/news.svg', 'icons/favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon-v3.png', 'icons/favicon-32.png', 'icons/favicon-32-dark.png',
+  'icons/news.svg', 'icons/favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon-v4.png', 'icons/favicon-32.png', 'icons/favicon-32-dark.png',
 ];
 
 self.addEventListener('install', (e) => {

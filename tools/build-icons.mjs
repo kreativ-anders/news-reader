@@ -1,4 +1,5 @@
-// INFO: renders the app and site icons from brand/news-icon.svg (rounded) and brand/news-icon-full.svg (full bleed):
+// INFO: renders the app and site icons from brand/news-icon.svg (rounded) and brand/news-icon-full.svg (full bleed),
+//       and the PNG favicons from brand/news-mark[-dark].svg:
 //       node tools/build-icons.mjs
 //       iOS caches the touch icon by URL – after a design change bump TOUCH (and app/index.html, app/sw.js, the asset test).
 //       Uses the Playwright Chromium from the test tooling – no extra dependency.
@@ -8,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const TOUCH = 'apple-touch-icon-v3.png';
+const TOUCH = 'apple-touch-icon-v4.png';
 const svg = (f) => readFileSync(join(ROOT, 'brand', f), 'utf8').replace(/<title>.*?<\/title>/, '');
 
 // INFO: full bleed without alpha – iOS fills transparency with black and a mask cuts the corners itself
@@ -17,6 +18,8 @@ const ICONS = [
   ['news-icon-full.svg', 512, true, ['app/icons/maskable-512.png']],
   ['news-icon.svg', 192, false, ['icon-192.png', 'app/icons/icon-192.png']],
   ['news-icon.svg', 512, false, ['icon-512.png', 'app/icons/icon-512.png']],
+  ['news-mark.svg', 32, false, ['favicon-32.png', 'app/icons/favicon-32.png']],
+  ['news-mark-dark.svg', 32, false, ['favicon-32-dark.png', 'app/icons/favicon-32-dark.png']],
 ];
 
 const browser = await chromium.launch();

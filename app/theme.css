@@ -11,7 +11,7 @@
 
 :root{
   --brand:#FFA500; --brand-2:#FFB52E; --on-brand:#000000;
-  --ink:#000000; --paper:#FFFFFF; --graphite:#292929;
+  --ink:#000000; --paper:#FFFFFF; --graphite:#292929; --logo-2:#858585;
 
   --bg:#292929; --bg2:#222222; --card:#323232; --card2:#3A3A3A; --line:#454545; --line-strong:#858585;
   --fg:#FFFFFF; --muted:#BDBDBD; --faint:#A3A3A3; --logo:#FFFFFF;
@@ -48,4 +48,4 @@
 body{font-family:var(--font)}
 h1,h2,h3,h4,h5,h6,summary,.nr-title{font-family:var(--serif);font-weight:600;letter-spacing:-.01em}
 
-.nr-mark .i{stroke:var(--logo)}.nr-mark .f{fill:var(--logo)}.nr-mark .r{stroke:var(--brand)}.nr-mark .d{fill:var(--brand)}
+.nr-mark .f{fill:var(--logo)}.nr-mark .g{fill:var(--logo-2)}.nr-mark .d{fill:var(--brand)}
