@@ -238,6 +238,23 @@ test('new posts show up while slower feeds are still loading', async ({ app, pag
   await expect(page.locator('#refreshBtn')).not.toHaveAttribute('aria-busy', 'true');
 });
 
+test('a refresh keeps the cards that did not change instead of drawing them again', async ({ app, page }) => {
+  await app.open();
+  await app.follow(`${FX()}/feeds/rss.xml`);
+  const real = await (await fetch(`${API()}/api/collect?url=${encodeURIComponent(FX() + '/feeds/rss.xml')}`)).json();
+  const post = { ...real.entries[0], id: 'e'.repeat(64), image: null, title: 'Fresh post', url: `${FX()}/fresh`, publishedAt: new Date().toISOString().slice(0, 19) + 'Z' };
+  await page.route('**/api/collect?**', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ...real, entries: [post, ...real.entries] }) }));
+  await app.go('inbox');
+  const before = await app.cards().count();
+  await page.evaluate(() => document.querySelectorAll('#view .card').forEach((c) => { c.kept = true; }));
+  await page.keyboard.press('r');
+  await expect(app.card('Fresh post')).toBeVisible();
+  await expect(page.locator('#refreshBtn')).not.toHaveAttribute('aria-busy', 'true');
+  const kept = await page.evaluate(() => [...document.querySelectorAll('#view .card')].map((c) => !!c.kept));
+  expect(kept.filter(Boolean)).toHaveLength(before);
+  expect(kept[0]).toBe(false);
+});
+
 test('OPML export and import', async ({ app, page, browser }) => {
   await app.open();
   await app.follow(`${FX()}/feeds/rdf.xml`);

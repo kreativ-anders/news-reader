@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, openWait, pool, parseOpml,
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.17';
+const VERSION = '0.8.18';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -325,6 +325,10 @@ function openArticle(id) {
 
 const urlOf = (id) => S.entries.get(id)?.url || S.items.get(id)?.data?.u;
 
+const SHOWN = ['url', 'title', 'summary', 'image', 'author', 'publishedAt'];
+const sameEntry = (a, b) => !!a && SHOWN.every((k) => a[k] === b[k]);
+
+// INFO: resolves to whether anything visible changed – an unchanged feed needs no redraw
 async function refreshFeed(feed, force = false) {
   const res = await fetchFeed(feed.data.url, { refresh: force, t });
   const now = Date.now();
@@ -341,7 +345,7 @@ async function refreshFeed(feed, force = false) {
   // INFO: new posts go into the next upload, so paired devices show them too (sync.js carried())
   if (fresh.some((e) => !known.has(e.id))) db.kvSet('carryAt', now).then(() => sync.schedule(), () => {});
   S.fetch.set(feed.id, { at: now, ok: true, strategy: res.source?.strategy, count: fresh.length, ...staleMeta(res.meta), ...sourceMeta(res) });
-  return res;
+  return remove.length > 0 || fresh.some((e) => !sameEntry(known.get(e.id), e));
 }
 
 // INFO: a stale copy either follows a failed refresh (lastError) or means the source was not asked this time
@@ -435,7 +439,7 @@ async function refreshAll(force = false, auto = false) {
   // INFO: new posts show up while the other feeds are still loading – one redraw per PAINT_MS at most
   let paintTimer = 0;
   const paint = () => { paintTimer ||= setTimeout(() => { paintTimer = 0; renderSoft(); }, PAINT_MS); };
-  const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force).then(paint).finally(() => progress(++done, feeds.length)));
+  const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force).then((changed) => changed && paint()).finally(() => progress(++done, feeds.length)));
   clearTimeout(paintTimer);
   let failed = 0;
   results.forEach((r, i) => {
@@ -727,15 +731,27 @@ function renderNow() {
   const active = document.activeElement;
   const refocus = !!active?.closest?.('#view .card');
   const again = focusSelector(active);
+  const old = new Map(cardsInView().map((c) => [c.dataset.id, c]));
   renderFeedNav();
   const views = { inbox: renderInbox, later: renderItems, done: renderItems, dismissed: renderItems, feeds: renderFeeds, settings: renderSettings };
   views[S.view]();
+  keepCards(old);
   markClamped();
   window.scrollTo(0, scroll);
   const i = applyKb();
   // INFO: the focused card (or its button) was replaced – without this, focus would fall back to <body>
   if (refocus) (cardsInView()[i] || viewHeading() || viewEl).focus({ preventScroll: true });
   else if (again && !document.activeElement?.closest?.('#view, #srcSec')) ($(again) || viewHeading() || viewEl).focus({ preventScroll: true });
+}
+
+// INFO: a redraw puts back cards whose markup did not change – their images stay painted instead of loading again
+const cardHtml = new WeakMap();
+function keepCards(old) {
+  for (const c of cardsInView()) {
+    const html = c.outerHTML, prev = old.get(c.dataset.id);
+    if (prev && cardHtml.get(prev) === html) c.replaceWith(prev);
+    else cardHtml.set(c, html);
+  }
 }
 
 const FOLDER_VIEWS = ['inbox', 'later', 'done', 'dismissed'];

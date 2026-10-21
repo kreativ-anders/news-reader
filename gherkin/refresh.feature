@@ -23,6 +23,8 @@ Feature: New posts are fetched without nagging the sources
     When feeds are refreshed
     Then at most 4 feeds are fetched at once
     And new posts appear in the Inbox while other feeds are still loading, at most one redraw every 0.6 seconds
+    And a feed without new or changed posts causes no redraw
+    And posts already shown stay in place with their pictures instead of being drawn again
 
   Scenario: Refresh forces every feed
     When I choose Refresh or press "r"
