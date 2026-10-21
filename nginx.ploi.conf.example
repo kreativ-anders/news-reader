@@ -47,7 +47,7 @@ server {
     listen 80;
     listen [::]:80;
 
-    root /home/ploi/news-reader.app/;
+    root /home/kreativ-anders/news-reader.app/;
     server_name news-reader.app;
 
     # Ploi manages certificates/HTTPS here.
@@ -151,7 +151,8 @@ server {
 
         try_files $uri =404;
 
-        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
+        # The PHP-FPM pool of the site's system user in Ploi (kreativ-anders).
+        fastcgi_pass unix:/run/php/php8.5-fpm-kreativ-anders.sock;
 
         include fastcgi_params;
 

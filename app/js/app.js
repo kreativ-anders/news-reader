@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, openWait, pool, parseOpml,
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.18';
+const VERSION = '0.8.19';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -196,8 +196,10 @@ const ERRC = {
   UPSTREAM_TOO_LARGE: 'too_large', TOO_MANY_REDIRECTS: 'redirects', INVALID_URL: 'invalid', UNSUPPORTED_URL: 'invalid', FORBIDDEN_HOST: 'invalid',
   RATE_LIMITED: 'busy', BUSY: 'busy', SYNC_DISABLED: 'sync_disabled', FORBIDDEN_NETWORK: 'network', SERVER_FULL: 'full',
   PAYLOAD_TOO_LARGE: 'sync_too_big', SERVER_MISCONFIGURED: 'misconfigured', NOT_AN_ARTICLE: 'no_article', NO_CONTENT: 'no_article',
+  // INFO: no JSON code – the web server answers itself because PHP is down (update, restart), not the source saying no
+  HTTP_502: 'down', HTTP_503: 'down', HTTP_504: 'down',
 };
-// INFO: errors without a code (or TIMEOUT / UNREACHABLE / HTTP_nnn from feeds.js) already carry translated text
+// INFO: errors without a code (or TIMEOUT / UNREACHABLE / other HTTP_nnn from feeds.js) already carry translated text
 //       401/403 from the source means it turns the collector away (often a bot wall), so "try later" would not help
 function errText(code, message = '', status = 0) {
   if (code === 'UPSTREAM_HTTP_ERROR' && (status === 401 || status === 403)) return t('errc.blocked');

@@ -411,6 +411,7 @@
     "redirects": "The site keeps redirecting – try a more specific address.",
     "invalid": "News can’t open this kind of address.",
     "busy": "Lots going on – try again in a minute.",
+    "down": "The News server is briefly unavailable. Your posts stay here – try again in a few minutes.",
     "sync_disabled": "Sync is turned off on this server.",
     "network": "Sync isn’t available from your network.",
     "full": "This server isn’t taking new sync setups right now.",

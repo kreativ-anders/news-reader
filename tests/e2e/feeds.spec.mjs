@@ -51,6 +51,17 @@ test('a source that turns the collector away says so, not "try again later"', as
   await expect((await app.follow(`${FX()}/server-error`)).locator('.err')).toHaveText(/isn’t answering/);
 });
 
+test('a server that is briefly down says so, not "the server said no"', async ({ app, page }) => {
+  await app.open();
+  for (const status of [502, 503, 504]) {
+    await page.route('**/api/collect?**', (route) => route.fulfill({ status, contentType: 'text/html', body: '<html><body>Bad Gateway</body></html>' }));
+    const err = (await app.follow(`${FX()}/feeds/rdf.xml`)).locator('.err');
+    await expect(err).toHaveText(/briefly unavailable/);
+    await expect(err).toHaveAttribute('title', new RegExp(String(status)));
+    await page.unroute('**/api/collect?**');
+  }
+});
+
 test('refresh, rename and unfollow a feed', async ({ app, page }) => {
   await app.open();
   await app.follow(`${FX()}/feeds/rdf.xml`);

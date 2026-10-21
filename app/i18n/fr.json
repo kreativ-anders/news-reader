@@ -411,6 +411,7 @@
     "redirects": "Le site redirige sans fin – essayez une adresse plus précise.",
     "invalid": "News ne peut pas ouvrir ce type d’adresse.",
     "busy": "Beaucoup d’activité – réessayez dans une minute.",
+    "down": "Le serveur de News est momentanément indisponible. Vos articles restent là – réessayez dans quelques minutes.",
     "sync_disabled": "La synchro est désactivée sur ce serveur.",
     "network": "La synchro n’est pas disponible depuis votre réseau.",
     "full": "Ce serveur n’accepte pas de nouvelle synchro pour le moment.",

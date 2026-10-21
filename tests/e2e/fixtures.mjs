@@ -8,7 +8,7 @@ export const API = () => process.env.NR_E2E_API;
 export const FX = () => process.env.NR_E2E_FIXTURES;
 
 const ALLOWED_CONSOLE = [
-  /Failed to load resource: the server responded with a status of (4\d\d|503)/, // Collector / article errors are part of the tests
+  /Failed to load resource: the server responded with a status of (4\d\d|50[234])/, // Collector / article errors, PHP down
   /Failed to load resource: net::ERR_(INTERNET_DISCONNECTED|CONNECTION_REFUSED)/, // offline / unreachable-server tests
   /images\.example\.org/,                                                       // fixture thumbnails that do not exist
 ];

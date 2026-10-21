@@ -21,6 +21,12 @@ Feature: Following feeds from any web address
     Then a friendly text in the app language says why
     And the raw server message is in the tooltip
 
+  Scenario: A server that is briefly down is not mistaken for the source saying no
+    Given the web server answers 502, 503 or 504 without an error code, because PHP is down
+    When a source cannot be followed or refreshed
+    Then the text says the News server is briefly unavailable and my posts stay
+    And the status code is in the tooltip
+
   Scenario: A source that turns the server away is fetched from the device
     Given a source answers the server with 401 or 403
     Then the app fetches the addresses the server suggests from my browser, without cookies or referrer

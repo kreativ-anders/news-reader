@@ -411,6 +411,7 @@
     "redirects": "Il sito continua a reindirizzare – prova un indirizzo più preciso.",
     "invalid": "News non può aprire questo tipo di indirizzo.",
     "busy": "C’è molto traffico – riprova tra un minuto.",
+    "down": "Il server di News non è disponibile per qualche momento. I tuoi post restano qui – riprova tra qualche minuto.",
     "sync_disabled": "La sync è disattivata su questo server.",
     "network": "La sync non è disponibile dalla tua rete.",
     "full": "Questo server al momento non accetta nuove sync.",

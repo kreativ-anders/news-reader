@@ -411,6 +411,7 @@
     "redirects": "Die Website leitet endlos weiter – probier eine genauere Adresse.",
     "invalid": "Diese Art von Adresse kann News nicht öffnen.",
     "busy": "Gerade ist viel los – versuch es in einer Minute noch einmal.",
+    "down": "Der News-Server ist kurz nicht erreichbar. Deine Beiträge bleiben da – versuch es in ein paar Minuten noch einmal.",
     "sync_disabled": "Auf diesem Server ist der Sync ausgeschaltet.",
     "network": "Aus deinem Netzwerk ist der Sync nicht verfügbar.",
     "full": "Dieser Server nimmt gerade keine neuen Sync-Einrichtungen an.",

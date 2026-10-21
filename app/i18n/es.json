@@ -411,6 +411,7 @@
     "redirects": "La web redirige sin parar – prueba con una dirección más concreta.",
     "invalid": "News no puede abrir este tipo de dirección.",
     "busy": "Hay mucho movimiento – inténtalo de nuevo en un minuto.",
+    "down": "El servidor de News no está disponible por un momento. Tus publicaciones siguen aquí – inténtalo de nuevo en unos minutos.",
     "sync_disabled": "La sincronización está desactivada en este servidor.",
     "network": "La sincronización no está disponible desde tu red.",
     "full": "Este servidor no admite nuevas sincronizaciones por ahora.",
