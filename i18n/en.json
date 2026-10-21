@@ -172,7 +172,7 @@
     "does_news_use_ai": "Does News use AI?",
     "does_news_use_ai_text": "No. There is no AI and no model learning from your reading habits – not on your device and not on the server. News follows a few simple rules: new posts land in your inbox newest first, and only your own decision moves them on. What you see depends on your sources, not on a profile of you.",
     "how_does_sync_work": "How does sync work without an account?",
-    "the_first_device_creates": "Your first device creates a random secret key. Other devices join by pasting this sync key under Settings → Sync. From that key, each device derives an access token and an encryption key. The server only ever gets the token and one encrypted file – the key itself never leaves your devices.",
+    "the_first_device_creates": "Your first device creates a random secret key. Other devices join by pasting this sync key under Settings → Sync. From that key, each device derives an access token and an encryption key. The server only ever gets the token and one encrypted file – the key itself never leaves your devices. Under Settings → Paired devices you see every device and can remove one you no longer use; a device not active for over a year is pointed out with a red dot.",
     "can_the_server_operator": "Can the server operator read my feeds or reading list?",
     "no_feeds_reading_list": "No. Feeds, reading list and progress are encrypted on your device (AES-256-GCM) before they are uploaded. The server stores one sealed file for your devices, named after a hash of the access token – no database, nothing readable to leak. Like any website, the web server does see your IP address when you connect.",
     "what_if_i_lose": "What if I lose all my devices?",

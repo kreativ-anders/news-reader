@@ -328,6 +328,7 @@
     "last": "Dernière synchro {when}",
     "click_setup": "Cliquer pour activer la synchro",
     "click_sync": "Cliquer pour synchroniser",
+    "click_devices": "Cliquer pour voir vos appareils",
     "https": "La synchro nécessite une connexion sécurisée (HTTPS) pour le chiffrement.",
     "conflict": "Beaucoup de modifications à la fois – nouvel essai dans un instant.",
     "decrypt": "Impossible de déverrouiller vos données de synchro – mauvaise clé ou données endommagées.",
@@ -361,7 +362,12 @@
     "offline": "Une connexion Internet est nécessaire.",
     "stale_link_title": "Cette clé de synchro n’est plus valide",
     "stale_link_body": "La clé a été changée sur un autre appareil. Copiez-y la nouvelle clé de synchro.",
-    "key_changed": "Clé modifiée – cet appareil ne recevra pas la prochaine clé. Retirez-le et associez-le à nouveau."
+    "key_changed": "Clé modifiée – cet appareil ne recevra pas la prochaine clé. Retirez-le et associez-le à nouveau.",
+    "idle": "inactif depuis plus d’un an",
+    "idle_pill_one": "{n} appareil inactif depuis plus d’un an",
+    "idle_pill_other": "{n} appareils inactifs depuis plus d’un an",
+    "idle_hint_one": "<strong>{n} appareil</strong> n’a pas été actif depuis plus d’un an. Vous l’utilisez encore ? Alors tout va bien. Sinon, retirez-le – il ne recevra plus rien de nouveau.",
+    "idle_hint_other": "<strong>{n} appareils</strong> n’ont pas été actifs depuis plus d’un an. Vous les utilisez encore ? Alors tout va bien. Sinon, retirez-les – ils ne recevront plus rien de nouveau."
   },
   "reader": {
     "close": "Fermer",

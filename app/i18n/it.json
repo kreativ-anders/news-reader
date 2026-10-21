@@ -328,6 +328,7 @@
     "last": "Ultima sync {when}",
     "click_setup": "Clicca per attivare la sync",
     "click_sync": "Clicca per sincronizzare ora",
+    "click_devices": "Clicca per vedere i tuoi dispositivi",
     "https": "La sync richiede una connessione sicura (HTTPS) per la cifratura.",
     "conflict": "Tante modifiche tutte insieme – riprovo tra un attimo.",
     "decrypt": "Impossibile sbloccare i tuoi dati di sync – chiave errata o dati danneggiati.",
@@ -361,7 +362,12 @@
     "offline": "Serve una connessione a Internet.",
     "stale_link_title": "Questa chiave di sync non è più valida",
     "stale_link_body": "La chiave è stata cambiata su un altro dispositivo. Copia lì la nuova chiave di sync.",
-    "key_changed": "Chiave cambiata – questo dispositivo non riceverà la prossima chiave. Rimuovilo e abbinalo di nuovo."
+    "key_changed": "Chiave cambiata – questo dispositivo non riceverà la prossima chiave. Rimuovilo e abbinalo di nuovo.",
+    "idle": "non attivo da oltre un anno",
+    "idle_pill_one": "{n} dispositivo non attivo da oltre un anno",
+    "idle_pill_other": "{n} dispositivi non attivi da oltre un anno",
+    "idle_hint_one": "<strong>{n} dispositivo</strong> non è attivo da oltre un anno. Lo usi ancora? Allora va tutto bene. Altrimenti rimuovilo – così non riceve più niente di nuovo.",
+    "idle_hint_other": "<strong>{n} dispositivi</strong> non sono attivi da oltre un anno. Li usi ancora? Allora va tutto bene. Altrimenti rimuovili – così non ricevono più niente di nuovo."
   },
   "reader": {
     "close": "Chiudi",

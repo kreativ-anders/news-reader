@@ -5,13 +5,13 @@
 //       Feeds and item states are synced records; entries are fetched per device from the Collector.
 
 import * as db from './db.js';
-import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable } from './sync.js';
+import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable, isIdleDevice } from './sync.js';
 import { esc, httpUrl, hostOf as host } from './util.js';
 import { normalizeUrl, extractUrl, feedId, fetchFeed, openWait, pool, parseOpml, buildOpml, cleanTitle } from './feeds.js';
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.16';
+const VERSION = '0.8.17';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -45,6 +45,8 @@ const S = {
   swipe: { ...SWIPE_DEFAULT },
   quiet: new Set(),
   dupImg: new Set(),
+  idle: 0,
+  focusIdle: false,
 };
 
 let t = (k) => k;
@@ -1140,19 +1142,40 @@ async function renderDevices() {
   if (!box) return;
   const [list, own] = await Promise.all([sync.devices(), db.kvGet('deviceId')]);
   list.sort((a, b) => (b.id === own) - (a.id === own));
-  box.innerHTML = list.length ? list.map((d) => {
+  const now = Date.now();
+  const idle = new Set(list.filter((d) => isIdleDevice(d, own, now)).map((d) => d.id));
+  setIdle(idle.size);
+  // INFO: a background sync redraws the list – focus stays where it was
+  const again = box.contains(document.activeElement) ? focusSelector(document.activeElement) : null;
+  const hint = idle.size ? `<p class="idle-hint" id="idleHint" tabindex="-1">${t('devices.idle_hint', { n: idle.size })}</p>` : '';
+  box.innerHTML = hint + (list.length ? list.map((d) => {
     const self = d.id === own;
     const name = esc(d.data.name);
     const since = d.data.since ? new Date(d.data.since).toLocaleDateString(t.lang, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
     return `<div class="feedrow device" data-device="${esc(d.id)}">
       <div class="t">${name}${self ? ` <span class="pill">${t('devices.this')}</span>` : ''}</div>
       ${d.data.platform !== d.data.name ? `<div class="u">${esc(d.data.platform)}</div>` : ''}
-      <div class="st"><span>${self ? t('devices.active_now') : t('devices.seen', { when: ago(d.data.seen) })}</span>${since ? `<span>· ${t('devices.since', { date: since })}</span>` : ''}${d.pubChanged ? `<span class="err">· ${t('devices.key_changed')}</span>` : ''}</div>
+      <div class="st"><span>${self ? t('devices.active_now') : t('devices.seen', { when: ago(d.data.seen) })}</span>${since ? `<span>· ${t('devices.since', { date: since })}</span>` : ''}${idle.has(d.id) ? `<span class="err">· ${t('devices.idle')}</span>` : ''}${d.pubChanged ? `<span class="err">· ${t('devices.key_changed')}</span>` : ''}</div>
       <div class="ops">
         <button class="icon-btn" type="button" data-device-act="rename" title="${esc(t('devices.rename'))}" aria-label="${esc(t('devices.rename'))}: ${name}">${ICON.edit}</button>
         ${self ? '' : `<button class="icon-btn" type="button" data-device-act="remove" title="${esc(t('devices.remove'))}" aria-label="${esc(t('devices.remove'))}: ${name}">${ICON.trash}</button>`}
       </div></div>`;
-  }).join('') : `<p class="hint">${t('devices.none')}</p>`;
+  }).join('') : `<p class="hint">${t('devices.none')}</p>`);
+  if (S.focusIdle) {
+    S.focusIdle = false;
+    const h = $('#idleHint');
+    if (h) { h.scrollIntoView({ block: 'center' }); h.focus({ preventScroll: true }); return; }
+  }
+  if (again) $(again)?.focus({ preventScroll: true });
+}
+
+function setIdle(n) {
+  if (S.idle === n) return;
+  S.idle = n;
+  paintStatus(sync.status);
+}
+async function checkIdle() {
+  setIdle(await db.kvGet('vaultKey') ? (await sync.idleDevices()).length : 0);
 }
 
 async function deviceAction(act, id) {
@@ -1234,11 +1257,13 @@ function paintStatus(st) {
   pill.dataset.state = st.state === 'ok' && st.pending ? 'pending' : st.state;
   $('.ico', pill).innerHTML = SYNC_ICON[pill.dataset.state] || SYNC_ICON.ok;
   $('.txt', pill).textContent = statusText(st);
+  const idle = st.state !== 'local' && S.idle ? t('devices.idle_pill', { n: S.idle }) : '';
+  pill.toggleAttribute('data-idle', !!idle);
   const detail = [statusText(st, true)];
   if (st.lastSync) detail.push(t('sync.last', { when: new Date(st.lastSync).toLocaleString(t.lang) }));
-  const hint = t(st.state === 'local' ? 'sync.click_setup' : 'sync.click_sync');
-  pill.title = detail.join('\n') + '\n' + hint;
-  pill.setAttribute('aria-label', `${statusText(st)} – ${hint}`);
+  const hint = t(st.state === 'local' ? 'sync.click_setup' : idle ? 'sync.click_devices' : 'sync.click_sync');
+  pill.title = [...detail, idle, hint].filter(Boolean).join('\n');
+  pill.setAttribute('aria-label', [statusText(st), idle, hint].filter(Boolean).join(' – '));
   const d = $('#syncDetail');
   if (d) d.textContent = statusText(st, true);
   const now = $('#syncNow');
@@ -1468,6 +1493,8 @@ document.addEventListener('click', async (ev) => {
 
   if (el.closest('#syncPill')) {
     if (sync.status.state === 'local') return go('settings');
+    // INFO: the dot alone says nothing – the click leads to the explanation and the remove buttons
+    if (S.idle) { S.focusIdle = true; return go('settings'); }
     return sync.run();
   }
   if (el.closest('#refreshBtn')) return manualRefresh();
@@ -1918,6 +1945,7 @@ async function handleIncoming() {
 
 sync.addEventListener('status', (e) => {
   paintStatus(e.detail);
+  if (e.detail.state !== 'syncing') checkIdle();
   if (e.detail.state === 'ok' && S.view === 'settings') renderDevices();
 });
 // INFO: stale = a pairing link whose key was changed meanwhile, otherwise this device was removed

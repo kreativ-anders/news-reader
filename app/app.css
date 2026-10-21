@@ -47,6 +47,9 @@ svg{display:block}
 .sync[data-state="syncing"] .ico svg{animation:spin 1s linear infinite}
 .sync:is([data-state="pending"],[data-state="idle"]) .ico{color:var(--warn)}
 .sync[data-state="error"]{color:var(--err)}
+.sync[data-idle]{position:relative}
+.sync[data-idle]::after{content:"";position:absolute;top:7px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--err);box-shadow:0 0 0 2px var(--bg)}
+.idle-hint{margin:0 0 12px;padding:2px 0 2px 10px;border-left:3px solid var(--err)}
 @media (max-width:420px){.sync .txt{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.sync{padding:0;width:40px;justify-content:center}}
 .sync .txt{overflow:hidden;text-overflow:ellipsis}
 
@@ -361,4 +364,6 @@ html.reader-open,html.reader-open body{overflow:hidden}
 @media (forced-colors:active){
   .card:focus-visible,.card.kb,.palette li[aria-selected="true"],.nav button[aria-current="page"],.subnav button[aria-current="page"]{outline:2px solid Highlight;outline-offset:-2px}
   :is(.icon-btn,.btn)[aria-disabled="true"]{color:GrayText}
+  .sync[data-idle]::after{forced-color-adjust:none;background:Mark;box-shadow:0 0 0 2px Canvas}
+  .idle-hint{border-left-color:Mark}
 }

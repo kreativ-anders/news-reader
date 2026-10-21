@@ -28,3 +28,16 @@ Feature: Paired devices can be seen, renamed and removed
   Scenario: Unpairing announces itself
     When I choose "Unpair this device"
     Then the other devices see that it left
+
+  Scenario: A device not active for a year is pointed out
+    Given another paired device has not been active for over a year
+    Then the sync status shows a red dot and names the inactive device count to screen readers
+    When I click the sync status
+    Then Settings → Paired devices opens with focus on a hint that explains what it means
+    And the device is marked "not active for over a year" and can be removed on its own
+    And nothing is removed without my decision
+
+  Scenario: The hint disappears once the device is gone or back
+    Given the red dot is shown for an inactive device
+    When I remove that device or it syncs again
+    Then the dot and the hint disappear and clicking the sync status syncs again

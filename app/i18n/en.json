@@ -328,6 +328,7 @@
     "last": "Last sync {when}",
     "click_setup": "Click to set up sync",
     "click_sync": "Click to sync now",
+    "click_devices": "Click to see your devices",
     "https": "Sync needs a secure connection (HTTPS) for encryption.",
     "conflict": "Lots of changes at once – trying again in a moment.",
     "decrypt": "Can’t unlock your sync data – the key is wrong or the data is damaged.",
@@ -361,7 +362,12 @@
     "offline": "This needs an internet connection.",
     "stale_link_title": "This sync key is no longer valid",
     "stale_link_body": "The key was changed on another device. Copy the new sync key there.",
-    "key_changed": "Key changed – this device won’t get the next key. Remove it and pair it again."
+    "key_changed": "Key changed – this device won’t get the next key. Remove it and pair it again.",
+    "idle": "not active for over a year",
+    "idle_pill_one": "{n} device not active for over a year",
+    "idle_pill_other": "{n} devices not active for over a year",
+    "idle_hint_one": "<strong>{n} device</strong> hasn’t been active for over a year. Still using it? Then everything’s fine. If not, remove it – then it gets nothing new from you.",
+    "idle_hint_other": "<strong>{n} devices</strong> haven’t been active for over a year. Still using them? Then everything’s fine. If not, remove them – then they get nothing new from you."
   },
   "reader": {
     "close": "Close",

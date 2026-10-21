@@ -328,6 +328,7 @@
     "last": "Última sincronización {when}",
     "click_setup": "Haz clic para activar la sincronización",
     "click_sync": "Haz clic para sincronizar ahora",
+    "click_devices": "Haz clic para ver tus dispositivos",
     "https": "La sincronización necesita una conexión segura (HTTPS) para el cifrado.",
     "conflict": "Muchos cambios a la vez – lo intento de nuevo en un momento.",
     "decrypt": "No se pueden desbloquear tus datos de sincronización – clave incorrecta o datos dañados.",
@@ -361,7 +362,12 @@
     "offline": "Hace falta conexión a Internet.",
     "stale_link_title": "Esta clave de sincronización ya no es válida",
     "stale_link_body": "La clave se cambió en otro dispositivo. Copia allí la nueva clave de sincronización.",
-    "key_changed": "Clave cambiada – este dispositivo no recibirá la siguiente clave. Quítalo y vuelve a vincularlo."
+    "key_changed": "Clave cambiada – este dispositivo no recibirá la siguiente clave. Quítalo y vuelve a vincularlo.",
+    "idle": "sin actividad desde hace más de un año",
+    "idle_pill_one": "{n} dispositivo sin actividad desde hace más de un año",
+    "idle_pill_other": "{n} dispositivos sin actividad desde hace más de un año",
+    "idle_hint_one": "<strong>{n} dispositivo</strong> lleva más de un año sin actividad. ¿Todavía lo usas? Entonces todo bien. Si no, quítalo – así no recibirá nada nuevo.",
+    "idle_hint_other": "<strong>{n} dispositivos</strong> llevan más de un año sin actividad. ¿Todavía los usas? Entonces todo bien. Si no, quítalos – así no recibirán nada nuevo."
   },
   "reader": {
     "close": "Cerrar",

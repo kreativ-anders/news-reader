@@ -21,6 +21,7 @@ const MAX_PLAIN_BYTES = 32 << 20;
 const TOO_LARGE_TARGET = 800_000;
 const DEVICE_TOUCH_MS = 3600e3;
 const DEVICE_NAME_MAX = 60;
+const DEVICE_IDLE_MS = 365 * 864e5;
 // INFO: unsorted posts of this age travel with the sync data, so a device that missed them (the source only lists
 //       its newest posts) still shows them in the Inbox; = the Inbox window of a new feed (INITIAL_WINDOW_MS)
 const CARRY_MS = 14 * 864e5;
@@ -349,6 +350,11 @@ export class Sync extends EventTarget {
       .sort((a, b) => (b.data.seen || 0) - (a.data.seen || 0));
   }
 
+  async idleDevices(now = Date.now()) {
+    const own = await db.kvGet('deviceId');
+    return (await this.devices()).filter((d) => isIdleDevice(d, own, now));
+  }
+
   // INFO: trust on first use – the first public key seen for a device id is kept
   async pinKeys(records) {
     const pins = await db.kvGet('pubPins', {});
@@ -441,6 +447,12 @@ export class Sync extends EventTarget {
 // INFO: newer than the current version, even if that one carries a (skewed) future timestamp within the limit
 function nextStamp(cur, now = Date.now()) {
   return cur.updatedAt <= now + db.MAX_SKEW_MS ? Math.max(now, cur.updatedAt + 1) : now;
+}
+
+// INFO: only a hint – nothing is removed without the user; a device without any timestamp is never flagged
+export function isIdleDevice(d, own, now) {
+  const at = d.data?.seen || d.data?.since;
+  return d.id !== own && !!at && now - at >= DEVICE_IDLE_MS;
 }
 
 // INFO: deterministic on every device, so pruned records cannot be resurrected by an old device

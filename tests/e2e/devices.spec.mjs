@@ -148,3 +148,43 @@ test('unpairing announces itself to the other devices', async ({ app, page, brow
   await syncNow(page);
   await expect(rows(page)).toHaveCount(1);
 });
+
+test('a device not active for a year shows a red dot that leads to the hint', async ({ app, page, browser }) => {
+  const key = await createVault(app, page);
+  const b = await paired(browser, key);
+  const bId = await b.app.kv('deviceId');
+  await b.ctx.close();
+  await syncNow(page);
+  await openSettings(app);
+  await expect(rows(page)).toHaveCount(2, { timeout: 15_000 });
+  const pill = page.locator('#syncPill');
+  await expect(pill).not.toHaveAttribute('data-idle', '');
+
+  await page.evaluate(async ({ bId, dbUrl }) => {
+    const db = await import(dbUrl);
+    const cur = await db.get('records', ['device', bId]);
+    const old = Date.now() - 400 * 864e5;
+    await db.putLocal([{ ...cur, data: { ...cur.data, since: old, seen: old }, updatedAt: Date.now() }]);
+  }, { bId, dbUrl: `${API()}/app/js/db.js` });
+  await app.go('inbox');
+  await syncNow(page);
+  await expect(pill).toHaveAttribute('data-idle', '');
+  await expect(pill).toHaveAttribute('aria-label', /1 device not active for over a year – Click to see your devices/);
+
+  await pill.click();
+  await expect(page).toHaveURL(/#settings$/);
+  await expect(page.locator('#idleHint')).toBeFocused();
+  await expect(page.locator('#idleHint')).toContainText('1 device');
+  const row = page.locator(`#devices [data-device="${bId}"]`);
+  await expect(row.locator('.st')).toContainText('not active for over a year');
+  await expect(rows(page)).toHaveCount(2);
+
+  await row.locator('[data-device-act="remove"]').click();
+  await page.locator('#dlgOk').click();
+  await expect(rows(page)).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.locator('#idleHint')).toHaveCount(0);
+  await expect(pill).not.toHaveAttribute('data-idle', '');
+  await app.go('inbox');
+  await syncNow(page);
+  await expect(page).not.toHaveURL(/#settings$/);
+});

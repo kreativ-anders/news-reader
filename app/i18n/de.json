@@ -328,6 +328,7 @@
     "last": "Letzte Synchronisation {when}",
     "click_setup": "Klicken, um Sync einzurichten",
     "click_sync": "Klicken, um jetzt zu synchronisieren",
+    "click_devices": "Klicken, um deine Geräte zu sehen",
     "https": "Sync braucht für die Verschlüsselung eine sichere Verbindung (HTTPS).",
     "conflict": "Viele Änderungen auf einmal – gleich neuer Versuch.",
     "decrypt": "Deine Sync-Daten lassen sich nicht entsperren – falscher Schlüssel oder beschädigte Daten.",
@@ -361,7 +362,12 @@
     "offline": "Dafür ist eine Internetverbindung nötig.",
     "stale_link_title": "Dieser Sync-Schlüssel gilt nicht mehr",
     "stale_link_body": "Der Schlüssel wurde auf einem anderen Gerät gewechselt. Kopiere dort den neuen Sync-Schlüssel.",
-    "key_changed": "Schlüssel geändert – dieses Gerät bekommt den nächsten Schlüssel nicht. Entferne es und kopple es neu."
+    "key_changed": "Schlüssel geändert – dieses Gerät bekommt den nächsten Schlüssel nicht. Entferne es und kopple es neu.",
+    "idle": "seit über einem Jahr nicht aktiv",
+    "idle_pill_one": "{n} Gerät seit über einem Jahr nicht aktiv",
+    "idle_pill_other": "{n} Geräte seit über einem Jahr nicht aktiv",
+    "idle_hint_one": "<strong>{n} Gerät</strong> war seit über einem Jahr nicht aktiv. Nutzt du es noch? Dann ist alles gut. Wenn nicht, entferne es – dann bekommt es nichts Neues mehr von dir.",
+    "idle_hint_other": "<strong>{n} Geräte</strong> waren seit über einem Jahr nicht aktiv. Nutzt du sie noch? Dann ist alles gut. Wenn nicht, entferne sie – dann bekommen sie nichts Neues mehr von dir."
   },
   "reader": {
     "close": "Schließen",

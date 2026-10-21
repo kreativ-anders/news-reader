@@ -38,7 +38,7 @@ Every module in `app/js/`, `app/sw.js`, `src/` and `api/index.php` must appear i
 | `refresh.feature` | Refresh on open, manual refresh and pause, sync timers | E2E `feeds` |
 | `offline.feature` | Service worker, offline changes, saved copies and reader, new version | E2E `offline`, `app`; JS `assets` |
 | `sync.feature` | Pairing, sync key and link, merge, checks, size limit, local-only | E2E `sync`, `sync-hardening`; JS `sync` |
-| `devices.feature` | Paired devices, removal with key change, unpair | E2E `devices`, `sync-hardening` |
+| `devices.feature` | Paired devices, removal with key change, unpair, inactive devices | E2E `devices`, `sync-hardening` |
 | `retention.feature` | Initial window, unsorted posts, daily pruning | E2E `sync-hardening` |
 | `keyboard_accessibility.feature` | Views, focus, shortcuts and switching them off, screen readers, labels | E2E `ux`, `ui`, `app` |
 | `search.feature` | Search and go to | E2E `ui` |
@@ -54,6 +54,7 @@ Every module in `app/js/`, `app/sw.js`, `src/` and `api/index.php` must appear i
 | `executable/feed_identity.feature` | `normalizeUrl`, `extractUrl`, pinned `feedId`, `cleanTitle` | **runs** `tests/js/feed-identity.bdd.test.mjs` |
 | `executable/vault_records.feature` | `validRecord` – which records from other devices are taken | **runs** `tests/js/vault-records.bdd.test.mjs` |
 | `executable/pruning.feature` | `prunable` periods, `slim` sync records | **runs** `tests/js/pruning.bdd.test.mjs` |
+| `executable/idle_devices.feature` | `isIdleDevice` – which paired devices count as inactive | **runs** `tests/js/idle-devices.bdd.test.mjs` |
 | `executable/refresh_rhythm.feature` | `openWait` – how long opening the app leaves a feed alone | **runs** `tests/js/refresh-rhythm.bdd.test.mjs` |
 | `executable/safe_output.feature` | `esc`, `httpUrl`, `hostOf` | **runs** `tests/js/safe-output.bdd.test.mjs` |
 | `executable/sync_protocol.feature` | `/api/sync` create/read/update/delete, auth, preconditions, forwards | **runs** `tests/api/sync-protocol.bdd.test.mjs` |
