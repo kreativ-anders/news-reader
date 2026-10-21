@@ -24,7 +24,7 @@ Feature: The server is safe to run on the open internet
       And XML is parsed without network access and without entity expansion
 
     Scenario: Slow sources cannot tie up every worker
-      Then at most 8 upstream fetches run at once, 2 per client
+      Then at most 8 upstream fetches run at once, 4 per client
       And more get 503 "BUSY" with Retry-After
 
   Rule: Clients are rate limited

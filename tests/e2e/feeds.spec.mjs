@@ -125,6 +125,7 @@ test('opening the app looks for new posts on its own and says so in the header',
   let release;
   const hold = new Promise((r) => { release = r; });
   await page.route('**/api/collect?**', async (route) => { calls.push(route.request().url()); await hold; return route.continue(); });
+  await app.ageFetches(4 * 3600e3);
   await page.reload();
   await expect(page.locator('#pulse')).toHaveText('Looking for new posts…');
   await expect(page.locator('#progress')).toBeVisible();
@@ -180,9 +181,26 @@ test('a source that turns the server away is fetched from the device – same en
   expect(Object.values(await app.kv('fetchState'))[0]).toMatchObject({ ok: true, strategy: 'client' });
 });
 
-test('refresh: at most two fetches at once; a feed turned away with BUSY is fetched again after Retry-After', async ({ app, page }) => {
+test('opening the app leaves feeds alone that were checked recently for how often they post; Refresh checks all', async ({ app, page }) => {
   await app.open();
-  for (const f of ['rdf.xml', 'atom.xml', 'rss.xml']) await app.follow(`${FX()}/feeds/${f}`);
+  for (const f of ['rss.xml', 'atom.xml']) await app.follow(`${FX()}/feeds/${f}`);
+  await app.go('inbox');
+  const calls = [];
+  await page.route('**/api/collect?**', (route) => { calls.push(decodeURIComponent(route.request().url())); return route.continue(); });
+  // INFO: fetched 1 h ago – below the 3-hour wait of feeds posting once a day or less
+  await app.ageFetches(3600e3);
+  await page.reload();
+  await expect.poll(() => app.kv('lastRefresh')).toBeGreaterThan(0);
+  await expect(page.locator('#refreshBtn')).not.toHaveAttribute('aria-busy', 'true');
+  expect(calls).toEqual([]);
+
+  await page.keyboard.press('r');
+  await expect.poll(() => calls.length).toBe(2);
+});
+
+test('refresh: at most four fetches at once; a feed turned away with BUSY is fetched again after Retry-After', async ({ app, page }) => {
+  await app.open();
+  for (const f of ['rdf.xml', 'atom.xml', 'rss.xml', 'long.xml', 'quiet.xml']) await app.follow(`${FX()}/feeds/${f}`);
   let open = 0, most = 0, atom = 0;
   await page.route('**/api/collect?**', async (route) => {
     if (decodeURIComponent(route.request().url()).includes('/feeds/atom.xml') && !atom++) {
@@ -196,7 +214,28 @@ test('refresh: at most two fetches at once; a feed turned away with BUSY is fetc
   await expect(app.toast()).toContainText('1 feed will be checked again');
   await expect.poll(() => atom, { timeout: 10_000 }).toBe(2);
   await expect.poll(async () => Object.values(await app.kv('fetchState')).every((st) => st.ok && !st.retry)).toBe(true);
-  expect(most).toBeLessThanOrEqual(2);
+  expect(most).toBeGreaterThan(2);
+  expect(most).toBeLessThanOrEqual(4);
+});
+
+test('new posts show up while slower feeds are still loading', async ({ app, page }) => {
+  await app.open();
+  for (const f of ['rss.xml', 'atom.xml']) await app.follow(`${FX()}/feeds/${f}`);
+  const real = await (await fetch(`${API()}/api/collect?url=${encodeURIComponent(FX() + '/feeds/rss.xml')}`)).json();
+  const post = { ...real.entries[0], id: 'f'.repeat(64), title: 'Brand new post', url: `${FX()}/brand-new`, publishedAt: new Date().toISOString().slice(0, 19) + 'Z' };
+  let release;
+  const hold = new Promise((r) => { release = r; });
+  await page.route('**/api/collect?**', async (route) => {
+    const url = decodeURIComponent(route.request().url());
+    if (url.includes('/feeds/atom.xml')) { await hold; return route.continue(); }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ...real, entries: [post, ...real.entries] }) });
+  });
+  await app.go('inbox');
+  await page.keyboard.press('r');
+  await expect(app.card('Brand new post')).toBeVisible();
+  await expect(page.locator('#refreshBtn')).toHaveAttribute('aria-busy', 'true');
+  release();
+  await expect(page.locator('#refreshBtn')).not.toHaveAttribute('aria-busy', 'true');
 });
 
 test('OPML export and import', async ({ app, page, browser }) => {

@@ -25,7 +25,7 @@ const NR_REQUEST_TIMEOUT    = 15;
 const NR_LOW_SPEED_LIMIT    = 1024;       // INFO: bytes/s – slower transfers are aborted after NR_LOW_SPEED_TIME seconds
 const NR_LOW_SPEED_TIME     = 10;
 const NR_UPSTREAM_SLOTS     = 8;          // INFO: upstream fetches running at once (all clients); more → 503 BUSY
-const NR_UPSTREAM_PER_CLIENT = 2;         // INFO: upstream fetches running at once per client (/64)
+const NR_UPSTREAM_PER_CLIENT = 4;         // INFO: upstream fetches running at once per client (/64) – = FETCH_PARALLEL in app/js/app.js
 const NR_TIME_BUDGET        = 60;         // INFO: wall-clock seconds for all upstream requests of one API call
 const NR_MAX_REDIRECTS      = 5;
 const NR_MAX_CHILD_SITEMAPS = 3;

@@ -96,6 +96,28 @@ export class App {
     }), key);
   }
 
+  /** Write a value into the app's IndexedDB kv store – the app reads it on its next start. */
+  setKv(key, value) {
+    return this.page.evaluate(([k, v]) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('news');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const tx = req.result.transaction('kv', 'readwrite');
+        tx.objectStore('kv').put({ k, v });
+        tx.oncomplete = () => { resolve(); req.result.close(); };
+        tx.onerror = () => reject(tx.error);
+      };
+    }), [key, value]);
+  }
+
+  /** Make every feed's last fetch look `ms` older and the last refresh long ago (next start refreshes). */
+  async ageFetches(ms) {
+    const st = await this.kv('fetchState');
+    for (const s of Object.values(st)) s.at -= ms;
+    await this.setKv('fetchState', st);
+    await this.setKv('lastRefresh', 0);
+  }
+
   /** Number of local changes not yet pushed to the sync server. */
   pending() {
     return this.page.evaluate(() => new Promise((resolve, reject) => {

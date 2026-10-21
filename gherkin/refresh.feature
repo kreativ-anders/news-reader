@@ -8,7 +8,8 @@ Feature: New posts are fetched without nagging the sources
   Scenario: Opening the app looks for new posts
     Given the last refresh was more than 15 minutes ago
     When I start the app or return to it
-    Then all feeds are refreshed without a toast
+    Then feeds are refreshed by their posting rhythm, without a toast
+    And a feed checked recently compared to how often it posts is left alone (gherkin/executable/refresh_rhythm.feature)
     And the header shows "Looking for new posts…" under the logo with a progress line
     And then the number of new posts for 4 seconds
 
@@ -18,15 +19,21 @@ Feature: New posts are fetched without nagging the sources
     Then nothing is fetched
     And the header says when it last checked
 
+  Scenario: New posts show up while slower feeds are still loading
+    When feeds are refreshed
+    Then at most 4 feeds are fetched at once
+    And new posts appear in the Inbox while other feeds are still loading, at most one redraw every 0.6 seconds
+
   Scenario: Refresh forces every feed
     When I choose Refresh or press "r"
-    Then every feed is fetched
+    Then every feed is fetched, also those opening the app left alone
     And entries and decisions are kept
     And a toast reports the number of new posts
 
   Scenario: Refresh buttons pause after use
     Given I just refreshed manually
     Then the refresh buttons pause for 60 seconds (per feed in the feed list)
+    And opening the app pauses them only when it fetched something
     And a click on a paused button explains the wait instead of fetching
 
   Scenario: Retries skip feeds that cannot have changed

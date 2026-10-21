@@ -115,6 +115,15 @@ async function capped(res, max) {
   }
 }
 
+// INFO: opening the app checks a feed only once its last fetch is older than a quarter of its usual gap between
+//       posts – at least 15 min (the Collector's refresh window), at most 3 h. Refresh still checks every feed.
+export const OPEN_WAIT_MIN_MS = 15 * 60 * 1000;
+export const OPEN_WAIT_MAX_MS = 3 * 3600 * 1000;
+export function openWait(perWeek) {
+  if (!(perWeek > 0)) return OPEN_WAIT_MAX_MS;
+  return Math.min(OPEN_WAIT_MAX_MS, Math.max(OPEN_WAIT_MIN_MS, 7 * 864e5 / perWeek / 4));
+}
+
 export async function pool(items, limit, fn) {
   const out = new Array(items.length);
   let i = 0;

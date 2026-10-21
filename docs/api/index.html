@@ -70,7 +70,7 @@
     <ul>
       <li><code>400</code> invalid or forbidden URL (<code>INVALID_URL</code>, <code>UNSUPPORTED_URL</code>, <code>FORBIDDEN_HOST</code>, <code>DNS_FAILED</code>)</li>
       <li><code>422</code> the source failed or has no posts (<code>NO_FEED_DETECTED</code>, <code>PLATFORM_NO_FEED</code>, <code>UPSTREAM_*</code>, <code>TOO_MANY_REDIRECTS</code>, <code>NOT_AN_ARTICLE</code>, <code>NO_CONTENT</code>)</li>
-      <li><code>429</code> rate limited · <code>503</code> busy – both with <code>Retry-After</code>; only fetches that reach the source count against the limit, cache hits and busy answers are free</li>
+      <li><code>429</code> rate limited · <code>503</code> busy – both with <code>Retry-After</code>; only fetches that reach the source count against the limit, cache hits and busy answers are free; at most 4 fetches that reach a source run at once per client</li>
     </ul>
 
     <h2>Sync</h2>

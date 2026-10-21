@@ -7,11 +7,11 @@
 import * as db from './db.js';
 import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable } from './sync.js';
 import { esc, httpUrl, hostOf as host } from './util.js';
-import { normalizeUrl, extractUrl, feedId, fetchFeed, pool, parseOpml, buildOpml, cleanTitle } from './feeds.js';
+import { normalizeUrl, extractUrl, feedId, fetchFeed, openWait, pool, parseOpml, buildOpml, cleanTitle } from './feeds.js';
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.15';
+const VERSION = '0.8.16';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -19,7 +19,8 @@ const OPEN_REFRESH_MS = 15 * 60 * 1000;
 // INFO: the Collector ignores ?refresh=1 for copies younger than 15 minutes – repeated clicks would only cost requests
 const COOLDOWN_MS = 60 * 1000;
 // INFO: matches the Collector's NR_UPSTREAM_PER_CLIENT – more parallel fetches only earn BUSY answers
-const FETCH_PARALLEL = 2;
+const FETCH_PARALLEL = 4;
+const PAINT_MS = 600;
 const RETRY_MAX_MS = 15 * 60 * 1000;
 // INFO: a new subscription shows the last 14 days, but at least the newest 3 entries
 const INITIAL_WINDOW_MS = 14 * 864e5;
@@ -419,14 +420,21 @@ function progress(done, total) {
 async function refreshAll(force = false, auto = false) {
   const all = liveFeeds(), now = Date.now();
   if (!all.length) { if (force && !auto) showToast(t('toast.no_feeds')); return; }
-  const feeds = all.filter((f) => (force ? !waiting(f, now) : due(f, now)));
+  // INFO: opening the app skips feeds checked recently relative to how often they post (openWait)
+  const stats = auto ? allFeedStats() : null;
+  const rhythm = (f) => { const st = S.fetch.get(f.id); return !st?.ok || now - st.at >= openWait(perWeekOf(stats.get(f.id), now)); };
+  const feeds = all.filter((f) => (force ? !waiting(f, now) && (!auto || rhythm(f)) : due(f, now)));
   if (S.refreshing) return;
   const before = inboxEntries('').length;
   S.refreshing = true;
   paintRequests();
   let done = 0;
   if (feeds.length) { pulse(t('app.loading')); progress(0, feeds.length); }
-  const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force).finally(() => progress(++done, feeds.length)));
+  // INFO: new posts show up while the other feeds are still loading – one redraw per PAINT_MS at most
+  let paintTimer = 0;
+  const paint = () => { paintTimer ||= setTimeout(() => { paintTimer = 0; renderSoft(); }, PAINT_MS); };
+  const results = await pool(feeds, FETCH_PARALLEL, (f) => refreshFeed(f, force).then(paint).finally(() => progress(++done, feeds.length)));
+  clearTimeout(paintTimer);
   let failed = 0;
   results.forEach((r, i) => {
     if (!r.ok) {
@@ -439,7 +447,8 @@ async function refreshAll(force = false, auto = false) {
   await db.kvSet('lastRefresh', S.lastRefresh);
   await db.kvSet('fetchState', Object.fromEntries(S.fetch));
   S.refreshing = false;
-  if (force) coolDown('all');
+  // INFO: an open that left every feed alone must not make Refresh wait
+  if (force && (feeds.length || !auto)) coolDown('all');
   if (force && !auto) render(); else renderSoft();
   paintRequests();
   scheduleRetry();
@@ -869,14 +878,15 @@ function allFeedStats() {
   });
 }
 
+const perWeekOf = (x, now = Date.now()) => (x?.recent ? x.recent / Math.max(864e5, now - x.oldest) * 7 * 864e5 : 0);
+
 // INFO: one feed or several (a folder, all feeds) – posts per week add up, the read rate is over all their decisions
 function feedStats(ids) {
   const sum = { perWeek: 0, last: 0, read: 0, dropped: 0, unread: 0 };
   for (const id of [].concat(ids)) {
     const x = allFeedStats().get(id);
     if (!x) continue;
-    const span = x.recent ? Math.max(864e5, Date.now() - x.oldest) : 0;
-    if (span) sum.perWeek += x.recent / span * 7 * 864e5;
+    sum.perWeek += perWeekOf(x);
     sum.last = Math.max(sum.last, x.last);
     sum.read += x.read; sum.dropped += x.dropped; sum.unread += x.unread;
   }
