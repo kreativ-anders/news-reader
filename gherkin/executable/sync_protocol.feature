@@ -22,6 +22,17 @@ Feature: The sync server stores one sealed blob per group of devices
       And the answer carries a new ETag
       And the answer reports the uploaded size
 
+    Scenario Outline: Every answer names the size limit, so devices can show how full their sync data is
+      Given the device created the sync data
+      When the device <request>
+      Then the answer names the size limit of 1000000 bytes, readable by the app
+
+      Examples:
+        | request                                |
+        | reads the sync data                    |
+        | reads the sync data with its ETag      |
+        | uploads the sync data with its ETag    |
+
     Scenario: The stored blob comes back byte for byte and is never cached
       Given the device created the sync data
       When the device reads the sync data

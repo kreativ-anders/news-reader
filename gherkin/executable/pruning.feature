@@ -6,7 +6,8 @@ Feature: Old records are pruned the same way on every device
   Pruning runs once a day, also without sync. It only looks at the record and the time, so every device drops
   the same records and an old device cannot bring a pruned one back. Before upload, records are slimmed down to
   what the other devices still need – plus the unsorted posts of the last 14 days, because a source only lists
-  its newest posts and a device that checked it later would never see the older ones.
+  its newest posts and a device that checked it later would never see the older ones. Pruning and slimming keep
+  the sync data of a heavy reader well below the server limit; the app shows how full it is.
 
   Rule: How long a record is kept depends on its kind and state
 
@@ -95,3 +96,34 @@ Feature: Old records are pruned the same way on every device
     Scenario: At most the newest 1000 posts travel along
       Given 1005 unsorted posts of a followed feed published within the last days
       Then the newest 1000 travel with the sync data
+
+  Rule: The sync data of a heavy reader fits the server limit
+
+    Scenario Outline: Months of reading in 66 feeds, plus 1000 unsorted posts that travel along
+      Given <decisions> decisions within the pruning periods: 60 % Not interested, 25 % Done, 10 % untouched, 5 % Later
+      Then the sealed sync data stays below <bytes> bytes
+
+      Examples:
+        | decisions | bytes  |
+        | 5000      | 500000 |
+        | 10000     | 800000 |
+
+  Rule: The app shows how full the sync data is and warns from 75 %
+
+    Scenario Outline: Fill level
+      Given the sync data has <bytes> bytes and the server allows <max>
+      Then it is shown as <percent> % full
+      And it <warns> as nearly full
+
+      Examples:
+        | bytes   | max                 | percent | warns         |
+        | 380000  | 1000000             | 38      | is not shown  |
+        | 749999  | 1000000             | 74      | is not shown  |
+        | 750000  | 1000000             | 75      | is shown      |
+        | 380000  | 500000              | 76      | is shown      |
+        | 380000  | nothing (old server)| 38      | is not shown  |
+        | 1200000 | 1000000             | 100     | is shown      |
+
+    Scenario: Before the first sync nothing is shown
+      Given this device has not read or written sync data yet
+      Then no fill level is shown

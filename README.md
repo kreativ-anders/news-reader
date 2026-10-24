@@ -122,7 +122,7 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 **Search and go to** (`/`, Ctrl/Cmd+K, search button): views, folders and feeds; with a query also every known post – title matches first, then newest. Picking a post jumps to its view and selects it.
 
 **Storage**
-- IndexedDB `news`: `records` (feeds, items, devices – synced), `outbox` (unsynced changes; none without a vault), `entries` (per device), `articles` (offline copies), `kv` (`vaultKey`, `deviceId`, `deviceKey`, `server`, `etag`, `lastSync`, `carryAt`, `carrySent`, `lastRefresh`, `swipe`, `fetchState`, `pubPins`, `revoked`, `lastMaintain`, `badge`).
+- IndexedDB `news`: `records` (feeds, items, devices – synced), `outbox` (unsynced changes; none without a vault), `entries` (per device), `articles` (offline copies), `kv` (`vaultKey`, `deviceId`, `deviceKey`, `server`, `etag`, `lastSync`, `syncSize`, `carryAt`, `carrySent`, `lastRefresh`, `swipe`, `fetchState`, `pubPins`, `revoked`, `lastMaintain`, `badge`).
 - `localStorage`: `nr.lang`, `nr.theme` (shared with the site), `news.density`, `news.acts`, `news.keys`, `news.badge`, `news.feedNav`, `news.folders.closed`, `news.tip.swipe`.
 
 **Retention**
@@ -219,6 +219,8 @@ vault key (32 random bytes, base64url; shown to users as the "sync key" – copi
 | `DELETE` | remove vault (`204`), optional `If-Match` (`412`); `404` if none; `410 FORWARDED` for a forward |
 
 Other answers: `401 UNAUTHORIZED` (token must be 43 chars base64url), `400 INVALID_BODY` (magic `NRS1`/`NRF1`, ≥ 33 bytes), `413 PAYLOAD_TOO_LARGE`, `429 RATE_LIMITED`, `403 FORBIDDEN_NETWORK` (`NR_SYNC_ALLOWED_NETS`), `404 SYNC_DISABLED`, `507 SERVER_FULL`, `500 SYNC_WRITE_FAILED` / `SERVER_MISCONFIGURED`.
+
+Every answer carries `X-Sync-Max-Bytes: <NR_SYNC_MAX_BYTES>` (exposed via CORS). The app remembers the size of the last blob it read or wrote together with this limit (`kv` `syncSize`, 1 MB for servers without the header) and shows the fill level in *Settings → Sync*, with a hint from 75 %. Over the limit, `413` makes the app drop its oldest finished items and retry once.
 
 - Auth `Authorization: Bearer <token>`; file `var/sync/<2 hex>/<sha256(token)>.vault`; atomic writes under a per-vault stripe lock (global lock only when a vault is created).
 - Blob: `"NRS1"` · flags (bit 0 = gzip) · 12-byte IV · ciphertext (AAD `newsreader-sync-v1`). Plaintext `{v:1, at, records:[{kind,id,data,updatedAt}]}`:

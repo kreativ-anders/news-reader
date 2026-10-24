@@ -5,13 +5,13 @@
 //       Feeds and item states are synced records; entries are fetched per device from the Collector.
 
 import * as db from './db.js';
-import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable, isIdleDevice } from './sync.js';
+import { Sync, serverBase, defaultServer, isValidKey, cryptoAvailable, isIdleDevice, syncFill } from './sync.js';
 import { esc, httpUrl, hostOf as host } from './util.js';
 import { normalizeUrl, extractUrl, feedId, fetchFeed, openWait, pool, parseOpml, buildOpml, cleanTitle } from './feeds.js';
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.19';
+const VERSION = '0.8.20';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -1097,7 +1097,8 @@ async function renderSettings() {
           <button class="btn btn-ghost" type="button" id="leaveVault">${t('settings.unpair')}</button>
           <button class="btn btn-danger" type="button" id="wipeVault">${t('settings.wipe')}</button>
         </div>
-        <dl class="kv" style="margin-top:14px"><dt>${t('settings.server')}</dt><dd>${esc(new URL('api/sync', server).href)}</dd><dt>${t('settings.status')}</dt><dd id="syncDetail">${esc(statusText(sync.status, true))}</dd></dl>`
+        <dl class="kv" style="margin-top:14px"><dt>${t('settings.server')}</dt><dd>${esc(new URL('api/sync', server).href)}</dd><dt>${t('settings.status')}</dt><dd id="syncDetail">${esc(statusText(sync.status, true))}</dd><dt id="syncSizeT" hidden>${t('settings.sync_size')}</dt><dd id="syncSize" hidden></dd></dl>
+        <p class="full-hint" id="syncFull" hidden>${t('settings.sync_full')}</p>`
       : `
         <p>${t('settings.sync_intro')}</p>${cryptoAvailable() ? '' : `<p class="err">${t('settings.sync_https')}</p>`}
         <div class="row"><button class="btn btn-primary" type="button" id="createVault"${cryptoAvailable() ? '' : ' disabled'}>${t('settings.create_vault')}</button></div>
@@ -1145,6 +1146,7 @@ async function renderSettings() {
       <p>${local}</p>
       <div class="row"><button class="btn btn-danger" type="button" id="resetLocal">${t('settings.reset')}</button></div>
     </section>`;
+  paintSize(sync.status);
   if (key) renderDevices();
 }
 
@@ -1284,8 +1286,23 @@ function paintStatus(st) {
   pill.setAttribute('aria-label', [statusText(st), idle, hint].filter(Boolean).join(' – '));
   const d = $('#syncDetail');
   if (d) d.textContent = statusText(st, true);
+  paintSize(st);
   const now = $('#syncNow');
   if (now && st.state === 'syncing') now.setAttribute('aria-busy', 'true'); else now?.removeAttribute('aria-busy');
+}
+
+const fmtBytes = (n) => {
+  const [unit, div] = n >= 1e6 ? ['megabyte', 1e6] : n >= 1e3 ? ['kilobyte', 1e3] : ['byte', 1];
+  return new Intl.NumberFormat(t.lang, { style: 'unit', unit, maximumFractionDigits: div === 1e6 ? 1 : 0 }).format(n / div);
+};
+
+function paintSize(st) {
+  const dd = $('#syncSize');
+  if (!dd) return;
+  const fill = syncFill(st.size);
+  dd.textContent = fill ? t('settings.sync_size_value', { used: fmtBytes(fill.bytes), max: fmtBytes(fill.max), percent: new Intl.NumberFormat(t.lang, { style: 'percent' }).format(fill.percent / 100) }) : '';
+  dd.hidden = $('#syncSizeT').hidden = !fill;
+  $('#syncFull').hidden = !fill?.nearlyFull;
 }
 
 let toastTimer = null;

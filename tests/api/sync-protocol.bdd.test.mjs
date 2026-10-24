@@ -72,6 +72,10 @@ runFeature('gherkin/executable/sync_protocol.feature', (st) => {
     assert.equal(w.res.json.etag, w.res.header('etag'));
     assert.notEqual(w.etag, w.previous);
   });
+  st.step('the answer names the size limit of {int} bytes, readable by the app', (w, max) => {
+    assert.equal(w.res.header('x-sync-max-bytes'), String(max));
+    assert.match(w.res.header('access-control-expose-headers'), /\bX-Sync-Max-Bytes\b/);
+  });
   st.step('the answer reports the uploaded size', (w) => assert.equal(w.res.json.bytes, w.sent.length));
   st.step('the answer is the uploaded blob, byte for byte', (w) => {
     assert.ok(w.res.body.equals(w.sent));

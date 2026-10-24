@@ -78,7 +78,8 @@
     <pre tabindex="0" aria-label="Sync requests"><code>Authorization: Bearer &lt;token&gt;
 GET    /api/sync   → blob + ETag (304 with If-None-Match, 404 if none)
 PUT    /api/sync   If-Match: "&lt;etag&gt;" or If-None-Match: *   (412 conflict, 410 forwarded)
-DELETE /api/sync   → 204</code></pre>
+DELETE /api/sync   → 204
+Every answer: X-Sync-Max-Bytes (the size limit, 1 MB by default)</code></pre>
 
     <p>Full details: <a href="https://github.com/kreativ-anders/news-reader#collector-apicollect" rel="noopener">README on GitHub</a>.</p>
   </main>

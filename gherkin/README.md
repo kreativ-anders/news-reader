@@ -53,8 +53,8 @@ Every module in `app/js/`, `app/sw.js`, `src/` and `api/index.php` must appear i
 | `site.feature` | Language pages, thanks redirect, 404 page per language, theme, install, events, preview | E2E `site`; API `nginx`, `security`; JS `og-image`, `i18n` |
 | `executable/feed_identity.feature` | `normalizeUrl`, `extractUrl`, pinned `feedId`, `cleanTitle` | **runs** `tests/js/feed-identity.bdd.test.mjs` |
 | `executable/vault_records.feature` | `validRecord` – which records from other devices are taken | **runs** `tests/js/vault-records.bdd.test.mjs` |
-| `executable/pruning.feature` | `prunable` periods, `slim` sync records | **runs** `tests/js/pruning.bdd.test.mjs` |
+| `executable/pruning.feature` | `prunable` periods, `slim` sync records, size of a heavy reader, `syncFill` | **runs** `tests/js/pruning.bdd.test.mjs` |
 | `executable/idle_devices.feature` | `isIdleDevice` – which paired devices count as inactive | **runs** `tests/js/idle-devices.bdd.test.mjs` |
 | `executable/refresh_rhythm.feature` | `openWait` – how long opening the app leaves a feed alone | **runs** `tests/js/refresh-rhythm.bdd.test.mjs` |
 | `executable/safe_output.feature` | `esc`, `httpUrl`, `hostOf` | **runs** `tests/js/safe-output.bdd.test.mjs` |
-| `executable/sync_protocol.feature` | `/api/sync` create/read/update/delete, auth, preconditions, forwards | **runs** `tests/api/sync-protocol.bdd.test.mjs` |
+| `executable/sync_protocol.feature` | `/api/sync` create/read/update/delete, size limit header, auth, preconditions, forwards | **runs** `tests/api/sync-protocol.bdd.test.mjs` |

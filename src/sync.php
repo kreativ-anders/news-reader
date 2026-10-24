@@ -11,8 +11,10 @@ const NR_SYNC_MIN_BYTES = 4 + 1 + 12 + 16; // INFO: magic + flags + IV + GCM tag
 function nr_sync_handle(): never
 {
     nr_api_headers('GET, PUT, DELETE', 'Authorization, Content-Type, If-Match, If-None-Match');
-    header('Access-Control-Expose-Headers: ETag');
+    header('Access-Control-Expose-Headers: ETag, X-Sync-Max-Bytes');
     header('Cache-Control: no-store');
+    // INFO: lets the app show how full the sync data is, also against a self-hosted limit
+    header('X-Sync-Max-Bytes: ' . NR_SYNC_MAX_BYTES);
 
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     if ($method === 'OPTIONS') {

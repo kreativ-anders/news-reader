@@ -19,6 +19,9 @@ const MAINTAIN_EVERY_MS = 864e5;
 const UPLOAD_DELAY_MS = 20000;
 const MAX_PLAIN_BYTES = 32 << 20;
 const TOO_LARGE_TARGET = 800_000;
+// INFO: servers before X-Sync-Max-Bytes all used this limit
+const DEFAULT_MAX_BYTES = 1_000_000;
+const NEARLY_FULL = 0.75;
 const DEVICE_TOUCH_MS = 3600e3;
 const DEVICE_NAME_MAX = 60;
 const DEVICE_IDLE_MS = 365 * 864e5;
@@ -30,7 +33,7 @@ const CARRY_MAX = 1000;
 export class Sync extends EventTarget {
   constructor() {
     super();
-    this.status = { state: 'local', pending: 0, lastSync: null, message: '', code: '' };
+    this.status = { state: 'local', pending: 0, lastSync: null, message: '', code: '', size: null };
     this.running = null;
     this.again = false;
     this.debounce = null;
@@ -45,6 +48,7 @@ export class Sync extends EventTarget {
   async init() {
     await this.maintain().catch(() => {});
     this.status.lastSync = await db.kvGet('lastSync', null);
+    this.status.size = await db.kvGet('syncSize', null);
     await this.refreshPending();
     this.emitStatus(await db.kvGet('vaultKey') ? 'idle' : 'local');
   }
@@ -150,8 +154,10 @@ export class Sync extends EventTarget {
       remoteEtag = etag;
     } else if (res.ok) {
       remoteEtag = res.headers.get('ETag');
-      const blob = await decrypt(keys.aes, new Uint8Array(await res.arrayBuffer()));
+      const buf = new Uint8Array(await res.arrayBuffer());
+      const blob = await decrypt(keys.aes, buf);
       if (blob.forward) return this.follow(blob.data);
+      await this.noteSize(res, buf.length);
       remote = Array.isArray(blob.data?.records) ? blob.data.records : [];
       changed.push(...await db.applyRemote(remote, (r) => isCarried(r) || prunable(r, now)));
       changed.push(...await db.addCarried(remote.filter((r) => isCarried(r) && db.validRecord(r, now)), now - CARRY_MS));
@@ -202,10 +208,18 @@ export class Sync extends EventTarget {
       return false;
     }
     if (!put.ok) throw await httpError(put);
+    await this.noteSize(put, put.size);
     await db.kvSet('etag', put.headers.get('ETag') || (await put.json()).etag);
     await db.outboxAck(sent);
     await db.kvSet('carrySent', carryAt);
     return true;
+  }
+
+  // INFO: local only, never part of the sync data – the last size this device read or wrote
+  async noteSize(res, bytes) {
+    const max = Number(res.headers.get('X-Sync-Max-Bytes'));
+    this.status.size = { bytes, max: Number.isSafeInteger(max) && max > 0 ? max : DEFAULT_MAX_BYTES };
+    await db.kvSet('syncSize', this.status.size);
   }
 
   async deriveKeys(key) {
@@ -278,6 +292,7 @@ export class Sync extends EventTarget {
         created = await putSnapshot(endpoint, next, records, now, { 'If-None-Match': '*' });
       }
       if (!created.ok) throw await httpError(created);
+      await this.noteSize(created, created.size);
       const newEtag = created.headers.get('ETag') || (await created.json()).etag;
 
       const moved = await request(endpoint, old.token, {
@@ -304,6 +319,8 @@ export class Sync extends EventTarget {
     if (!isValidKey(key)) throw new Error('Invalid vault key.');
     await db.kvSet('vaultKey', key);
     await db.kvDel('etag');
+    await db.kvDel('syncSize');
+    this.status.size = null;
     await db.kvDel('deviceId');
     await db.kvDel('deviceKey');
     await db.kvDel('pubPins');
@@ -328,6 +345,8 @@ export class Sync extends EventTarget {
     }
     await db.kvDel('vaultKey');
     await db.kvDel('etag');
+    await db.kvDel('syncSize');
+    this.status.size = null;
     await db.kvDel('deviceId');
     await db.kvDel('deviceKey');
     await db.kvDel('pubPins');
@@ -505,8 +524,18 @@ export function carried(entries, records, now) {
   return out.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, CARRY_MAX);
 }
 
+// INFO: how full the sync data is; null until this device read or wrote it once
+export function syncFill(size) {
+  if (!(size?.bytes >= 0)) return null;
+  const max = size.max > 0 ? size.max : DEFAULT_MAX_BYTES;
+  const ratio = size.bytes / max;
+  return { bytes: size.bytes, max, percent: Math.min(100, Math.floor(ratio * 100)), nearlyFull: ratio >= NEARLY_FULL };
+}
+
+export const snapshot = (records, now) => ({ v: 1, at: now, records: records.map(slim) });
+
 async function putSnapshot(endpoint, keys, records, now, conditional) {
-  const body = await encrypt(keys.aes, { v: 1, at: now, records: records.map(slim) }, MAGIC, AAD);
+  const body = await encrypt(keys.aes, snapshot(records, now), MAGIC, AAD);
   const res = await request(endpoint, keys.token, { method: 'PUT', body, headers: { 'Content-Type': 'application/octet-stream', ...conditional } });
   return Object.assign(res, { size: body.length });
 }

@@ -1,4 +1,4 @@
-// Sync hardening: forged device records, the upload size limit, local-only housekeeping.
+// Sync hardening: forged device records, the upload size limit and fill level, local-only housekeeping.
 // Gherkin: gherkin/sync.feature, gherkin/devices.feature, gherkin/retention.feature
 import { test, expect, API, App } from './fixtures.mjs';
 
@@ -101,6 +101,25 @@ test('an upload over the size limit drops the oldest finished items and retries 
   const ids = (await records(page)).filter((r) => r.kind === 'item').map((r) => r.id).sort();
   expect(ids).toEqual(['done1', 'done2', 'done3', 'done4', 'keep']);
   expect(await app.pending()).toBe(0);
+});
+
+test('settings show how full the sync data is and warn from 75 % of the server limit', async ({ app, page }) => {
+  await createVault(app, page);
+  await expect(page.locator('#syncSize')).toHaveText(/^\d+ (byte|kB) of 1 MB \(\d+%\)$/);
+  await expect(page.locator('#syncSizeT')).toBeVisible();
+  await expect(page.locator('#syncFull')).toBeHidden();
+
+  // INFO: a self-hosted server with a tiny limit – the next full read reports it
+  await page.route('**/api/sync', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const res = await route.fetch();
+    return route.fulfill({ response: res, headers: { ...res.headers(), 'x-sync-max-bytes': '200' } });
+  });
+  await page.evaluate(async (u) => (await import(u)).kvDel('etag'), `${API()}/app/js/db.js`);
+  await syncNow(page);
+  await expect(page.locator('#syncSize')).toHaveText(/ of 200 byte \(100%\)$/);
+  await expect(page.locator('#syncFull')).toBeVisible();
+  expect((await app.kv('syncSize')).max).toBe(200);
 });
 
 test('local-only mode prunes old dismissed items at start and keeps no outbox', async ({ app, page }) => {

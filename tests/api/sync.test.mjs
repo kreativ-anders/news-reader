@@ -23,12 +23,12 @@ describe('sync protocol', () => {
     assert.ok(!names.some((n) => n.includes(t)));
   });
 
-  it('CORS preflight exposes ETag', async () => {
+  it('CORS preflight exposes ETag and the size limit', async () => {
     const r = await s.get('/api/sync', { method: 'OPTIONS' });
     assert.equal(r.status, 204);
     assert.match(r.header('access-control-allow-headers'), /Authorization/);
     assert.match(r.header('access-control-allow-headers'), /If-Match/);
-    assert.equal((await sync(token())).header('access-control-expose-headers'), 'ETag');
+    assert.equal((await sync(token())).header('access-control-expose-headers'), 'ETag, X-Sync-Max-Bytes');
   });
 
   it('concurrent creates: exactly one wins', async () => {

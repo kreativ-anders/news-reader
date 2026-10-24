@@ -55,6 +55,11 @@ Feature: Paired devices share feeds and decisions, end-to-end encrypted
     Given an upload is refused as too large
     Then the oldest finished posts are removed and the upload is retried once
 
+  Scenario: Settings show how full the sync data is
+    Given this device is paired and has read or written the sync data
+    Then Settings → Sync shows its size next to the server's limit (exact rules: executable/pruning.feature)
+    And from 75 % on a hint says that the oldest Done and Not interested posts are forgotten first, Later stays
+
   Scenario: Without pairing nothing leaves the device
     Given this device is not paired
     Then no changes are queued for upload
