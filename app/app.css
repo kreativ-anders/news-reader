@@ -82,7 +82,10 @@ svg{display:block}
 :is(.nav,.drawer) .subnav .fold-t{flex:none;width:24px;padding:6px 4px;justify-content:center}
 :is(.nav,.drawer) .subnav .fold-t svg{width:14px;height:14px;transition:transform .15s}
 .fold.closed .fold-t svg{transform:rotate(-90deg)}
-.fold-b{display:flex;flex-direction:column;gap:1px;margin-left:24px}
+.fold-b{display:flex;flex-direction:column;gap:1px;margin-left:11px;padding-left:12px;border-left:1px solid var(--line)}
+/* INFO: folder sum as a pill, feed counts plain – so the sum does not read as one more row of the list */
+.fold-h .badge:not(:empty){color:var(--fg);border:1px solid var(--line-strong);padding:0 6px;border-radius:var(--radius)}
+.fold-b .badge{font-weight:500}
 :is(.nav,.drawer) .subnav .quiet{padding:4px 8px;font-size:.78rem;font-weight:600;color:var(--faint)}
 :is(.nav,.drawer) .subnav .quiet:hover{color:var(--fg)}
 .vh h1 .crumb{font-size:.6em;font-weight:500;color:var(--muted)}
