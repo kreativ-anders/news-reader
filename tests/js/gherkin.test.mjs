@@ -22,7 +22,8 @@ const list = (header = '') => header.split(',').map((s) => s.trim()).filter(Bool
 const features = ls('gherkin', '.feature', { recursive: true }).map((path) => ({ path, ...parseFeature(read(path), path) }));
 const tests = ls('tests', '', { recursive: true })
   .filter((f) => /\.(test|spec)\.mjs$|-test\.php$/.test(f) && !f.includes('/fixtures/') && !f.endsWith('/gherkin.test.mjs'));
-const markers = tests.flatMap((file) => read(file).split('\n').flatMap((line) => {
+// INFO: \r?\n – a Windows checkout has CRLF, and "." in MARKER stops at the \r
+const markers = tests.flatMap((file) => read(file).split(/\r?\n/).flatMap((line) => {
   const m = line.match(MARKER);
   return m ? list(m[1]).map((ref) => ({ file, ref })) : [];
 }));
