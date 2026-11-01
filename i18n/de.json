@@ -33,7 +33,7 @@
     "news_is_a_calm": "News ist ein ruhiger RSS-Reader für Smartphone und Desktop. Kein endloses Scrollen, kein Algorithmus – nur deine Quellen und das, was für dich zählt. Jeder neue Beitrag bekommt eine schnelle Entscheidung: jetzt lesen, später oder nicht interessiert. Deine Geräte bleiben synchron, Ende-zu-Ende-verschlüsselt, ganz ohne Konto.",
     "open_news": "News öffnen",
     "host_your_own": "Selbst hosten",
-    "free_amp_open_source": "Kostenlos &amp; Open Source · installierbar wie eine App · funktioniert offline",
+    "free_amp_open_source": "Kostenlos &amp; Open Source · startet sofort, ohne Konto · funktioniert offline",
     "synced": "Synchron 09:41",
     "inbox": "Eingang",
     "the_quiet_comeback_of": "Das stille Comeback von RSS im Jahr 2026",
@@ -55,6 +55,11 @@
     "sum_3": "Wir haben gemessen, was ein Seitenaufruf wirklich kostet – vom Rechenzentrum bis zum Smartphone – und wo die meiste Energie bleibt.",
     "nav_sources": "Quellen",
     "feeds": "Feeds"
+  },
+  "aud": {
+    "label": "Ich möchte",
+    "reader": "News lesen",
+    "host": "selbst hosten"
   },
   "reader": {
     "the_reader": "Der Reader",
@@ -164,7 +169,7 @@
     "what_is_news": "Was ist News?",
     "news_is_a_calm": "Ein ruhiger Feed-Reader für Smartphone und Desktop-Browser. Jeder neue Beitrag landet im Eingang und bekommt eine Entscheidung: jetzt lesen, später oder nicht interessiert. News lässt sich wie eine App installieren, funktioniert offline und ist kostenlos und Open Source.",
     "how_install": "Wie installiere ich News?",
-    "how_install_text": "Direkt aus dem Browser – kein App Store, kein Konto. In Chrome, Edge oder Samsung Internet nutzt du den Button „News installieren“ auf dieser Seite. Auf iPhone und iPad öffnest du News in Safari, tippst auf Teilen und wählst Zum Home-Bildschirm. Auf dem Mac öffnest du News in Safari und wählst Ablage › Zum Dock hinzufügen. Installiert bekommt News ein eigenes Symbol und Fenster und funktioniert offline.",
+    "how_install_text": "Direkt aus dem Browser, ohne App Store und ohne Konto. In Chrome, Edge oder Samsung Internet tippst du auf den Button „News installieren“ neben „News öffnen“ auf dieser Seite. Auf iPhone und iPad öffnest du News in Safari, tippst auf Teilen und wählst Zum Home-Bildschirm. Auf dem Mac öffnest du News in Safari und wählst Ablage › Zum Dock hinzufügen. Installiert bekommt News ein eigenes Symbol und Fenster und funktioniert offline.",
     "how_update": "Wie aktualisiere ich News?",
     "how_update_text": "Gar nicht – News ist eine Web-App und aktualisiert sich selbst. Bei jedem Öffnen und jedem Zurückwechseln sucht sie im Hintergrund nach einer neuen Version. Ist eine bereit, sagt News dir Bescheid: Tipp auf Neu laden, und du bist auf dem neuesten Stand. In den Einstellungen siehst du direkt unter der Überschrift, welche Version du hast.",
     "how_is_it_different": "Was unterscheidet News von anderen Feed-Readern?",
@@ -177,6 +182,8 @@
     "no_feeds_reading_list": "Nein. Feeds, Eingang, Leseliste und Lesestand werden auf deinem Gerät verschlüsselt (AES-256-GCM), bevor sie hochgeladen werden. Der Server speichert für deine Geräte eine versiegelte Datei, benannt nach einem Hash des Zugangs-Tokens – keine Datenbank, nichts Lesbares, das durchsickern könnte. Wie bei jeder Website sieht der Webserver beim Verbinden allerdings deine IP-Adresse.",
     "what_if_i_lose": "Was passiert, wenn ich alle meine Geräte verliere?",
     "then_the_vault_cannot": "Dann kann niemand deine synchronisierten Daten öffnen – auch wir nicht. Das ist der Preis echter Ende-zu-Ende-Verschlüsselung. Lust auf ein Backup? Exportiere deine Feeds ab und zu als OPML.",
+    "who_runs": "Wer betreibt news-reader.app?",
+    "who_runs_text": "News Reader wird von kreativ-anders aus Nürnberg betrieben (Manuel Steinberg, siehe <a href=\"./imprint.html\">Impressum</a>). Die Nutzung ist kostenlos. Den Server bezahlen alle, die freiwillig etwas geben. Deine Daten nimmst du jederzeit mit: Exportiere deine Feeds als OPML oder betreibe eine eigene Kopie, denn News Reader steht unter MIT-Lizenz.",
     "what_is_the_collector": "Was ist der Collector?",
     "the_collector_is_the": "Der Teil von News Reader, der deine Quellen abruft. Gib ihm eine beliebige Website- oder Feed-Adresse, und er findet die neuen Beiträge – aus dem Feed der Seite, wenn es einen gibt, sonst aus ihrer Sitemap oder direkt aus der Seite. Weist eine Website den Server ab, versucht die App, sie direkt von deinem Gerät zu laden. Entwickler können ihn als kleine Web-API nutzen: <code>GET /api/collect?url=…</code>.",
     "what_if_a_website": "Was, wenn eine Website keinen RSS-Feed hat?",

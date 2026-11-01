@@ -306,3 +306,33 @@ test.describe('install button', () => {
     });
   });
 });
+
+test('audience switch shows readers or admins their part of the page', async ({ page }) => {
+  await page.goto(API() + '/');
+  const sw = page.locator('[data-aud-switch]');
+  await expect(sw).toBeVisible();
+  await expect(page.locator('#reader')).toBeVisible();
+  await expect(page.locator('#build')).toBeHidden();
+  await sw.locator('button[data-aud="host"]').click();
+  await expect(sw.locator('button[data-aud="host"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#build')).toBeVisible();
+  await expect(page.locator('#collector')).toBeVisible();
+  await expect(page.locator('#reader')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#build')).toBeVisible();
+  await sw.locator('button[data-aud="reader"]').click();
+  await expect(page.locator('#build')).toBeHidden();
+  await page.locator('.nav a[href="#build"]').click();
+  await expect(page.locator('#build')).toBeVisible();
+  await expect(page.locator('#build-title')).toBeInViewport();
+});
+
+test('without JavaScript every section shows and the switch stays hidden', async ({ browser }) => {
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  const page = await ctx.newPage();
+  await page.goto(API() + '/');
+  await expect(page.locator('[data-aud-switch]')).toBeHidden();
+  await expect(page.locator('#reader')).toBeVisible();
+  await expect(page.locator('#build')).toBeVisible();
+  await ctx.close();
+});

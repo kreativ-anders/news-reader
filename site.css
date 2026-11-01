@@ -106,3 +106,14 @@ footer a{text-decoration:underline;text-decoration-color:var(--line-strong);text
 
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .doc address{margin:12px 0}
+
+/* INFO: audience switch in the hero (site.js) – hides the sections of the other audience; without JS everything shows */
+.aud{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-top:22px}
+.aud[hidden]{display:none}
+.aud-label{font-weight:700;color:var(--muted);font-size:.96rem}
+.aud-opts{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--line-strong);border-radius:var(--radius)}
+.aud-opts button{font:600 .96rem var(--font);color:var(--muted);background:none;border:0;border-radius:calc(var(--radius) - 2px);padding:7px 14px;cursor:pointer}
+.aud-opts button:hover{color:var(--fg)}
+.aud-opts button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+html[data-aud-mode="reader"] [data-audience="host"],html[data-aud-mode="host"] [data-audience="reader"]{display:none}
+@media (forced-colors:active){.aud-opts button[aria-pressed="true"]{outline:2px solid Highlight}}

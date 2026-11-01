@@ -34,6 +34,15 @@ Feature: The project site explains News in five languages
     Then it cycles light, dark and auto, says the current mode and sets the browser bar colour
     And the app uses the same choice
 
+  Scenario: Readers and admins each see their part of the page
+    Given the start page
+    When I choose "host it myself" in the switch below the hero
+    Then the Collector and self-host sections show and the reader sections hide
+    And the choice is remembered for my next visit
+    When I follow a link to a section of the other part, like "Self-host" in the navigation
+    Then the switch changes over before the page scrolls there
+    And without JavaScript there is no switch and every section shows
+
   Scenario: Installing the app
     Given Chromium offers installation
     When I choose "Install app"

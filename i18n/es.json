@@ -33,7 +33,7 @@
     "news_is_a_calm": "News es un lector RSS tranquilo para tu móvil y tu escritorio. Sin scroll infinito, sin algoritmo – solo tus fuentes. Lo que importa se queda; el resto, sáltatelo. Cada entrada nueva recibe una decisión rápida: leer ahora, más tarde o no me interesa. Tus dispositivos se mantienen sincronizados, cifrados de extremo a extremo y sin cuenta.",
     "open_news": "Abrir News",
     "host_your_own": "Alójalo tú",
-    "free_amp_open_source": "Gratis &amp; de código abierto · se instala como una app · funciona sin conexión",
+    "free_amp_open_source": "Gratis &amp; de código abierto · se abre al instante, sin cuenta · funciona sin conexión",
     "synced": "Sincronizado 09:41",
     "inbox": "Bandeja",
     "the_quiet_comeback_of": "La vuelta silenciosa del RSS en 2026",
@@ -55,6 +55,11 @@
     "sum_3": "Medimos lo que cuesta de verdad abrir una página – del centro de datos al móvil – y adónde va la mayor parte de la energía.",
     "nav_sources": "Fuentes",
     "feeds": "Feeds"
+  },
+  "aud": {
+    "label": "Quiero",
+    "reader": "leer mis fuentes",
+    "host": "alojarlo yo mismo"
   },
   "reader": {
     "the_reader": "El lector",
@@ -164,7 +169,7 @@
     "what_is_news": "¿Qué es News?",
     "news_is_a_calm": "Un lector de feeds tranquilo para tu móvil y el navegador de tu escritorio. Cada entrada nueva llega a la bandeja y recibe una decisión: leer ahora, más tarde o no me interesa. Se instala como una app, funciona sin conexión y es gratis y de código abierto.",
     "how_install": "¿Cómo instalo News?",
-    "how_install_text": "Directamente desde el navegador – sin tienda de apps ni cuenta. En Chrome, Edge o Samsung Internet, usa el botón «Instalar News» de esta página. En iPhone y iPad, abre News en Safari, toca Compartir y elige Añadir a pantalla de inicio. En Mac, abre News en Safari y elige Archivo › Añadir al Dock. Una vez instalada, News tiene su propio icono y ventana y funciona sin conexión.",
+    "how_install_text": "Directamente desde el navegador, sin tienda de apps ni cuenta. En Chrome, Edge o Samsung Internet, toca el botón «Instalar News» junto a «Abrir News» en esta página. En iPhone y iPad, abre News en Safari, toca Compartir y elige Añadir a pantalla de inicio. En Mac, abre News en Safari y elige Archivo › Añadir al Dock. Una vez instalada, News tiene su propio icono y ventana y funciona sin conexión.",
     "how_update": "¿Cómo actualizo News?",
     "how_update_text": "No tienes que hacer nada: News es una app web y se actualiza sola. Cada vez que la abres o vuelves a ella, busca en segundo plano una versión nueva. Cuando está lista, News te avisa: toca Recargar y ya estás al día. En Ajustes, justo debajo del título, ves qué versión tienes.",
     "how_is_it_different": "¿En qué se diferencia de otros lectores de feeds?",
@@ -177,6 +182,8 @@
     "no_feeds_reading_list": "No. Feeds, Bandeja, lista de lectura y progreso se cifran en tu dispositivo (AES-256-GCM) antes de subirse. El servidor guarda un archivo sellado para tus dispositivos, con el nombre de un hash del token de acceso – sin base de datos, nada legible que filtrar. Como cualquier web, el servidor sí ve tu dirección IP cuando te conectas.",
     "what_if_i_lose": "¿Y si pierdo todos mis dispositivos?",
     "then_the_vault_cannot": "Entonces nadie puede abrir tus datos sincronizados – ni siquiera nosotros. Es el precio del cifrado de extremo a extremo de verdad. ¿Quieres una copia de seguridad? Exporta tus feeds en OPML de vez en cuando.",
+    "who_runs": "¿Quién gestiona news-reader.app?",
+    "who_runs_text": "News Reader lo gestiona kreativ-anders desde Núremberg, Alemania (Manuel Steinberg, consulta el <a href=\"./imprint.html\">aviso legal</a>). Su uso es gratis. El servidor lo pagan quienes aportan lo que quieren. Puedes llevarte tus datos cuando quieras: exporta tus fuentes en OPML o aloja tu propia copia, porque News Reader tiene licencia MIT.",
     "what_is_the_collector": "¿Qué es el Collector?",
     "the_collector_is_the": "La parte de News Reader que consulta tus fuentes. Dale la dirección de cualquier web o feed y encuentra las entradas nuevas – del feed de la web si lo tiene, si no de su sitemap o de la propia página. Si un sitio rechaza al servidor, la app intenta cargarlo directamente desde tu dispositivo. Los desarrolladores pueden usarlo como una pequeña API web: <code>GET /api/collect?url=…</code>.",
     "what_if_a_website": "¿Y si una web no tiene feed RSS?",

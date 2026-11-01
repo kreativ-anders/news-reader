@@ -33,7 +33,7 @@
     "news_is_a_calm": "News est un lecteur RSS serein pour votre mobile et votre ordinateur. Pas de défilement sans fin, pas d’algorithme – seulement vos sources, et vous passez le reste. Chaque nouvel article appelle une décision rapide : lire maintenant, plus tard ou pas intéressé. Vos appareils restent synchronisés, chiffrés de bout en bout, sans compte.",
     "open_news": "Ouvrir News",
     "host_your_own": "Héberger le vôtre",
-    "free_amp_open_source": "Gratuit &amp; open source · s’installe comme une app · fonctionne hors ligne",
+    "free_amp_open_source": "Gratuit &amp; open source · s’ouvre tout de suite, sans compte · fonctionne hors ligne",
     "synced": "Synchronisé 09:41",
     "inbox": "Réception",
     "the_quiet_comeback_of": "Le retour discret du RSS en 2026",
@@ -55,6 +55,11 @@
     "sum_3": "Nous avons mesuré ce que coûte vraiment l’affichage d’une page – du centre de données au mobile – et où part l’essentiel de l’énergie.",
     "nav_sources": "Sources",
     "feeds": "Flux"
+  },
+  "aud": {
+    "label": "Je veux",
+    "reader": "lire mes flux",
+    "host": "l’héberger moi-même"
   },
   "reader": {
     "the_reader": "Le lecteur",
@@ -164,7 +169,7 @@
     "what_is_news": "Qu’est-ce que News ?",
     "news_is_a_calm": "Un lecteur de flux serein pour votre mobile et le navigateur de votre ordinateur. Chaque nouvel article arrive en réception et appelle une décision : lire maintenant, plus tard ou pas intéressé. News s’installe comme une app, fonctionne hors ligne et est gratuit et open source.",
     "how_install": "Comment installer News ?",
-    "how_install_text": "Directement depuis votre navigateur – pas d’App Store, pas de compte. Dans Chrome, Edge ou Samsung Internet, utilisez le bouton « Installer News » sur cette page. Sur iPhone et iPad, ouvrez News dans Safari, touchez Partager et choisissez Sur l’écran d’accueil. Sur Mac, ouvrez News dans Safari et choisissez Fichier › Ajouter au Dock. Une fois installée, News a sa propre icône et sa propre fenêtre et fonctionne hors ligne.",
+    "how_install_text": "Directement depuis votre navigateur, sans App Store ni compte. Dans Chrome, Edge ou Samsung Internet, touchez le bouton « Installer News » à côté de « Ouvrir News » sur cette page. Sur iPhone et iPad, ouvrez News dans Safari, touchez Partager et choisissez Sur l’écran d’accueil. Sur Mac, ouvrez News dans Safari et choisissez Fichier › Ajouter au Dock. Une fois installée, News a sa propre icône et sa propre fenêtre et fonctionne hors ligne.",
     "how_update": "Comment mettre à jour News ?",
     "how_update_text": "Vous n’avez rien à faire : News est une application web qui se met à jour toute seule. Chaque fois que vous l’ouvrez ou y revenez, elle vérifie discrètement s’il existe une nouvelle version. Quand elle est prête, News vous prévient : touchez Recharger et vous êtes à jour. Dans les Réglages, juste sous le titre, vous voyez quelle version vous utilisez.",
     "how_is_it_different": "Quelle différence avec les autres lecteurs de flux ?",
@@ -177,6 +182,8 @@
     "no_feeds_reading_list": "Non. Flux, Réception, liste de lecture et progression sont chiffrés sur votre appareil (AES-256-GCM) avant l’envoi. Le serveur stocke un fichier scellé pour vos appareils, nommé d’après un hash du jeton d’accès – pas de base de données, rien de lisible à divulguer. Comme pour tout site web, le serveur voit tout de même votre adresse IP lors de la connexion.",
     "what_if_i_lose": "Et si je perds tous mes appareils ?",
     "then_the_vault_cannot": "Alors personne ne peut ouvrir vos données synchronisées – pas même nous. C’est le prix d’un vrai chiffrement de bout en bout. Envie d’une sauvegarde ? Exportez vos flux en OPML de temps en temps.",
+    "who_runs": "Qui exploite news-reader.app ?",
+    "who_runs_text": "News Reader est exploité par kreativ-anders, à Nuremberg en Allemagne (Manuel Steinberg, voir les <a href=\"./imprint.html\">mentions légales</a>). L’utilisation est gratuite. Le serveur est financé par celles et ceux qui donnent ce qu’ils veulent. Vous pouvez reprendre vos données à tout moment : exportez vos flux en OPML ou hébergez votre propre copie, car News Reader est sous licence MIT.",
     "what_is_the_collector": "Qu’est-ce que le Collector ?",
     "the_collector_is_the": "La partie de News Reader qui va chercher vos sources. Donnez-lui l’adresse de n’importe quel site ou flux et il trouve les nouveaux articles – dans le flux du site s’il en a un, sinon dans son sitemap ou directement dans la page. Si un site refuse le serveur, l’app essaie de le charger directement depuis votre appareil. Les développeurs peuvent l’utiliser comme petite API web : <code>GET /api/collect?url=…</code>.",
     "what_if_a_website": "Et si un site n’a pas de flux RSS ?",

@@ -113,3 +113,35 @@ if (installBtns.length && installDlg) {
   }));
   installDlg.addEventListener('close', () => opener?.focus());
 }
+
+// INFO: audience switch below the hero – readers see the reader sections, admins the Collector and self-host sections.
+//       Without JS the switch stays hidden and every section shows. A link into a hidden section (nav, #build) switches over first.
+const aud = document.querySelector('[data-aud-switch]');
+if (aud) {
+  const KEY = 'news-site-audience', html = document.documentElement;
+  const remember = (mode) => { try { localStorage.setItem(KEY, mode); } catch { /* INFO: storage blocked */ } };
+  const stored = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
+  const setAudience = (mode) => {
+    html.dataset.audMode = mode;
+    aud.querySelectorAll('button[data-aud]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.aud === mode)));
+  };
+  const fit = (id) => {
+    const part = id && document.getElementById(id)?.closest('[data-audience]');
+    if (part && part.dataset.audience !== html.dataset.audMode) setAudience(part.dataset.audience);
+  };
+  aud.hidden = false;
+  setAudience(stored() === 'host' ? 'host' : 'reader');
+  const hashId = () => decodeURIComponent(location.hash.slice(1));
+  if (hashId()) { fit(hashId()); document.getElementById(hashId())?.scrollIntoView(); }
+  addEventListener('hashchange', () => fit(hashId()));
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (a) fit(decodeURIComponent(a.getAttribute('href').slice(1)));
+  });
+  aud.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-aud]');
+    if (!b) return;
+    setAudience(b.dataset.aud);
+    remember(b.dataset.aud);
+  });
+}

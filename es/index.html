@@ -99,7 +99,7 @@
                     "name": "¿Cómo instalo News?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Directamente desde el navegador – sin tienda de apps ni cuenta. En Chrome, Edge o Samsung Internet, usa el botón «Instalar News» de esta página. En iPhone y iPad, abre News en Safari, toca Compartir y elige Añadir a pantalla de inicio. En Mac, abre News en Safari y elige Archivo › Añadir al Dock. Una vez instalada, News tiene su propio icono y ventana y funciona sin conexión."
+                        "text": "Directamente desde el navegador, sin tienda de apps ni cuenta. En Chrome, Edge o Samsung Internet, toca el botón «Instalar News» junto a «Abrir News» en esta página. En iPhone y iPad, abre News en Safari, toca Compartir y elige Añadir a pantalla de inicio. En Mac, abre News en Safari y elige Archivo › Añadir al Dock. Una vez instalada, News tiene su propio icono y ventana y funciona sin conexión."
                     }
                 },
                 {
@@ -148,6 +148,14 @@
                     "acceptedAnswer": {
                         "@type": "Answer",
                         "text": "Entonces nadie puede abrir tus datos sincronizados – ni siquiera nosotros. Es el precio del cifrado de extremo a extremo de verdad. ¿Quieres una copia de seguridad? Exporta tus feeds en OPML de vez en cuando."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "¿Quién gestiona news-reader.app?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "News Reader lo gestiona kreativ-anders desde Núremberg, Alemania (Manuel Steinberg, consulta el aviso legal). Su uso es gratis. El servidor lo pagan quienes aportan lo que quieren. Puedes llevarte tus datos cuando quieras: exporta tus fuentes en OPML o aloja tu propia copia, porque News Reader tiene licencia MIT."
                     }
                 },
                 {
@@ -423,7 +431,11 @@
             <a class="btn btn-primary" href="../app/" data-open-app><span class="l-app" data-i18n="hero.open_news">Abrir News</span><span class="l-browser" hidden data-i18n="install.open_in_browser">Abrir en el navegador</span></a>
             <a class="btn btn-ghost" href="#build" data-i18n="hero.host_your_own">Alójalo tú</a>
           </div>
-          <p class="hero-note" data-i18n="hero.free_amp_open_source">Gratis &amp; de código abierto · se instala como una app · funciona sin conexión</p>
+          <p class="hero-note" data-i18n="hero.free_amp_open_source">Gratis &amp; de código abierto · se abre al instante, sin cuenta · funciona sin conexión</p>
+          <div class="aud" role="group" aria-labelledby="audLabel" data-aud-switch hidden>
+            <span id="audLabel" class="aud-label" data-i18n="aud.label">Quiero</span>
+            <span class="aud-opts"><button type="button" data-aud="reader" aria-pressed="true" data-i18n="aud.reader">leer mis fuentes</button><button type="button" data-aud="host" aria-pressed="false" data-i18n="aud.host">alojarlo yo mismo</button></span>
+          </div>
         </div>
 
         <div class="device" role="img" data-i18n-attr="aria-label:hero.device_label" aria-label="La app News: la bandeja con las entradas de hoy – cada una con fuente, hora, título y resumen, y los botones leer ahora, más tarde y no me interesa – y el estado de sincronización «Sincronizado»">
@@ -455,7 +467,7 @@
     </section>
 
     <!-- ============================================================ how reading works -->
-    <section id="reader" class="alt" aria-labelledby="reader-title">
+    <section id="reader" class="alt" data-audience="reader" aria-labelledby="reader-title">
       <div class="wrap">
         <div class="sec-head">
           <p class="eyebrow" data-i18n="reader.the_reader">El lector</p>
@@ -475,7 +487,7 @@
       </div>
     </section>
 
-    <section id="features" aria-labelledby="features-title">
+    <section id="features" data-audience="reader" aria-labelledby="features-title">
       <div class="wrap">
         <div class="sec-head">
           <h2 id="features-title" data-i18n="features.everything_a_reader_needs">Todo lo que necesita un lector. Nada que no necesite.</h2>
@@ -564,7 +576,7 @@
     </section>
 
     <!-- ============================================================ collector (secondary) -->
-    <section id="collector" class="variants" aria-labelledby="variants-title">
+    <section id="collector" class="variants" data-audience="host" aria-labelledby="variants-title">
       <div class="wrap">
         <div class="sec-head">
           <p class="eyebrow" data-i18n="collector.under_the_hood_collector">Bajo el capó · Collector</p>
@@ -709,7 +721,7 @@
     </section>
 
     <!-- ============================================================ build your own -->
-    <section id="build" class="alt" aria-labelledby="build-title">
+    <section id="build" class="alt" data-audience="host" aria-labelledby="build-title">
       <div class="wrap">
         <div class="sec-head">
           <p class="eyebrow" data-i18n="build.build_your_own">Autoalojamiento · soberanía digital</p>
@@ -753,13 +765,14 @@
         <div class="sec-head"><h2 id="faq-title" data-i18n="faq.questions_amp_answers">Preguntas &amp; respuestas</h2></div>
         <div class="faq">
           <details><summary data-i18n="faq.what_is_news">¿Qué es News?</summary><p data-i18n="faq.news_is_a_calm">Un lector de feeds tranquilo para tu móvil y el navegador de tu escritorio. Cada entrada nueva llega a la bandeja y recibe una decisión: leer ahora, más tarde o no me interesa. Se instala como una app, funciona sin conexión y es gratis y de código abierto.</p></details>
-          <details><summary data-i18n="faq.how_install">¿Cómo instalo News?</summary><p data-i18n="faq.how_install_text">Directamente desde el navegador – sin tienda de apps ni cuenta. En Chrome, Edge o Samsung Internet, usa el botón «Instalar News» de esta página. En iPhone y iPad, abre News en Safari, toca Compartir y elige Añadir a pantalla de inicio. En Mac, abre News en Safari y elige Archivo › Añadir al Dock. Una vez instalada, News tiene su propio icono y ventana y funciona sin conexión.</p></details>
+          <details><summary data-i18n="faq.how_install">¿Cómo instalo News?</summary><p data-i18n="faq.how_install_text">Directamente desde el navegador, sin tienda de apps ni cuenta. En Chrome, Edge o Samsung Internet, toca el botón «Instalar News» junto a «Abrir News» en esta página. En iPhone y iPad, abre News en Safari, toca Compartir y elige Añadir a pantalla de inicio. En Mac, abre News en Safari y elige Archivo › Añadir al Dock. Una vez instalada, News tiene su propio icono y ventana y funciona sin conexión.</p></details>
           <details><summary data-i18n="faq.how_update">¿Cómo actualizo News?</summary><p data-i18n="faq.how_update_text">No tienes que hacer nada: News es una app web y se actualiza sola. Cada vez que la abres o vuelves a ella, busca en segundo plano una versión nueva. Cuando está lista, News te avisa: toca Recargar y ya estás al día. En Ajustes, justo debajo del título, ves qué versión tienes.</p></details>
           <details><summary data-i18n="faq.how_is_it_different">¿En qué se diferencia de otros lectores de feeds?</summary><p data-i18n="faq.no_account_no_ads">Sin cuenta, sin anuncios, sin rastreo y sin algoritmo que decida lo que ves. Tu progreso de lectura vive en tus dispositivos, la sincronización está cifrada de extremo a extremo y puedes ejecutarlo todo en tu propio servidor.</p></details>
           <details><summary data-i18n="faq.does_news_use_ai">¿News usa IA?</summary><p data-i18n="faq.does_news_use_ai_text">No. No hay IA ni ningún modelo que aprenda de tus hábitos de lectura – ni en tu dispositivo ni en el servidor. News sigue unas pocas reglas simples: las entradas nuevas llegan a la bandeja, las más nuevas primero, y solo tu decisión las mueve. Lo que ves depende de tus fuentes, no de un perfil sobre ti.</p></details>
           <details><summary data-i18n="faq.how_does_sync_work">¿Cómo funciona la sincronización sin cuenta?</summary><p data-i18n="faq.the_first_device_creates">Tu primer dispositivo crea una clave secreta aleatoria. Los demás se unen pegando esta clave de sincronización en Ajustes → Sync. A partir de esa clave, cada dispositivo deriva un token de acceso y una clave de cifrado. El servidor solo recibe el token y un archivo cifrado – la clave nunca sale de tus dispositivos. En Ajustes → Dispositivos vinculados ves todos tus dispositivos y puedes quitar el que ya no uses; un dispositivo sin actividad desde hace más de un año se señala con un punto rojo.</p></details>
           <details><summary data-i18n="faq.can_the_server_operator">¿Puede quien gestiona el servidor leer mis feeds o mi lista de lectura?</summary><p data-i18n="faq.no_feeds_reading_list">No. Feeds, Bandeja, lista de lectura y progreso se cifran en tu dispositivo (AES-256-GCM) antes de subirse. El servidor guarda un archivo sellado para tus dispositivos, con el nombre de un hash del token de acceso – sin base de datos, nada legible que filtrar. Como cualquier web, el servidor sí ve tu dirección IP cuando te conectas.</p></details>
           <details><summary data-i18n="faq.what_if_i_lose">¿Y si pierdo todos mis dispositivos?</summary><p data-i18n="faq.then_the_vault_cannot">Entonces nadie puede abrir tus datos sincronizados – ni siquiera nosotros. Es el precio del cifrado de extremo a extremo de verdad. ¿Quieres una copia de seguridad? Exporta tus feeds en OPML de vez en cuando.</p></details>
+          <details><summary data-i18n="faq.who_runs">¿Quién gestiona news-reader.app?</summary><p data-i18n="faq.who_runs_text">News Reader lo gestiona kreativ-anders desde Núremberg, Alemania (Manuel Steinberg, consulta el <a href="./imprint.html">aviso legal</a>). Su uso es gratis. El servidor lo pagan quienes aportan lo que quieren. Puedes llevarte tus datos cuando quieras: exporta tus fuentes en OPML o aloja tu propia copia, porque News Reader tiene licencia MIT.</p></details>
           <details><summary data-i18n="faq.what_is_the_collector">¿Qué es el Collector?</summary><p data-i18n="faq.the_collector_is_the">La parte de News Reader que consulta tus fuentes. Dale la dirección de cualquier web o feed y encuentra las entradas nuevas – del feed de la web si lo tiene, si no de su sitemap o de la propia página. Si un sitio rechaza al servidor, la app intenta cargarlo directamente desde tu dispositivo. Los desarrolladores pueden usarlo como una pequeña API web: <code>GET /api/collect?url=…</code>.</p></details>
           <details><summary data-i18n="faq.what_if_a_website">¿Y si una web no tiene feed RSS?</summary><p data-i18n="faq.news_can_still_follow">News puede seguirla igualmente. El Collector lee entonces el sitemap de la web o toma las entradas más recientes directamente de la página.</p></details>
           <details><summary data-i18n="faq.can_i_host_my">¿Puedo alojar mi propio News Reader con mi propia marca?</summary><p data-i18n="faq.yes_it_is_mit">Sí – tiene licencia MIT. Colores y fuentes están en un archivo de tema; el nombre y los iconos, en el manifest de la web app. Úsalo para ti, tu familia, tu equipo o tus lectores, en tu propio dominio.</p></details>
