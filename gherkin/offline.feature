@@ -29,6 +29,11 @@ Feature: The app and the Later list work without a connection
     Given a post with an offline copy is Done or Not interested
     Then its copy is removed after one day
 
+  Scenario: The API never comes from the app cache
+    Given the app is served from the root of its server
+    When the app syncs or fetches a source
+    Then the request goes to the server and its answer is not cached
+
   Scenario: A new version offers a reload
     Given a new version of the app was published
     When I start the app or return to it

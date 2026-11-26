@@ -310,6 +310,7 @@
     "reset_ok": "Reimposta",
     "pair_title": "Associare questo dispositivo?",
     "pair_body": "<p>Questo dispositivo condividerà feed, lista di lettura e progressi con tutti i tuoi dispositivi associati.</p>",
+    "pair_trust": "<p>Associa solo con una chiave o un link dei tuoi dispositivi – chi l’ha creato può leggere tutto ciò che questo dispositivo sincronizza.</p>",
     "pair_server": "<p>Server: <code>{server}</code></p>",
     "pair_leave": "<p>Smetterà di sincronizzarsi con i suoi dispositivi attuali.</p>",
     "pair_merge": "<p>Quello che c’è già su questo dispositivo viene unito – non si perde nulla.</p>",

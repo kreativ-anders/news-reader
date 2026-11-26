@@ -11,7 +11,7 @@ import { normalizeUrl, extractUrl, feedId, fetchFeed, openWait, pool, parseOpml,
 import { LANGS, getLang, setLang, loadI18n, applyI18n, getTheme, setTheme, applyTheme } from './i18n.js';
 import { OfflineStore, openReader, readerOpen } from './offline.js';
 
-const VERSION = '0.8.21';
+const VERSION = '0.8.22';
 
 const PAGE = 150;
 // INFO: opening the app asks for fresh copies – not more often, the Collector ignores refresh=1 for younger copies anyway
@@ -1703,7 +1703,7 @@ async function joinVault({ key, server }) {
   if (current === key) { showToast(t('toast.already_paired')); return; }
   const ok = await dialog({
     title: t('dlg.pair_title'),
-    body: t('dlg.pair_body') + (server ? t('dlg.pair_server', { server: esc(server) }) : '') + (current ? t('dlg.pair_leave') : '') + t('dlg.pair_merge'),
+    body: t('dlg.pair_body') + (server ? t('dlg.pair_server', { server: esc(server) }) : '') + t('dlg.pair_trust') + (current ? t('dlg.pair_leave') : '') + t('dlg.pair_merge'),
     ok: t('dlg.pair_ok'),
   });
   if (!ok) return;

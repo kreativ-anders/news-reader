@@ -131,7 +131,7 @@ Item flow: *Inbox* → *Read now* (opens the original in a new tab and files it 
 - Offline copies of done/dismissed items are dropped after 1 day.
 - Pruning (once a day, also without sync): dismissed and untouched items after 30 days; done items, unfollowed feeds and device records after 180 days; *Later* (incl. legacy `reading`) never.
 
-**Offline** – the service worker caches the app shell; changes are queued until the server is reachable. Posts moved to *Later* are saved once via `/api/article`; offline they open in a full-screen reader (scrolled to the end → *Done*).
+**Offline** – the service worker caches the app shell (never `/api/`, also when the app is served at the server root); changes are queued until the server is reachable. Posts moved to *Later* are saved once via `/api/article`; offline they open in a full-screen reader (scrolled to the end → *Done*).
 
 **Input** – swipe (default right = *Later*, left = *Not interested*; configurable), keys `j`/`k`, `↓`/`↑` (once a card is selected), `o`/`Enter`, `l`, `x`, `d`, `u`, `r`, `1`–`4` (Inbox, Later, Done, Feeds), `/`, Ctrl/⌘ K, `v`, `Esc`, `?` (overview).
 

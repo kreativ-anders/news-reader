@@ -29,6 +29,7 @@ Feature: Paired devices share feeds and decisions, end-to-end encrypted
     When I paste a sync key or open a pairing link
     Then I am asked to confirm first
     And the dialog says that my data is merged into that group, names a custom server and warns when this device leaves its current group
+    And it warns that only a key or link from my own devices is safe, because whoever created it can read what this device syncs
 
   Scenario: An unreachable sync server is reported
     Given the sync server cannot be reached

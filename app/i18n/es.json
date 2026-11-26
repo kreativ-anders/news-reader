@@ -310,6 +310,7 @@
     "reset_ok": "Restablecer",
     "pair_title": "¿Vincular este dispositivo?",
     "pair_body": "<p>Este dispositivo compartirá feeds, lista de lectura y progreso con todos tus dispositivos vinculados.</p>",
+    "pair_trust": "<p>Vincula solo con una clave o un enlace de tus propios dispositivos: quien lo creó puede leer todo lo que este dispositivo sincroniza.</p>",
     "pair_server": "<p>Servidor: <code>{server}</code></p>",
     "pair_leave": "<p>Dejará de sincronizarse con sus dispositivos actuales.</p>",
     "pair_merge": "<p>Lo que ya hay en este dispositivo se combina – no se pierde nada.</p>",

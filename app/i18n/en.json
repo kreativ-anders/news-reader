@@ -310,6 +310,7 @@
     "reset_ok": "Reset",
     "pair_title": "Pair this device?",
     "pair_body": "<p>This device will share feeds, reading list and progress with all your paired devices.</p>",
+    "pair_trust": "<p>Only pair with a key or link from one of your own devices – whoever created it can read everything this device syncs.</p>",
     "pair_server": "<p>Server: <code>{server}</code></p>",
     "pair_leave": "<p>It will stop syncing with its current devices.</p>",
     "pair_merge": "<p>What’s already on this device is merged in – nothing gets lost.</p>",

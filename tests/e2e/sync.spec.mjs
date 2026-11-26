@@ -27,6 +27,7 @@ test('pair two devices, sync feeds and item states both ways', async ({ app, pag
   const b = new App(pageB);
   await pageB.goto(`${API()}/app/#pair=${key}`);
   await expect(pageB.locator('#dlg')).toBeVisible(); // "Pair this device?" confirmation
+  await expect(pageB.locator('#dlg')).toContainText('only pair with a key or link from one of your own devices', { ignoreCase: true });
   await pageB.locator('#dlgOk').click();
   await expect(pageB.locator('#syncPill')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
   await expect(b.badge('later')).toHaveText('1', { timeout: 15_000 });

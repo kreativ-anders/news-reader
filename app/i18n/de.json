@@ -310,6 +310,7 @@
     "reset_ok": "Zurücksetzen",
     "pair_title": "Dieses Gerät koppeln?",
     "pair_body": "<p>Dieses Gerät teilt dann Feeds, Leseliste und Lesestand mit all deinen gekoppelten Geräten.</p>",
+    "pair_trust": "<p>Kopple nur mit einem Schlüssel oder Link von deinen eigenen Geräten – wer ihn erstellt hat, kann alles lesen, was dieses Gerät synchronisiert.</p>",
     "pair_server": "<p>Server: <code>{server}</code></p>",
     "pair_leave": "<p>Mit seinen bisherigen Geräten synchronisiert es dann nicht mehr.</p>",
     "pair_merge": "<p>Was schon auf diesem Gerät ist, wird zusammengeführt – nichts geht verloren.</p>",

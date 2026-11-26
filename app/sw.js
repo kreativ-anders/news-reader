@@ -1,5 +1,5 @@
 // INFO: caches the app shell only – the API always goes to the network
-const VERSION = 'news-0.8.21';
+const VERSION = 'news-0.8.22';
 const SHELL = [
   './', 'index.html', 'app.css', 'theme.css', 'manifest.webmanifest',
   'fonts/newsreader.woff2', 'fonts/source-sans-3.woff2',
@@ -25,6 +25,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   const scope = new URL(self.registration.scope);
   if (req.method !== 'GET' || url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
+  // INFO: served from the server root, /api/ lies inside the scope – sync and Collector must never come from the cache
+  if (url.pathname.startsWith(new URL('../api/', scope).pathname)) return;
 
   // INFO: navigations to the app (share target ?url=…, pairing #pair=…) get the app shell. Other navigations
   //       (e.g. a link to i18n/en.json) go to the network – cached as the shell they would replace the app.

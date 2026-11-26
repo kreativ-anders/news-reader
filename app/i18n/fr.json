@@ -310,6 +310,7 @@
     "reset_ok": "Réinitialiser",
     "pair_title": "Associer cet appareil ?",
     "pair_body": "<p>Cet appareil partagera flux, liste de lecture et progression avec tous vos appareils associés.</p>",
+    "pair_trust": "<p>N’associez qu’avec une clé ou un lien venant de vos propres appareils – la personne qui l’a créé peut lire tout ce que cet appareil synchronise.</p>",
     "pair_server": "<p>Serveur : <code>{server}</code></p>",
     "pair_leave": "<p>Il cessera de se synchroniser avec ses appareils actuels.</p>",
     "pair_merge": "<p>Ce qui se trouve déjà sur cet appareil est fusionné – rien ne se perd.</p>",

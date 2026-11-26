@@ -27,6 +27,22 @@ test('service worker cache version follows the app version', () => {
   assert.equal(sw, app, 'bump VERSION in app/sw.js together with app/js/app.js');
 });
 
+test('service worker: the API is never answered from the cache, also when the app is served at the root', () => {
+  const answered = (scope, path) => {
+    const on = {};
+    const self = { addEventListener: (type, fn) => { on[type] = fn; }, registration: { scope } };
+    new Function('self', 'caches', read('app/sw.js'))(self, { open: () => new Promise(() => {}) });
+    let hit = false;
+    on.fetch({ request: { method: 'GET', mode: 'cors', url: new URL(path, scope).href }, respondWith: () => { hit = true; } });
+    return hit;
+  };
+  for (const scope of ['https://example.test/', 'https://example.test/app/', 'https://example.test/sub/']) {
+    assert.equal(answered(scope, new URL('../api/sync', scope).pathname), false, `${scope}: /api/sync must go to the network`);
+    assert.equal(answered(scope, new URL('../api/collect?url=x', scope).pathname + '?url=x'), false, `${scope}: /api/collect must go to the network`);
+    assert.equal(answered(scope, 'app.css'), true, `${scope}: shell files still come from the cache`);
+  }
+});
+
 for (const [file, base] of [['app/manifest.webmanifest', 'app/'], ['site.webmanifest', '']]) {
   test(`${file}: valid, icons exist`, () => {
     const m = JSON.parse(read(file));
